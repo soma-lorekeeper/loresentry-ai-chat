@@ -13,6 +13,9 @@ no route from outside the cluster.
 Cloudflare → ALB → gateway → ai-chat
 ```
 
+Browsers never reach this service, so it has no CORS configuration — the gateway is
+the only CORS boundary.
+
 ## Stack
 
 | | Version | Notes |
