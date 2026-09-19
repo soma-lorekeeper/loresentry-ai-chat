@@ -25,6 +25,7 @@ the only CORS boundary.
 | uvicorn | 0.52.4 (`[standard]`) | ASGI server. |
 | pytest | 9.1.1 | |
 | httpx | 0.28.1 | Required by `fastapi.testclient`. |
+| Flyway | 12.11 (CLI) | Copied into the image from `flyway/flyway`; only the PostgreSQL plugin and driver are kept. |
 | Port | 8000 | Platform convention, shared with every other service. |
 
 Dependencies are pinned exactly rather than floored (`==`, not `>=`) so that a
@@ -39,6 +40,21 @@ CI run and a production image built a month apart resolve to the same tree.
 
 The gateway exposes this service publicly at `GET /ai-chat`, which calls `/` here
 and returns the payload nested under `upstream`.
+
+## Schema
+
+Migrations live in [`db/migration`](db/migration). The container entrypoint
+runs `flyway migrate` against `DB_HOST`/`DB_PORT`/`DB_NAME` with
+`DB_USERNAME`/`DB_PASSWORD` and only then starts uvicorn, so a failed migration
+keeps the pod from becoming ready.
+
+| Table | Purpose |
+| --- | --- |
+| `chat_sessions` | Per-project chat session: owner user id, title, soft delete |
+| `chat_messages` | Completed user messages and AI responses (`COMPLETE`/`FAILED`/`CANCELLED`); streaming chunks are not stored |
+
+Project and user ids are plain values; there are no cross-database foreign keys.
+Running uvicorn directly, as below, skips the migration step.
 
 ## Run locally
 
@@ -55,7 +71,8 @@ curl localhost:8000/health
 pytest
 ```
 
-No AWS or network access required.
+No AWS access required. `tests/test_migrations.py` applies the migrations to a
+`postgres:18` container through Testcontainers, so Docker must be running.
 
 ## Deploy
 
@@ -74,8 +91,6 @@ Deployed to the `prod` namespace of the `lore-sentry-k8s` EKS cluster via Argo C
 
 ## Not implemented yet
 
-- PostgreSQL persistence for sessions and messages. The database is not
-  provisioned yet, so no driver or ORM is wired in — adding one before the
-  database exists would only make the container fail to start.
+- Data access for sessions and messages on top of the schema.
 - Streaming response generation, cancel/retry handling.
 - Agent orchestration against `loresentry-graph-rag`.
