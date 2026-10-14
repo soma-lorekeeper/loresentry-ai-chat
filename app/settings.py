@@ -1,0 +1,84 @@
+import os
+from dataclasses import dataclass
+
+
+def _int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    return int(value) if value else default
+
+
+def _float(name: str, default: float) -> float:
+    value = os.getenv(name)
+    return float(value) if value else default
+
+
+@dataclass(frozen=True)
+class Settings:
+    db_host: str = "localhost"
+    db_port: str = "5432"
+    db_name: str = "ai_chat"
+    db_username: str = "ai_chat_svc"
+    db_password: str = ""
+    db_pool_size: int = 10
+    content_base_url: str = "http://localhost:8001"
+    content_timeout_seconds: float = 30.0
+    openai_api_key: str = ""
+    openai_model: str = "gpt-6-luna"
+    openai_reasoning_effort: str = "medium"
+    openai_max_output_tokens: int = 32000
+    openai_timeout_seconds: float = 120.0
+    turn_deadline_seconds: float = 170.0
+    context_limit: int = 1_400_000
+    history_floor: int = 20_000
+    recent_manuscripts: int = 3
+    heartbeat_seconds: float = 15.0
+    cancel_poll_seconds: float = 2.0
+    stale_turn_seconds: int = 300
+    shutdown_grace_seconds: float = 15.0
+
+    @property
+    def conninfo(self) -> str:
+        return (
+            f"host={self.db_host} port={self.db_port} dbname={self.db_name} "
+            f"user={self.db_username} password={self.db_password} connect_timeout=3"
+        )
+
+    @classmethod
+    def from_environment(cls) -> "Settings":
+        return cls(
+            db_host=os.getenv("DB_HOST", cls.db_host),
+            db_port=os.getenv("DB_PORT", cls.db_port),
+            db_name=os.getenv("DB_NAME", cls.db_name),
+            db_username=os.getenv("DB_USERNAME", cls.db_username),
+            db_password=os.getenv("DB_PASSWORD", cls.db_password),
+            db_pool_size=_int("DB_POOL_SIZE", cls.db_pool_size),
+            content_base_url=os.getenv("CONTENT_BASE_URL", cls.content_base_url),
+            content_timeout_seconds=_float(
+                "CONTENT_TIMEOUT_SECONDS", cls.content_timeout_seconds
+            ),
+            openai_api_key=os.getenv("OPENAI_API_KEY", cls.openai_api_key),
+            openai_model=os.getenv("OPENAI_MODEL", cls.openai_model),
+            openai_reasoning_effort=os.getenv(
+                "OPENAI_REASONING_EFFORT", cls.openai_reasoning_effort
+            ),
+            openai_max_output_tokens=_int(
+                "OPENAI_MAX_OUTPUT_TOKENS", cls.openai_max_output_tokens
+            ),
+            openai_timeout_seconds=_float(
+                "OPENAI_TIMEOUT_SECONDS", cls.openai_timeout_seconds
+            ),
+            turn_deadline_seconds=_float(
+                "CHAT_TURN_DEADLINE_SECONDS", cls.turn_deadline_seconds
+            ),
+            context_limit=_int("CHAT_CONTEXT_LIMIT", cls.context_limit),
+            history_floor=_int("CHAT_HISTORY_FLOOR", cls.history_floor),
+            recent_manuscripts=_int("CHAT_RECENT_MANUSCRIPTS", cls.recent_manuscripts),
+            heartbeat_seconds=_float("CHAT_HEARTBEAT_SECONDS", cls.heartbeat_seconds),
+            cancel_poll_seconds=_float(
+                "CHAT_CANCEL_POLL_SECONDS", cls.cancel_poll_seconds
+            ),
+            stale_turn_seconds=_int("CHAT_STALE_TURN_SECONDS", cls.stale_turn_seconds),
+            shutdown_grace_seconds=_float(
+                "CHAT_SHUTDOWN_GRACE_SECONDS", cls.shutdown_grace_seconds
+            ),
+        )

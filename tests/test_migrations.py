@@ -31,7 +31,7 @@ def test_migrations_create_chat_tables(conn):
         "select table_name from information_schema.tables where table_schema = 'public'"
     ).fetchall()
 
-    assert {"chat_sessions", "chat_messages"} <= {row[0] for row in rows}
+    assert {"chat_sessions", "chat_messages", "chat_turns"} <= {row[0] for row in rows}
 
 
 def test_chat_messages_reject_unknown_role(conn):
@@ -46,3 +46,40 @@ def test_chat_messages_reject_unknown_role(conn):
             "values (%s, 'SYSTEM', 'x', 'COMPLETE')",
             (session_id,),
         )
+
+
+def test_a_session_holds_one_generating_turn_at_a_time(conn):
+    session_id = conn.execute(
+        "insert into chat_sessions (project_id, user_id, title) "
+        "values (uuidv7(), uuidv7(), 't') returning id"
+    ).fetchone()[0]
+    conn.execute(
+        "insert into chat_turns (session_id, status) values (%s, 'GENERATING')",
+        (session_id,),
+    )
+    conn.execute(
+        "insert into chat_turns (session_id, status) values (%s, 'COMPLETE')",
+        (session_id,),
+    )
+
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        conn.execute(
+            "insert into chat_turns (session_id, status) values (%s, 'GENERATING')",
+            (session_id,),
+        )
+
+
+def test_question_ids_are_unique_per_session(conn):
+    session_id = conn.execute(
+        "insert into chat_sessions (project_id, user_id, title) "
+        "values (uuidv7(), uuidv7(), 't') returning id"
+    ).fetchone()[0]
+    client_id = conn.execute("select uuidv7()").fetchone()[0]
+    insert = (
+        "insert into chat_messages (session_id, role, content_md, status, "
+        "client_message_id) values (%s, 'USER', 'q', 'COMPLETE', %s)"
+    )
+    conn.execute(insert, (session_id, client_id))
+
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        conn.execute(insert, (session_id, client_id))
