@@ -629,3 +629,23 @@ def test_malformed_requests_are_rejected(env):
     assert (status, body["code"]) == (400, "INVALID_REQUEST")
     status, body = env.send(session["id"], "가" * 4001)
     assert (status, body["code"]) == (400, "INVALID_REQUEST")
+
+
+def test_without_an_api_key_the_service_starts_and_answers_fail(database):
+    user, project = uuid4(), uuid4()
+    settings = Settings(
+        db_host=database["host"],
+        db_port=str(database["port"]),
+        db_name=database["dbname"],
+        db_username=database["user"],
+        db_password=database["password"],
+        openai_api_key="",
+    )
+    with TestClient(create_app(settings, FakeContent(user, project))) as client:
+        env = Env(
+            client, user, project, FakeContent(user, project), FakeModel(), database
+        )
+        status, events = env.send(env.create()["id"])
+
+    assert status == 200
+    assert payload(events, "error")["code"] == "CHAT_MODEL_UNAVAILABLE"

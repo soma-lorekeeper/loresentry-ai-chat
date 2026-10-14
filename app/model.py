@@ -127,3 +127,14 @@ class OpenAIModel:
             raise ModelFailure("MODEL_CONNECTION_FAILED") from None
         except APIStatusError as error:
             raise ModelFailure(status_code(error)) from None
+
+
+class UnconfiguredModel:
+    def __init__(self, name: str):
+        self.name = name
+
+    async def stream(
+        self, prompt: Prompt, cache_key: str
+    ) -> AsyncIterator[TextDelta | Finished]:
+        raise ModelFailure("MODEL_NOT_CONFIGURED")
+        yield

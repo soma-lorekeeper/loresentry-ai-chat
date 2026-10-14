@@ -14,7 +14,7 @@ from psycopg_pool import AsyncConnectionPool
 from app import db, logs
 from app.content import ContentClient, ContentSource
 from app.errors import ChatFailure, handle_failure, handle_unexpected, handle_validation
-from app.model import AnswerModel, OpenAIModel
+from app.model import AnswerModel, OpenAIModel, UnconfiguredModel
 from app.routes import Services, router
 from app.settings import Settings
 from app.store import Store
@@ -54,6 +54,9 @@ def create_app(
                 stack.push_async_callback(http.aclose)
                 source = ContentClient(http)
             answers = model
+            if answers is None and not config.openai_api_key:
+                log.error("OPENAI_API_KEY is not set; answers will fail")
+                answers = UnconfiguredModel(config.openai_model)
             if answers is None:
                 client = AsyncOpenAI(api_key=config.openai_api_key, max_retries=0)
                 stack.push_async_callback(client.close)
