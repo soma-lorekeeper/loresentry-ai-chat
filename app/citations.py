@@ -39,6 +39,12 @@ def tag_end(text: str) -> int | None:
     return None
 
 
+def is_unclosed_wrapper(text: str) -> bool:
+    return ">" not in text and any(
+        text.rstrip().startswith(name) for name in WRAPPER_NAMES
+    )
+
+
 def could_become_tag(text: str) -> bool:
     if any(name.startswith(text) for name in (OPEN, *WRAPPER_NAMES)):
         return True
@@ -101,6 +107,9 @@ class CitationStream:
                 self.cite(tag, out)
                 continue
             if not final and could_become_tag(self.pending):
+                break
+            if final and is_unclosed_wrapper(self.pending):
+                self.pending = ""
                 break
             self.emit("<", out)
             self.pending = self.pending[1:]
