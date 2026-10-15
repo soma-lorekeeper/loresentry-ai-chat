@@ -122,3 +122,11 @@ def test_text_that_only_looks_like_a_tag_is_kept():
     events = run(parser, ["<finals> 결승 <c", "at> 고양이 <fin"])
 
     assert text_of(events) == "<finals> 결승 <cat> 고양이 <fin"
+
+
+def test_an_unclosed_wrapper_tag_at_the_very_end_is_dropped():
+    parser = stream()
+    events = run(parser, ['답이에요. <cite id="D3"/></fin', "al"])
+
+    assert text_of(events) == "답이에요. [[1]]"
+    assert parser.content == "답이에요. [[1]]"
