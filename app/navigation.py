@@ -66,7 +66,9 @@ If the documents are not enough, list in `missing` only the facts the question i
 Example
 Question: 레나가 처음 각성한 곳은 어디야?
 Documents say "레나는 무너진 성당의 제단 앞에서 처음으로 빛을 끌어냈다." -> {"sufficient": true, "missing": []}
-Documents only say "성당에서의 각성 이후 레나는 달라졌다." -> {"sufficient": false, "missing": ["그것이 레나의 첫 각성이라는 근거"]}"""
+Documents only say "성당에서의 각성 이후 레나는 달라졌다." -> {"sufficient": false, "missing": ["그것이 레나의 첫 각성이라는 근거"]}
+Question: 민호는 검을 쓸 줄 알아?
+Only a character setting document was read, saying "민호는 검술의 달인이다." -> {"sufficient": false, "missing": ["원고에서 민호가 검을 쓰는 장면"]}"""
 
 ANSWER_CHECK_INSTRUCTIONS = """You review an answer to an author's question about their web novel project against the documents it was based on. You do not rewrite it.
 The answer is ok if it addresses the question that was asked; every claim is supported by the documents; each <cite id="..."> points to a document that actually contains what it supports; it does not contradict the documents or present setting documents or memos as events of the manuscript; and it says so where the documents are ambiguous or silent. An answer that honestly says the documents do not contain something is ok when that is true.
