@@ -31,7 +31,14 @@ def test_migrations_create_chat_tables(conn):
         "select table_name from information_schema.tables where table_schema = 'public'"
     ).fetchall()
 
-    assert {"chat_sessions", "chat_messages", "chat_turns"} <= {row[0] for row in rows}
+    assert {
+        "chat_sessions",
+        "chat_messages",
+        "chat_turns",
+        "chat_held_documents",
+        "document_summaries",
+        "summary_queue",
+    } <= {row[0] for row in rows}
 
 
 def test_chat_messages_reject_unknown_role(conn):

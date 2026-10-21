@@ -1,6 +1,7 @@
 import threading
 import time
-from dataclasses import dataclass, replace
+from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
 from uuid import UUID, uuid4
@@ -11,8 +12,22 @@ from fastapi.testclient import TestClient
 from testcontainers.community.postgres import PostgresContainer
 
 from app.main import create_app
+from app.navigation import AnswerCheck, Sufficiency
 from app.settings import Settings
-from tests.support import CH3, FakeContent, FakeModel, read_events
+from tests.support import (
+    CH1,
+    CH2,
+    CH3,
+    GREENHOUSE,
+    LENA,
+    FakeContent,
+    FakeModel,
+    answer,
+    documents,
+    read,
+    read_events,
+    short,
+)
 
 MIGRATIONS = sorted(
     (Path(__file__).parent.parent / "db" / "migration").glob("V*__*.sql"),
@@ -93,13 +108,13 @@ class Env:
         return response.json()
 
 
-@pytest.fixture
-def env(database):
+@contextmanager
+def make_env(database, model: FakeModel | None = None, **overrides):
     with psycopg.connect(**database, autocommit=True) as conn:
         conn.execute("truncate chat_sessions cascade")
     user, project = uuid4(), uuid4()
     content = FakeContent(user, project)
-    model = FakeModel()
+    model = model or FakeModel()
     settings = Settings(
         db_host=database["host"],
         db_port=str(database["port"]),
@@ -108,9 +123,16 @@ def env(database):
         db_password=database["password"],
         heartbeat_seconds=0.2,
         cancel_poll_seconds=0.05,
+        **overrides,
     )
     with TestClient(create_app(settings, content, model)) as client:
         yield Env(client, user, project, content, model, database)
+
+
+@pytest.fixture
+def env(database):
+    with make_env(database) as made:
+        yield made
 
 
 def names(events) -> list[str]:
@@ -141,19 +163,19 @@ def test_availability_reports_size_and_limit(env):
     assert response.headers["cache-control"] == "no-store"
     assert response.json() == {
         "status": "available",
-        "size": env.content.data.size,
-        "limit": 1_400_000,
+        "size": env.content.total,
+        "limit": env.content.total,
     }
 
 
-def test_availability_flags_a_story_over_the_limit(env):
-    env.content.data = replace(env.content.data, size=1_400_001)
+def test_a_large_story_is_still_available(env):
+    env.content.edit(CH1, "가" * 2_000_000)
 
     response = env.client.get(
         f"/projects/{env.project}/chat/availability", headers=env.headers
     )
 
-    assert response.json()["status"] == "too-large"
+    assert response.json()["status"] == "available"
 
 
 def test_other_projects_are_not_found(env):
@@ -257,13 +279,40 @@ def test_a_turn_streams_phases_sources_and_text_then_saves(env):
         == "북쪽 문을 연 사람은 서윤이에요. 레나는 그 앞에 먼저 섰어요."
     )
 
+    assert done["answer"]["grounding"] == {
+        "level": "SUPPORTED",
+        "documents_read": 2,
+        "missing": [],
+    }
     turn = env.query(
         "select status, model, input_tokens, cached_tokens, output_tokens, "
-        "reasoning_tokens, context_chars, first_token_ms is not null from chat_turns"
+        "reasoning_tokens, steps, judge_calls, grounding, rejections, chars_read, "
+        "context_chars > 0, first_token_ms is not null from chat_turns"
     )
+    read_chars = env.content.docs[CH3].chars + env.content.docs[CH2].chars
     assert turn == [
-        ("COMPLETE", "fake-model", 1200, 800, 90, 30, env.content.data.size, True)
+        (
+            "COMPLETE",
+            "fake-model",
+            2600,
+            1600,
+            200,
+            70,
+            2,
+            2,
+            "SUPPORTED",
+            0,
+            read_chars,
+            True,
+            True,
+        )
     ]
+    held = env.query(
+        "select target_id::text, kind from chat_held_documents "
+        "order by first_read_at, target_id"
+    )
+    assert held == [(CH3, "DOCUMENT"), (CH2, "DOCUMENT")]
+    assert env.content.reads == [([CH3, CH2], [])]
 
 
 def test_profile_and_question_reach_the_model(env):
@@ -288,12 +337,11 @@ def test_profile_and_question_reach_the_model(env):
         env.client.headers.pop("X-User-Display-Name")
         env.client.headers.pop("X-User-Locale")
 
-    prompt = env.model.prompts[-1]
-    assert (
-        '<author name="서윤주" locale="ko"/>' in prompt.input[0]["content"][0]["text"]
-    )
-    final = prompt.input[-1]["content"][0]["text"]
-    assert '<viewing id="D3"' in final and "<task>Explain" in final
+    prompt = env.model.inputs[0]
+    assert '<author name="서윤주" locale="ko"/>' in prompt[0]["content"][0]["text"]
+    final = prompt[-1]["content"][0]["text"]
+    assert f'<viewing id="{short(CH3)}"' in final and "<task>Explain" in final
+    assert f'<quote id="{short(CH3)}"' in final
     listed = env.client.get(
         f"/projects/{env.project}/chat/sessions", headers=env.headers
     ).json()["sessions"][0]
@@ -308,25 +356,31 @@ def test_a_question_needs_text_or_a_quote(env):
     assert body["code"] == "CHAT_QUESTION_REQUIRED"
 
 
-def test_a_story_over_the_limit_is_refused_before_streaming(env):
-    session = env.create()
-    env.content.data = replace(env.content.data, size=1_400_001)
-    status, body = env.send(session["id"])
+def test_a_large_story_reads_only_what_fits_each_step(database):
+    model = FakeModel([read(CH1, CH3, CH2), read(CH3, CH2), answer()])
+    with make_env(database, model, step_max_chars=1_000) as env:
+        env.content.edit(CH1, "가" * 5_000)
+        status, events = env.send(env.create()["id"])
 
-    assert status == 422
-    assert body["code"] == "CHAT_CONTEXT_TOO_LARGE"
-    assert env.query("select count(*) from chat_messages") == [(0,)]
+    assert status == 200 and "done" in names(events)
+    assert env.content.reads == [([CH1], []), ([CH3, CH2], [])]
+    first = model.inputs[1][-1]["output"]
+    assert f'<skipped id="{short(CH3)}"' in first
+    assert f'<skipped id="{short(CH2)}"' in first
 
 
-def test_the_next_turn_carries_the_conversation(env):
+def test_the_next_turn_carries_the_conversation_and_held_documents(env):
     session = env.create()
     env.send(session["id"], "첫 질문")
     env.send(session["id"], "두 번째 질문")
 
-    prompt = env.model.prompts[-1]
-    assert prompt.history_turns == 1
-    assert prompt.input[2]["role"] == "assistant"
-    assert '<cite id="D3"/>' in prompt.input[2]["content"]
+    prompt = env.model.inputs[2]
+    held = prompt[0]["content"][1]["text"]
+    assert f'<document id="{short(CH3)}"' in held
+    assert f'<document id="{short(CH2)}"' in held
+    assert prompt[2]["role"] == "assistant"
+    assert f'<cite id="{short(CH3)}"/>' in prompt[2]["content"]
+    assert env.content.reads[1] == ([CH3, CH2], [])
 
 
 def test_resending_the_same_request_replays_the_saved_answer(env):
@@ -337,7 +391,7 @@ def test_resending_the_same_request_replays_the_saved_answer(env):
 
     assert names(again) == ["done"]
     assert payload(again, "done") == payload(first, "done")
-    assert len(env.model.prompts) == 1
+    assert env.model.calls == 2
 
 
 def test_a_failed_turn_keeps_the_question_and_can_be_retried(env):
@@ -649,3 +703,104 @@ def test_without_an_api_key_the_service_starts_and_answers_fail(database):
 
     assert status == 200
     assert payload(events, "error")["code"] == "CHAT_MODEL_UNAVAILABLE"
+
+
+def test_held_documents_come_back_at_their_current_revision(env):
+    session = env.create()
+    env.send(session["id"], "첫 질문")
+    env.content.edit(CH3, "서윤은 등불을 들고 문 앞에서 기다렸다.")
+    del env.content.docs[CH2]
+    env.send(session["id"], "두 번째 질문")
+
+    held = env.model.inputs[2][0]["content"][1]["text"]
+    assert "서윤은 등불을 들고 문 앞에서 기다렸다." in held
+    assert f'rev="{env.content.docs[CH3].revision_no}"' in held
+    assert f'<document id="{short(CH2)}"' not in held
+    assert env.query("select target_id::text from chat_held_documents") == [(CH3,)]
+
+
+def test_held_documents_over_the_limit_drop_the_oldest(database):
+    model = FakeModel([read(CH3), answer(), read(LENA), answer()])
+    docs = documents()
+    limit = docs[LENA].chars + docs[GREENHOUSE].chars
+    with make_env(database, model, held_max_chars=limit) as env:
+        session = env.create()
+        env.send(session["id"], "첫 질문")
+        env.send(session["id"], "두 번째 질문")
+        env.send(session["id"], "세 번째 질문")
+        held = env.query("select target_id::text from chat_held_documents")
+
+    assert held == [(LENA,)]
+    assert (
+        f'<document id="{short(CH3)}"' not in model.inputs[-1][0]["content"][1]["text"]
+    )
+
+
+def test_a_rejected_answer_is_reviewed_and_rewritten(database):
+    model = FakeModel(
+        [read(CH2), answer("레나가 열었어요."), read(CH3), answer()],
+        sufficiency=[Sufficiency(False, ["북쪽 문을 연 사람"]), Sufficiency(True, [])],
+        checks=[AnswerCheck(False, ["문서는 서윤이라고 한다"]), AnswerCheck(True, [])],
+    )
+    with make_env(database, model) as env:
+        _, events = env.send(env.create()["id"])
+        turn = env.query("select grounding, rejections, reviews from chat_turns")
+
+    assert "done" in names(events)
+    third = model.inputs[2]
+    rejected = third[-2]
+    review = third[-1]["content"][0]["text"]
+    assert rejected["role"] == "assistant"
+    assert rejected["content"][0]["text"] == "레나가 열었어요."
+    assert '<review n="1" sufficient="false" answer_ok="false">' in review
+    assert "<missing>북쪽 문을 연 사람</missing>" in review
+    assert "<problem>문서는 서윤이라고 한다</problem>" in review
+    assert turn == [
+        (
+            "SUPPORTED",
+            1,
+            [
+                {
+                    "n": 1,
+                    "sufficient": False,
+                    "missing": ["북쪽 문을 연 사람"],
+                    "answer_ok": False,
+                    "problems": ["문서는 서윤이라고 한다"],
+                }
+            ],
+        )
+    ]
+    assert "레나가 열었어요." not in model.sufficiency_inputs[0]
+    assert "레나가 열었어요." in model.check_inputs[0]
+
+
+def test_without_a_passing_review_the_answer_says_so(database):
+    model = FakeModel(
+        [read(CH2), answer("첫 답"), answer("마지막 답")],
+        sufficiency=[Sufficiency(False, ["첫 각성 장소"])] * 3,
+    )
+    with make_env(database, model, max_steps=2) as env:
+        session = env.create()
+        _, events = env.send(session["id"])
+        saved = env.messages(session["id"])["messages"][-1]
+
+    assert model.choices == ["auto", "none", "none"]
+    final = model.inputs[-1][-1]["content"][0]["text"]
+    assert final.startswith("<final>") and "첫 각성 장소" in final
+    assert saved["content"] == "마지막 답"
+    assert saved["grounding"] == {
+        "level": "NOT_ENOUGH",
+        "documents_read": 1,
+        "missing": ["첫 각성 장소"],
+    }
+    assert payload(events, "done")["answer"]["grounding"]["level"] == "NOT_ENOUGH"
+
+
+def test_citing_a_node_that_was_not_read_drops_the_source(database):
+    model = FakeModel([read(CH3), answer(f'답이에요.<cite id="{short(LENA)}"/> 끝')])
+    with make_env(database, model) as env:
+        _, events = env.send(env.create()["id"])
+
+    done = payload(events, "done")["answer"]
+    assert done["citations"] == []
+    assert done["content"] == "답이에요. 끝"

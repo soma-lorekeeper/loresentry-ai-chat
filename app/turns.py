@@ -7,17 +7,20 @@ from dataclasses import dataclass, replace
 from typing import Any
 from uuid import UUID
 
+from app.agent import Agent, Outcome
 from app.citations import CitationStream, Cited
-from app.content import ContentSource
+from app.content import ContentSource, Document, Memo
 from app.errors import CONTRACTS, ChatFailure
-from app.model import AnswerModel, Finished, ModelFailure, TextDelta, Usage
-from app.prompt import Profile, Question, build_prompt
+from app.model import AnswerModel, ModelFailure, Usage
+from app.navigation import Turn
+from app.prompt import Profile, Question, select_history
 from app.settings import Settings
 from app.store import Metrics, Started, Store, message_json
 
 log = logging.getLogger("ai_chat.turns")
 
 TERMINAL = {"done", "error"}
+CHUNK = 60
 CANCELLED_EVENT = {"code": "CHAT_ANSWER_CANCELLED", "message": "The answer was stopped"}
 
 
@@ -71,6 +74,17 @@ def with_usage(metrics: Metrics, usage: Usage | None) -> Metrics:
     )
 
 
+def finished(metrics: Metrics, outcome: Outcome) -> Metrics:
+    return replace(
+        with_usage(metrics, outcome.usage),
+        steps=outcome.steps,
+        judge_calls=outcome.judge_calls,
+        grounding=outcome.level,
+        rejections=len(outcome.reviews),
+        reviews=[review.as_json() for review in outcome.reviews],
+    )
+
+
 class TurnRunner:
     def __init__(
         self,
@@ -83,6 +97,7 @@ class TurnRunner:
         self.content = content
         self.model = model
         self.settings = settings
+        self.agent = Agent(model, content, settings)
         self.tasks: dict[UUID, asyncio.Task[None]] = {}
         self.stopping = False
 
@@ -152,51 +167,45 @@ class TurnRunner:
         outcome = "complete"
         try:
             channel.put("phase", {"phase": "gathering"})
-            snapshot = await self.content.snapshot(user_id, project_id)
-            metrics = replace(
-                metrics,
-                context_chars=snapshot.size,
-                snapshot_ms=int((time.monotonic() - begun) * 1000),
-            )
-            if snapshot.size > self.settings.context_limit:
-                raise ChatFailure("CHAT_CONTEXT_TOO_LARGE")
-            history = await self.store.history(session_id, started.question["id"])
-            prompt = build_prompt(
-                snapshot,
-                profile,
-                history,
-                question,
-                recent_count=self.settings.recent_manuscripts,
-                history_budget=max(
-                    self.settings.history_floor,
-                    self.settings.context_limit - snapshot.size,
-                ),
-            )
-            channel.put("phase", {"phase": "reading"})
-            parser = CitationStream(prompt.materials)
-            usage: Usage | None = None
             async with asyncio.timeout(self.settings.turn_deadline_seconds):
-                async for event in self.model.stream(prompt, str(project_id)):
-                    if isinstance(event, Finished):
-                        usage = event.usage
-                        continue
-                    if not isinstance(event, TextDelta) or not event.text:
-                        continue
-                    if metrics.first_token_ms is None:
-                        metrics = replace(
-                            metrics,
-                            first_token_ms=int((time.monotonic() - begun) * 1000),
-                        )
-                        channel.put("phase", {"phase": "writing"})
-                    self.forward(parser.feed(event.text), channel)
-            self.forward(parser.finish(), channel)
-            metrics = with_usage(metrics, usage)
+                turn = await self.prepare(
+                    started, user_id, project_id, profile, question
+                )
+                metrics = replace(
+                    metrics,
+                    snapshot_ms=int((time.monotonic() - begun) * 1000),
+                )
+                channel.put("phase", {"phase": "reading"})
+                result = await self.agent.run(
+                    turn, begun + self.settings.turn_deadline_seconds
+                )
+                metrics = replace(
+                    finished(metrics, result),
+                    context_chars=turn.context_chars,
+                    chars_read=turn.chars_read,
+                    first_token_ms=int((time.monotonic() - begun) * 1000),
+                )
+                parser = self.deliver(result, turn, channel)
             if not parser.content:
                 raise ModelFailure("MODEL_EMPTY_RESPONSE")
             metrics = replace(metrics, total_ms=int((time.monotonic() - begun) * 1000))
             watcher.cancel()
             answer = await self.store.complete_turn(
-                turn_id, session_id, parser.content, parser.citations, metrics
+                turn_id,
+                session_id,
+                parser.content,
+                parser.citations,
+                metrics,
+                grounding={
+                    "level": result.level,
+                    "documents_read": len(turn.read),
+                    "missing": (
+                        result.reviews[-1].sufficiency.missing
+                        if result.reviews and result.level != "SUPPORTED"
+                        else []
+                    ),
+                },
+                held=[(target, turn.kind_of(target)) for target in turn.read],
             )
             if answer is None:
                 raise Stopped()
@@ -237,6 +246,11 @@ class TurnRunner:
                     "session_id": str(session_id),
                     "outcome": outcome,
                     "model": metrics.model,
+                    "grounding": metrics.grounding,
+                    "steps": metrics.steps,
+                    "judge_calls": metrics.judge_calls,
+                    "rejections": metrics.rejections,
+                    "chars_read": metrics.chars_read,
                     "context_chars": metrics.context_chars,
                     "input_tokens": metrics.input_tokens,
                     "cached_tokens": metrics.cached_tokens,
@@ -247,6 +261,67 @@ class TurnRunner:
                     "total_ms": int((time.monotonic() - begun) * 1000),
                 },
             )
+
+    async def prepare(
+        self,
+        started: Started,
+        user_id: UUID,
+        project_id: UUID,
+        profile: Profile,
+        question: Question,
+    ) -> Turn:
+        session_id = started.session["id"]
+        chat_map = await self.content.map(user_id, project_id)
+        held = await self.store.held(session_id)
+        fetched = await self.content.documents(
+            user_id,
+            project_id,
+            [target for target, kind in held if kind == "DOCUMENT"],
+            [target for target, kind in held if kind == "MEMO"],
+        )
+        documents, memos, dropped = self.trim_held(held, fetched)
+        await self.store.drop_held(session_id, dropped)
+        summaries = await self.store.summaries(
+            [node.id for node in (*chat_map.manuscripts, *chat_map.settings)]
+        )
+        history = await self.store.history(session_id, started.question["id"])
+        return Turn(
+            user_id=user_id,
+            project_id=project_id,
+            chat_map=chat_map,
+            profile=profile,
+            question=question,
+            history=select_history(history, self.settings.history_max_chars),
+            summaries=summaries,
+            held_documents=documents,
+            held_memos=memos,
+        )
+
+    def trim_held(
+        self, held: list[tuple[str, str]], fetched
+    ) -> tuple[list[Document], list[Memo], list[str]]:
+        found: dict[str, Document | Memo] = {
+            item.id: item for item in (*fetched.documents, *fetched.memos)
+        }
+        kept = [found[target] for target, _ in held if target in found]
+        dropped = [target for target, _ in held if target not in found]
+        total = sum(item.chars for item in kept)
+        while kept and total > self.settings.held_max_chars:
+            oldest = kept.pop(0)
+            total -= oldest.chars
+            dropped.append(oldest.id)
+        documents = [item for item in kept if isinstance(item, Document)]
+        memos = [item for item in kept if isinstance(item, Memo)]
+        return documents, memos, dropped
+
+    def deliver(self, outcome: Outcome, turn: Turn, channel: Channel) -> CitationStream:
+        parser = CitationStream(turn.materials())
+        channel.put("phase", {"phase": "writing"})
+        text = outcome.text
+        for start in range(0, len(text), CHUNK):
+            self.forward(parser.feed(text[start : start + CHUNK]), channel)
+        self.forward(parser.finish(), channel)
+        return parser
 
     def forward(self, items: list[Any], channel: Channel) -> None:
         for item in items:

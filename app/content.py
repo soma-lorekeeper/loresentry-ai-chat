@@ -17,6 +17,10 @@ DOC_TYPES = {
 }
 
 
+def doc_type(folder_code: str) -> str:
+    return DOC_TYPES.get(folder_code, folder_code.lower())
+
+
 @dataclass(frozen=True)
 class Property:
     key: str
@@ -36,11 +40,19 @@ class Document:
 
     @property
     def doc_type(self) -> str:
-        return DOC_TYPES.get(self.folder_code, self.folder_code.lower())
+        return doc_type(self.folder_code)
 
     @property
     def is_manuscript(self) -> bool:
         return self.folder_code == "MANUSCRIPT"
+
+    @property
+    def chars(self) -> int:
+        return (
+            len(self.title)
+            + len(self.body_text)
+            + sum(len(prop.value) for prop in self.properties)
+        )
 
 
 @dataclass(frozen=True)
@@ -58,61 +70,116 @@ class Memo:
     title: str | None
     body: str
 
+    @property
+    def chars(self) -> int:
+        return len(self.title or "") + len(self.body)
+
 
 @dataclass(frozen=True)
-class Snapshot:
+class Node:
+    id: str
+    kind: str
+    folder_code: str
+    title: str
+    chars: int
+    revision_no: int | None = None
+    ordinal: int | None = None
+    episode_name: str | None = None
+    properties: tuple[Property, ...] = ()
+    document_id: str | None = None
+    updated_at: str | None = None
+
+    @property
+    def is_memo(self) -> bool:
+        return self.kind == "MEMO"
+
+    @property
+    def doc_type(self) -> str:
+        return "memo" if self.is_memo else doc_type(self.folder_code)
+
+
+@dataclass(frozen=True)
+class ChatMap:
     project_id: str
     project_name: str
     project_description: str | None
-    manuscripts: tuple[Document, ...]
-    settings: tuple[Document, ...]
+    manuscripts: tuple[Node, ...]
+    settings: tuple[Node, ...]
+    memos: tuple[Node, ...]
     relations: tuple[Relation, ...]
-    memos: tuple[Memo, ...]
-    size: int
-    documents: dict[str, Document] = field(init=False, repr=False)
+    nodes: dict[str, Node] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(
             self,
-            "documents",
-            {doc.id: doc for doc in (*self.manuscripts, *self.settings)},
+            "nodes",
+            {
+                node.id: node
+                for node in (*self.manuscripts, *self.settings, *self.memos)
+            },
         )
 
+    @property
+    def ordered(self) -> tuple[Node, ...]:
+        return (*self.manuscripts, *self.settings, *self.memos)
 
-def parse_snapshot(payload: dict[str, Any]) -> Snapshot:
+
+@dataclass(frozen=True)
+class Fetched:
+    documents: tuple[Document, ...]
+    memos: tuple[Memo, ...]
+    missing: tuple[str, ...]
+
+
+def properties_of(item: dict[str, Any]) -> tuple[Property, ...]:
+    return tuple(Property(prop["key"], prop["value"]) for prop in item["properties"])
+
+
+def parse_map(payload: dict[str, Any]) -> ChatMap:
     project = payload["project"]
-    return Snapshot(
+    return ChatMap(
         project_id=project["id"],
         project_name=project["name"],
         project_description=project.get("description"),
         manuscripts=tuple(
-            Document(
+            Node(
                 id=item["id"],
-                title=item["title"],
+                kind="DOCUMENT",
                 folder_code="MANUSCRIPT",
-                body_text=item["body_text"],
+                title=item["title"],
+                chars=item["chars"],
                 revision_no=item["revision_no"],
                 ordinal=item["ordinal"],
                 episode_name=item.get("episode_name"),
-                properties=tuple(
-                    Property(prop["key"], prop["value"])
-                    for prop in item.get("properties", ())
-                ),
+                properties=properties_of(item),
+                updated_at=item.get("updated_at"),
             )
             for item in payload["manuscripts"]
         ),
         settings=tuple(
-            Document(
+            Node(
                 id=item["id"],
-                title=item["title"],
+                kind="DOCUMENT",
                 folder_code=item["folder_code"],
-                body_text=item["body_text"],
+                title=item["title"],
+                chars=item["chars"],
                 revision_no=item["revision_no"],
-                properties=tuple(
-                    Property(prop["key"], prop["value"]) for prop in item["properties"]
-                ),
+                properties=properties_of(item),
+                updated_at=item.get("updated_at"),
             )
             for item in payload["settings"]
+        ),
+        memos=tuple(
+            Node(
+                id=item["id"],
+                kind="MEMO",
+                folder_code="MEMO",
+                title=item.get("title") or "",
+                chars=item["chars"],
+                document_id=item.get("document_id"),
+                updated_at=item.get("updated_at"),
+            )
+            for item in payload["memos"]
         ),
         relations=tuple(
             Relation(
@@ -120,33 +187,72 @@ def parse_snapshot(payload: dict[str, Any]) -> Snapshot:
             )
             for item in payload["relations"]
         ),
-        memos=tuple(
-            Memo(
-                id=item["id"],
-                scope=item["scope"],
-                document_id=item.get("document_id"),
-                title=item.get("title"),
-                body=item["body"],
-            )
-            for item in payload["memos"]
-        ),
-        size=payload["size"],
     )
+
+
+def parse_documents(payload: dict[str, Any]) -> Fetched:
+    documents = [
+        Document(
+            id=item["id"],
+            title=item["title"],
+            folder_code="MANUSCRIPT",
+            body_text=item["body_text"],
+            revision_no=item["revision_no"],
+            ordinal=item["ordinal"],
+            episode_name=item.get("episode_name"),
+            properties=properties_of(item),
+        )
+        for item in payload["manuscripts"]
+    ]
+    documents += [
+        Document(
+            id=item["id"],
+            title=item["title"],
+            folder_code=item["folder_code"],
+            body_text=item["body_text"],
+            revision_no=item["revision_no"],
+            properties=properties_of(item),
+        )
+        for item in payload["settings"]
+    ]
+    memos = tuple(
+        Memo(
+            id=item["id"],
+            scope=item["scope"],
+            document_id=item.get("document_id"),
+            title=item.get("title"),
+            body=item["body"],
+        )
+        for item in payload["memos"]
+    )
+    return Fetched(tuple(documents), memos, tuple(payload["missing"]))
 
 
 class ContentSource(Protocol):
     async def size(self, user_id: UUID, project_id: UUID) -> int: ...
 
-    async def snapshot(self, user_id: UUID, project_id: UUID) -> Snapshot: ...
+    async def map(self, user_id: UUID, project_id: UUID) -> ChatMap: ...
+
+    async def documents(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+        document_ids: list[str],
+        memo_ids: list[str],
+    ) -> Fetched: ...
 
 
 class ContentClient:
     def __init__(self, client: httpx.AsyncClient):
         self.client = client
 
-    async def _get(self, user_id: UUID, path: str) -> dict[str, Any]:
+    async def _call(
+        self, user_id: UUID, method: str, path: str, body: Any = None
+    ) -> dict[str, Any]:
         try:
-            response = await self.client.get(path, headers={"X-User-Id": str(user_id)})
+            response = await self.client.request(
+                method, path, json=body, headers={"X-User-Id": str(user_id)}
+            )
         except httpx.HTTPError as error:
             raise ChatFailure("CONTENT_UNAVAILABLE", type(error).__name__) from None
         if response.status_code == 404:
@@ -159,14 +265,36 @@ class ContentClient:
             raise ChatFailure("CONTENT_UNAVAILABLE", "invalid json") from None
 
     async def size(self, user_id: UUID, project_id: UUID) -> int:
-        payload = await self._get(user_id, f"/internal/projects/{project_id}/chat-size")
+        payload = await self._call(
+            user_id, "GET", f"/internal/projects/{project_id}/chat-size"
+        )
         return int(payload["size"])
 
-    async def snapshot(self, user_id: UUID, project_id: UUID) -> Snapshot:
-        payload = await self._get(
-            user_id, f"/internal/projects/{project_id}/chat-snapshot"
+    async def map(self, user_id: UUID, project_id: UUID) -> ChatMap:
+        payload = await self._call(
+            user_id, "GET", f"/internal/projects/{project_id}/chat-map"
         )
         try:
-            return parse_snapshot(payload)
+            return parse_map(payload)
+        except (KeyError, TypeError) as error:
+            raise ChatFailure("CONTENT_UNAVAILABLE", type(error).__name__) from None
+
+    async def documents(
+        self,
+        user_id: UUID,
+        project_id: UUID,
+        document_ids: list[str],
+        memo_ids: list[str],
+    ) -> Fetched:
+        if not document_ids and not memo_ids:
+            return Fetched((), (), ())
+        payload = await self._call(
+            user_id,
+            "POST",
+            f"/internal/projects/{project_id}/chat-documents",
+            {"document_ids": document_ids, "memo_ids": memo_ids},
+        )
+        try:
+            return parse_documents(payload)
         except (KeyError, TypeError) as error:
             raise ChatFailure("CONTENT_UNAVAILABLE", type(error).__name__) from None

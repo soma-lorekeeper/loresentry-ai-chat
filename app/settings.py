@@ -28,13 +28,22 @@ class Settings:
     openai_max_output_tokens: int = 32000
     openai_timeout_seconds: float = 120.0
     turn_deadline_seconds: float = 170.0
-    context_limit: int = 1_400_000
-    history_floor: int = 20_000
-    recent_manuscripts: int = 3
+    step_max_chars: int = 40_000
+    max_steps: int = 4
+    held_max_chars: int = 200_000
+    history_max_chars: int = 40_000
+    answer_reserve_seconds: float = 75.0
+    judge_model: str = ""
+    judge_reasoning_effort: str = "low"
+    judge_max_output_tokens: int = 2000
     heartbeat_seconds: float = 15.0
     cancel_poll_seconds: float = 2.0
     stale_turn_seconds: int = 300
     shutdown_grace_seconds: float = 15.0
+
+    @property
+    def judge(self) -> str:
+        return self.judge_model or self.openai_model
 
     @property
     def conninfo(self) -> str:
@@ -70,9 +79,20 @@ class Settings:
             turn_deadline_seconds=_float(
                 "CHAT_TURN_DEADLINE_SECONDS", cls.turn_deadline_seconds
             ),
-            context_limit=_int("CHAT_CONTEXT_LIMIT", cls.context_limit),
-            history_floor=_int("CHAT_HISTORY_FLOOR", cls.history_floor),
-            recent_manuscripts=_int("CHAT_RECENT_MANUSCRIPTS", cls.recent_manuscripts),
+            step_max_chars=_int("CHAT_STEP_MAX_CHARS", cls.step_max_chars),
+            max_steps=_int("CHAT_MAX_STEPS", cls.max_steps),
+            held_max_chars=_int("CHAT_HELD_MAX_CHARS", cls.held_max_chars),
+            history_max_chars=_int("CHAT_HISTORY_MAX_CHARS", cls.history_max_chars),
+            answer_reserve_seconds=_float(
+                "CHAT_ANSWER_RESERVE_SECONDS", cls.answer_reserve_seconds
+            ),
+            judge_model=os.getenv("CHAT_JUDGE_MODEL", cls.judge_model),
+            judge_reasoning_effort=os.getenv(
+                "CHAT_JUDGE_REASONING_EFFORT", cls.judge_reasoning_effort
+            ),
+            judge_max_output_tokens=_int(
+                "CHAT_JUDGE_MAX_OUTPUT_TOKENS", cls.judge_max_output_tokens
+            ),
             heartbeat_seconds=_float("CHAT_HEARTBEAT_SECONDS", cls.heartbeat_seconds),
             cancel_poll_seconds=_float(
                 "CHAT_CANCEL_POLL_SECONDS", cls.cancel_poll_seconds
