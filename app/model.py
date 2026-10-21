@@ -1,12 +1,16 @@
-from collections.abc import AsyncIterator
+import json
 from dataclasses import dataclass
 from typing import Any, Protocol
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
-from app.prompt import Prompt
+from app.navigation import (
+    ANSWER_CHECK_SCHEMA,
+    SUFFICIENCY_SCHEMA,
+    AnswerCheck,
+    Sufficiency,
+)
 
-TEXT_EVENTS = {"response.output_text.delta", "response.refusal.delta"}
 QUOTA_CODES = {
     "insufficient_quota",
     "billing_hard_limit_reached",
@@ -22,14 +26,30 @@ class Usage:
     output_tokens: int
     reasoning_tokens: int
 
+    def __add__(self, other: "Usage | None") -> "Usage":
+        if other is None:
+            return self
+        return Usage(
+            self.input_tokens + other.input_tokens,
+            self.cached_tokens + other.cached_tokens,
+            self.cache_write_tokens + other.cache_write_tokens,
+            self.output_tokens + other.output_tokens,
+            self.reasoning_tokens + other.reasoning_tokens,
+        )
+
 
 @dataclass(frozen=True)
-class TextDelta:
+class ToolCall:
+    id: str
+    name: str
+    ranking: list[str]
+
+
+@dataclass(frozen=True)
+class StepResult:
+    call: ToolCall | None
     text: str
-
-
-@dataclass(frozen=True)
-class Finished:
+    items: list[dict[str, Any]]
     usage: Usage | None
 
 
@@ -42,9 +62,30 @@ class ModelFailure(Exception):
 class AnswerModel(Protocol):
     name: str
 
-    def stream(
-        self, prompt: Prompt, cache_key: str
-    ) -> AsyncIterator[TextDelta | Finished]: ...
+    async def step(
+        self,
+        instructions: str,
+        items: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        tool_choice: str,
+        cache_key: str,
+    ) -> StepResult: ...
+
+    async def sufficiency(
+        self, instructions: str, text: str
+    ) -> tuple[Sufficiency, Usage | None]: ...
+
+    async def check_answer(
+        self, instructions: str, text: str
+    ) -> tuple[AnswerCheck, Usage | None]: ...
+
+
+class SummaryModel(Protocol):
+    name: str
+
+    async def summarize(
+        self, instructions: str, text: str
+    ) -> tuple[str, Usage | None]: ...
 
 
 def status_code(error: APIStatusError) -> str:
@@ -76,7 +117,146 @@ def usage_of(usage: Any) -> Usage | None:
     )
 
 
+async def create(client: AsyncOpenAI, **options: Any) -> Any:
+    try:
+        response = await client.responses.create(
+            store=False, truncation="disabled", **options
+        )
+    except APITimeoutError:
+        raise ModelFailure("MODEL_TIMEOUT") from None
+    except APIConnectionError:
+        raise ModelFailure("MODEL_CONNECTION_FAILED") from None
+    except APIStatusError as error:
+        raise ModelFailure(status_code(error)) from None
+    if response.status == "incomplete":
+        raise ModelFailure("MODEL_INCOMPLETE")
+    if response.status == "failed":
+        raise ModelFailure("MODEL_FAILED")
+    return response
+
+
+def effort(value: str) -> dict[str, Any]:
+    return {"reasoning": {"effort": value}} if value else {}
+
+
+def parse_json(text: str) -> dict[str, Any]:
+    try:
+        value = json.loads(text)
+    except ValueError:
+        raise ModelFailure("MODEL_INVALID_JSON") from None
+    if not isinstance(value, dict):
+        raise ModelFailure("MODEL_INVALID_JSON")
+    return value
+
+
+def tool_call(item: Any) -> ToolCall:
+    if item.name != "request_documents":
+        raise ModelFailure("MODEL_INVALID_TOOL_CALL")
+    arguments = parse_json(item.arguments or "{}")
+    ranking = arguments.get("ranking")
+    if not isinstance(ranking, list):
+        raise ModelFailure("MODEL_INVALID_TOOL_CALL")
+    return ToolCall(item.call_id, item.name, [str(entry) for entry in ranking])
+
+
 class OpenAIModel:
+    def __init__(
+        self,
+        client: AsyncOpenAI,
+        name: str,
+        reasoning_effort: str,
+        max_output_tokens: int,
+        timeout_seconds: float,
+        judge_name: str,
+        judge_reasoning_effort: str,
+        judge_max_output_tokens: int,
+    ):
+        self.client = client
+        self.name = name
+        self.reasoning_effort = reasoning_effort
+        self.max_output_tokens = max_output_tokens
+        self.timeout_seconds = timeout_seconds
+        self.judge_name = judge_name
+        self.judge_reasoning_effort = judge_reasoning_effort
+        self.judge_max_output_tokens = judge_max_output_tokens
+
+    async def step(
+        self,
+        instructions: str,
+        items: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        tool_choice: str,
+        cache_key: str,
+    ) -> StepResult:
+        response = await create(
+            self.client,
+            model=self.name,
+            instructions=instructions,
+            input=items,
+            tools=tools,
+            tool_choice=tool_choice,
+            parallel_tool_calls=False,
+            include=["reasoning.encrypted_content"],
+            max_output_tokens=self.max_output_tokens,
+            prompt_cache_key=cache_key,
+            timeout=self.timeout_seconds,
+            **effort(self.reasoning_effort),
+        )
+        call = None
+        for item in response.output:
+            if item.type == "function_call":
+                call = tool_call(item)
+                break
+        output = [item.model_dump(exclude_none=True) for item in response.output]
+        text = "" if call else (response.output_text or "")
+        return StepResult(call, text, output, usage_of(response.usage))
+
+    async def _judge(
+        self, instructions: str, text: str, name: str, schema: dict[str, Any]
+    ) -> tuple[dict[str, Any], Usage | None]:
+        response = await create(
+            self.client,
+            model=self.judge_name,
+            instructions=instructions,
+            input=text,
+            text={
+                "format": {
+                    "type": "json_schema",
+                    "name": name,
+                    "strict": True,
+                    "schema": schema,
+                }
+            },
+            max_output_tokens=self.judge_max_output_tokens,
+            timeout=self.timeout_seconds,
+            **effort(self.judge_reasoning_effort),
+        )
+        return parse_json(response.output_text or ""), usage_of(response.usage)
+
+    async def sufficiency(
+        self, instructions: str, text: str
+    ) -> tuple[Sufficiency, Usage | None]:
+        value, usage = await self._judge(
+            instructions, text, "sufficiency", SUFFICIENCY_SCHEMA
+        )
+        return (
+            Sufficiency(bool(value["sufficient"]), [str(m) for m in value["missing"]]),
+            usage,
+        )
+
+    async def check_answer(
+        self, instructions: str, text: str
+    ) -> tuple[AnswerCheck, Usage | None]:
+        value, usage = await self._judge(
+            instructions, text, "answer_check", ANSWER_CHECK_SCHEMA
+        )
+        return (
+            AnswerCheck(bool(value["answer_ok"]), [str(p) for p in value["problems"]]),
+            usage,
+        )
+
+
+class OpenAISummaryModel:
     def __init__(
         self,
         client: AsyncOpenAI,
@@ -91,50 +271,31 @@ class OpenAIModel:
         self.max_output_tokens = max_output_tokens
         self.timeout_seconds = timeout_seconds
 
-    async def stream(
-        self, prompt: Prompt, cache_key: str
-    ) -> AsyncIterator[TextDelta | Finished]:
-        options: dict[str, Any] = {}
-        if self.reasoning_effort:
-            options["reasoning"] = {"effort": self.reasoning_effort}
-        try:
-            events = await self.client.responses.create(
-                model=self.name,
-                instructions=prompt.instructions,
-                input=prompt.input,
-                max_output_tokens=self.max_output_tokens,
-                prompt_cache_key=cache_key,
-                store=False,
-                truncation="disabled",
-                stream=True,
-                timeout=self.timeout_seconds,
-                **options,
-            )
-            async for event in events:
-                if event.type in TEXT_EVENTS:
-                    yield TextDelta(event.delta)
-                elif event.type == "response.completed":
-                    yield Finished(usage_of(event.response.usage))
-                elif event.type == "response.incomplete":
-                    raise ModelFailure("MODEL_INCOMPLETE")
-                elif event.type == "response.failed":
-                    raise ModelFailure("MODEL_FAILED")
-                elif event.type == "error":
-                    raise ModelFailure("MODEL_STREAM_ERROR")
-        except APITimeoutError:
-            raise ModelFailure("MODEL_TIMEOUT") from None
-        except APIConnectionError:
-            raise ModelFailure("MODEL_CONNECTION_FAILED") from None
-        except APIStatusError as error:
-            raise ModelFailure(status_code(error)) from None
+    async def summarize(self, instructions: str, text: str) -> tuple[str, Usage | None]:
+        response = await create(
+            self.client,
+            model=self.name,
+            instructions=instructions,
+            input=text,
+            max_output_tokens=self.max_output_tokens,
+            timeout=self.timeout_seconds,
+            **effort(self.reasoning_effort),
+        )
+        summary = (response.output_text or "").strip()
+        if not summary:
+            raise ModelFailure("MODEL_EMPTY_RESPONSE")
+        return summary, usage_of(response.usage)
 
 
 class UnconfiguredModel:
     def __init__(self, name: str):
         self.name = name
 
-    async def stream(
-        self, prompt: Prompt, cache_key: str
-    ) -> AsyncIterator[TextDelta | Finished]:
+    async def step(self, *_: Any, **__: Any) -> StepResult:
         raise ModelFailure("MODEL_NOT_CONFIGURED")
-        yield
+
+    async def sufficiency(self, *_: Any) -> tuple[Sufficiency, Usage | None]:
+        raise ModelFailure("MODEL_NOT_CONFIGURED")
+
+    async def check_answer(self, *_: Any) -> tuple[AnswerCheck, Usage | None]:
+        raise ModelFailure("MODEL_NOT_CONFIGURED")

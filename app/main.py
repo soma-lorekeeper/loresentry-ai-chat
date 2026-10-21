@@ -66,6 +66,9 @@ def create_app(
                     config.openai_reasoning_effort,
                     config.openai_max_output_tokens,
                     config.openai_timeout_seconds,
+                    config.judge,
+                    config.judge_reasoning_effort,
+                    config.judge_max_output_tokens,
                 )
             store = Store(pool, config.stale_turn_seconds)
             runner = TurnRunner(store, source, answers, config)

@@ -102,9 +102,7 @@ def no_store(payload: object, status: int = 200) -> JSONResponse:
 async def availability(project_id: str, user: User, deps: Deps) -> JSONResponse:
     project = uuid_or(project_id, "PROJECT_NOT_FOUND")
     size = await deps.content.size(user, project)
-    limit = deps.settings.context_limit
-    status = "too-large" if size > limit else "available"
-    return no_store({"status": status, "size": size, "limit": limit})
+    return no_store({"status": "available", "size": size, "limit": size})
 
 
 @router.get("/projects/{project_id}/chat/sessions")
@@ -187,9 +185,7 @@ async def send(
     if not content and quote is None:
         raise ChatFailure("CHAT_QUESTION_REQUIRED")
     row = await deps.store.session(user, session)
-    size = await deps.content.size(user, row["project_id"])
-    if size > deps.settings.context_limit:
-        raise ChatFailure("CHAT_CONTEXT_TOO_LARGE")
+    await deps.content.size(user, row["project_id"])
     started = await deps.store.begin_turn(
         user,
         session,

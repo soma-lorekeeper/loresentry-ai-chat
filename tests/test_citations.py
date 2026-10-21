@@ -1,13 +1,22 @@
 from uuid import uuid4
 
 from app.citations import CitationStream, Cited, Delta
-from app.prompt import Aliases, materials
-from tests.support import CH3, LENA, NOTE, snapshot
+from app.prompt import materials
+from tests.support import CH1, CH2, CH3, GREENHOUSE, LENA, NOTE, FakeContent
+
+ALIASES = {CH1: "D1", CH2: "D2", CH3: "D3", LENA: "D4", GREENHOUSE: "D5", NOTE: "M1"}
 
 
 def stream() -> CitationStream:
-    data = snapshot(str(uuid4()))
-    return CitationStream(materials(data, Aliases(data)))
+    content = FakeContent(uuid4(), uuid4())
+    return CitationStream(
+        materials(
+            list(content.docs.values()),
+            list(content.memos.values()),
+            content.relations,
+            ALIASES,
+        )
+    )
 
 
 def run(parser: CitationStream, chunks: list[str]) -> list[Delta | Cited]:

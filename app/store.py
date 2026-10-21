@@ -10,12 +10,13 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
 from app.errors import ChatFailure
+from app.navigation import Summary
 from app.prompt import Exchange, Question
 from app.text import chat_preview, chat_title, search_text, snippet
 
 SESSION_COLUMNS = "id, project_id, title, updated_at, preview"
 MESSAGE_COLUMNS = (
-    "id, session_id, role, content_md, intent, quote, citations, created_at"
+    "id, session_id, role, content_md, intent, quote, citations, grounding, created_at"
 )
 SEARCH_LIMIT = 50
 
@@ -45,6 +46,7 @@ def message_json(row: dict[str, Any]) -> dict[str, Any]:
         "intent": row["intent"],
         "quote": row["quote"],
         "citations": row["citations"],
+        "grounding": row["grounding"],
         "created_at": iso(row["created_at"]),
     }
 
@@ -74,6 +76,12 @@ class Metrics:
     snapshot_ms: int | None = None
     first_token_ms: int | None = None
     total_ms: int | None = None
+    steps: int | None = None
+    judge_calls: int | None = None
+    chars_read: int | None = None
+    grounding: str | None = None
+    rejections: int | None = None
+    reviews: list[dict[str, Any]] | None = None
 
 
 def like(term: str) -> str:
@@ -407,6 +415,43 @@ class Store:
                 pending = None
         return exchanges
 
+    async def held(self, session_id: UUID) -> list[tuple[str, str]]:
+        async with self.pool.connection() as conn:
+            rows = await (
+                await conn.execute(
+                    "select target_id, kind from chat_held_documents "
+                    "where session_id = %s order by first_read_at, target_id",
+                    (session_id,),
+                )
+            ).fetchall()
+        return [(str(row["target_id"]), row["kind"]) for row in rows]
+
+    async def drop_held(self, session_id: UUID, target_ids: list[str]) -> None:
+        if not target_ids:
+            return
+        async with self.pool.connection() as conn:
+            await conn.execute(
+                "delete from chat_held_documents "
+                "where session_id = %s and target_id = any(%s::uuid[])",
+                (session_id, target_ids),
+            )
+
+    async def summaries(self, document_ids: list[str]) -> dict[str, Summary]:
+        if not document_ids:
+            return {}
+        async with self.pool.connection() as conn:
+            rows = await (
+                await conn.execute(
+                    "select document_id, revision_no, summary from document_summaries "
+                    "where document_id = any(%s::uuid[])",
+                    (document_ids,),
+                )
+            ).fetchall()
+        return {
+            str(row["document_id"]): Summary(row["revision_no"], row["summary"])
+            for row in rows
+        }
+
     async def turn_status(self, turn_id: UUID) -> str | None:
         async with self.pool.connection() as conn:
             row = await (
@@ -423,6 +468,8 @@ class Store:
         content: str,
         citations: list[dict[str, Any]],
         metrics: Metrics,
+        grounding: dict[str, Any] | None = None,
+        held: list[tuple[str, str]] | None = None,
     ) -> dict[str, Any] | None:
         async with self.pool.connection() as conn, conn.transaction():
             turn = await (
@@ -436,11 +483,32 @@ class Store:
             answer = await (
                 await conn.execute(
                     "insert into chat_messages (session_id, role, content_md, status, "
-                    "citations) values (%s, 'ASSISTANT', %s, 'COMPLETE', %s) "
+                    "citations, grounding) "
+                    "values (%s, 'ASSISTANT', %s, 'COMPLETE', %s, %s) "
                     f"returning {MESSAGE_COLUMNS}",
-                    (session_id, content, Jsonb(citations)),
+                    (
+                        session_id,
+                        content,
+                        Jsonb(citations),
+                        Jsonb(grounding) if grounding is not None else None,
+                    ),
                 )
             ).fetchone()
+            if held:
+                await conn.execute(
+                    "insert into chat_held_documents "
+                    "(session_id, target_id, kind, first_read_at) "
+                    "select %s, target, kind, "
+                    "now() + make_interval(secs => position / 1000000.0) "
+                    "from unnest(%s::uuid[], %s::text[]) "
+                    "with ordinality as t(target, kind, position) "
+                    "on conflict (session_id, target_id) do nothing",
+                    (
+                        session_id,
+                        [target for target, _ in held],
+                        [kind for _, kind in held],
+                    ),
+                )
             await self._finish(conn, turn_id, "COMPLETE", None, metrics, answer["id"])
             await conn.execute(
                 "update chat_sessions set preview = %s, updated_at = now() "
@@ -470,7 +538,9 @@ class Store:
             "update chat_turns set status = %s, failure_code = %s, answer_id = %s, "
             "model = %s, context_chars = %s, input_tokens = %s, cached_tokens = %s, "
             "cache_write_tokens = %s, output_tokens = %s, reasoning_tokens = %s, "
-            "snapshot_ms = %s, first_token_ms = %s, total_ms = %s, finished_at = now() "
+            "snapshot_ms = %s, first_token_ms = %s, total_ms = %s, steps = %s, "
+            "judge_calls = %s, chars_read = %s, grounding = %s, rejections = %s, "
+            "reviews = %s, finished_at = now() "
             "where id = %s and status = 'GENERATING'",
             (
                 status,
@@ -486,6 +556,12 @@ class Store:
                 metrics.snapshot_ms,
                 metrics.first_token_ms,
                 metrics.total_ms,
+                metrics.steps,
+                metrics.judge_calls,
+                metrics.chars_read,
+                metrics.grounding,
+                metrics.rejections,
+                Jsonb(metrics.reviews) if metrics.reviews is not None else None,
                 turn_id,
             ),
         )
