@@ -1,0 +1,12 @@
+{
+ "questions": 36,
+ "correct": 28,
+ "partial": 8,
+ "wrong": 0,
+ "score": 0.889,
+ "recall": 0.901,
+ "seconds": 32.7,
+ "false_claims": 2,
+ "not_enough": 3,
+ "false_not_enough": 0
+}
