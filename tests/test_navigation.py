@@ -154,8 +154,8 @@ def test_reviews_list_missing_facts_and_problems():
         "<problem>인용이 틀렸다</problem>\n"
         "</review>"
     )
-    assert "Still missing: 첫 각성의 근거." in final_xml([review])
-    assert "Still missing: not checked." in final_xml([])
+    assert "Not settled: 첫 각성의 근거." in final_xml([review])
+    assert "Not settled: not checked." in final_xml([])
 
 
 def test_history_keeps_the_newest_turns_within_budget():

@@ -34,7 +34,7 @@ At each step, either call request_documents or write your answer.
 - When the documents you hold are enough, write your answer as a normal message instead of calling the tool. Reviewers check it against the documents.
 - After a <review>, rank first the documents most likely to contain each <missing> fact. Do not request again documents that turned out not to help.
 - When rewriting after a <review>, fix every <problem> and keep the parts of your previous answer that were not criticized.
-Rank by how likely a document is to contain the facts the answer still needs. Start from the quoted passage, the document the author is viewing, and nodes whose title, properties or summary match the question. Follow edges from documents that turned out useful.
+Rank by how likely a document is to contain the facts the answer still needs. Start from the quoted passage, the document the author is viewing, and nodes whose title, properties or summary match the question. Follow edges from documents that turned out useful. For a question about what changed or who joined, read the chapters at both points in time and where the change happens. Setting documents record the author's plan and the manuscript may differ, so when a setting document answers a question about the story, also read the manuscript chapters where it comes up.
 
 # How to answer
 - Answer only from documents you have read. Never from summaries or general knowledge. If they do not contain the answer, say so plainly and say what is missing. Do not invent events, traits or settings.
@@ -42,16 +42,26 @@ Rank by how likely a document is to contain the facts the answer still needs. St
 - If the documents support more than one reading, say so and give each reading with what it rests on.
 - You cannot edit documents. If asked to rewrite, you may offer wording, but say that the author has to apply it.
 - Answer in the language of the author's question. If that is unclear, use the author's locale.
-- Be concise and specific: lead with the answer, then the supporting points. Prefer chapter titles and character names over vague references.
+- Answer every part of the question. When it asks for several things, address each one.
+- Do not guess at reasons, places or timing the documents leave open.
+- Be concise and specific: lead with the answer, then the supporting points. Prefer chapter titles and character names over vague references. Most answers fit in 2 to 6 sentences or bullets; go longer only when the question asks for a full sequence or many items.
 
 {FORMAT}
 
 {SOURCES}"""
 
 SUFFICIENCY_INSTRUCTIONS = """You decide whether a set of documents from a web novel project is enough to answer the author's question. You do not answer it.
-The documents are enough if a definite, plausible answer can be built from them alone, without outside knowledge and without treating the author's memos as story facts. The answer does not have to be right, only supported by the documents. Every step of a multi-step answer must appear in the documents. If several answers are possible, the documents must give a reason to choose one. A question about whether something ever happens is answerable when the documents clearly cover the relevant part of the story.
+The documents are enough if a definite, plausible answer can be built from them alone, without outside knowledge and without treating the author's memos as story facts. The answer does not have to be right, only supported by the documents.
+- Every step of a multi-step answer must appear in the documents.
+- If the question is ambiguous, the documents must make clear which reading it has.
+- If documents disagree with each other, for example a setting document and the manuscript, they are still enough: the answer is to report the disagreement.
+- Setting documents and memos record the author's plan; the manuscript is the story. For a question about what happens or is true in the story, a setting document or memo alone is not enough: list in `missing` that the manuscript should confirm it. A question about what a setting document itself says is the exception.
+- Judge against the precision the question asks for. Do not demand exact dates, causes or details the question does not ask about.
+- For a request to explain a quoted passage, find related material, or trace what leads into it and follows from it, the documents are enough when they contain the passage and the scenes or settings directly connected to it. They do not have to cover everything.
+- A question about whether something ever happens is answerable when the documents clearly cover the relevant part of the story.
+- For a timeline or a list, the documents are enough when they give the events the story records. Gaps the story leaves are part of the answer, not missing facts.
 The author's earlier questions are only for understanding what the question refers to.
-If the documents are not enough, list in `missing` the facts still to look for, as short phrases in the language of the question.
+If the documents are not enough, list in `missing` only the facts the question itself needs, as short phrases in the language of the question.
 
 Example
 Question: 레나가 처음 각성한 곳은 어디야?
@@ -60,6 +70,7 @@ Documents only say "성당에서의 각성 이후 레나는 달라졌다." -> {"
 
 ANSWER_CHECK_INSTRUCTIONS = """You review an answer to an author's question about their web novel project against the documents it was based on. You do not rewrite it.
 The answer is ok if it addresses the question that was asked; every claim is supported by the documents; each <cite id="..."> points to a document that actually contains what it supports; it does not contradict the documents or present setting documents or memos as events of the manuscript; and it says so where the documents are ambiguous or silent. An answer that honestly says the documents do not contain something is ok when that is true.
+Do not reject an answer because a quote attribute is not word for word; the server checks quotes against the documents itself. Judge the claims, not the wording.
 List each failure in `problems`, briefly and specifically, in the language of the question.
 The conversation is only for understanding what the question refers to. Earlier answers are not evidence; only the documents are.
 
@@ -373,9 +384,16 @@ def final_xml(reviews: list[Review]) -> str:
     last = reviews[-1] if reviews else None
     missing = "; ".join(last.sufficiency.missing) if last else ""
     problems = "; ".join(last.check.problems) if last else ""
+    if last and last.sufficiency.sufficient:
+        return (
+            "<final>Write your final answer now. Fix every problem below and state "
+            "only what the documents say; where they do not say something, say so "
+            f"briefly. Problems: {problems or 'none reported'}.</final>"
+        )
     return (
-        "<final>Write your answer now. Begin by saying you could not find a certain "
-        "answer in the manuscript. Answer only what the documents you read show. "
-        f"Still missing: {missing or 'not checked'}. "
+        "<final>Write your answer now. Begin with one short sentence saying which part "
+        "of the question the manuscript does not settle. Then answer what the "
+        "documents you read do show. "
+        f"Not settled: {missing or 'not checked'}. "
         f"Problems to avoid: {problems or 'none reported'}. Do not guess.</final>"
     )

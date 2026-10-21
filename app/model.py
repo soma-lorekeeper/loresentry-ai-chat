@@ -1,4 +1,6 @@
 import json
+import logging
+import time
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -10,6 +12,8 @@ from app.navigation import (
     AnswerCheck,
     Sufficiency,
 )
+
+log = logging.getLogger("ai_chat.model")
 
 QUOTA_CODES = {
     "insufficient_quota",
@@ -69,6 +73,7 @@ class AnswerModel(Protocol):
         tools: list[dict[str, Any]],
         tool_choice: str,
         cache_key: str,
+        reasoning_effort: str | None = None,
     ) -> StepResult: ...
 
     async def sufficiency(
@@ -118,6 +123,7 @@ def usage_of(usage: Any) -> Usage | None:
 
 
 async def create(client: AsyncOpenAI, **options: Any) -> Any:
+    begun = time.monotonic()
     try:
         response = await client.responses.create(
             store=False, truncation="disabled", **options
@@ -132,6 +138,20 @@ async def create(client: AsyncOpenAI, **options: Any) -> Any:
         raise ModelFailure("MODEL_INCOMPLETE")
     if response.status == "failed":
         raise ModelFailure("MODEL_FAILED")
+    usage = usage_of(response.usage)
+    log.info(
+        "model call",
+        extra={
+            "model": options.get("model"),
+            "kind": "tool" if options.get("tools") else "text",
+            "effort": (options.get("reasoning") or {}).get("effort"),
+            "ms": int((time.monotonic() - begun) * 1000),
+            "input_tokens": usage.input_tokens if usage else None,
+            "cached_tokens": usage.cached_tokens if usage else None,
+            "output_tokens": usage.output_tokens if usage else None,
+            "reasoning_tokens": usage.reasoning_tokens if usage else None,
+        },
+    )
     return response
 
 
@@ -187,6 +207,7 @@ class OpenAIModel:
         tools: list[dict[str, Any]],
         tool_choice: str,
         cache_key: str,
+        reasoning_effort: str | None = None,
     ) -> StepResult:
         response = await create(
             self.client,
@@ -200,7 +221,9 @@ class OpenAIModel:
             max_output_tokens=self.max_output_tokens,
             prompt_cache_key=cache_key,
             timeout=self.timeout_seconds,
-            **effort(self.reasoning_effort),
+            **effort(
+                self.reasoning_effort if reasoning_effort is None else reasoning_effort
+            ),
         )
         call = None
         for item in response.output:

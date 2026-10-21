@@ -21,7 +21,7 @@ After each sentence or bullet that relies on the materials, add a source tag:
 TASKS = {
     "ask": None,
     "explain": "Explain the quoted passage: what happens in it, who is involved, what they do, and why it matters in the story so far.",
-    "related": "List the setting documents connected to the quoted passage, explicit relations first, and where the same people, places or objects appear elsewhere in the manuscript.",
+    "related": "Find what the quoted passage is connected to: the setting documents about the people, places, objects or clues it mentions (explicit relations first), and the other chapters where those same things appear. Stay on what the passage is about; do not list unrelated documents.",
     "flow": "Describe how the quoted passage connects to what comes before and after it: the chapters and scenes that lead into it and the ones that follow from it.",
 }
 
