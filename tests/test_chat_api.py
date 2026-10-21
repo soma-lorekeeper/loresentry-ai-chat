@@ -123,7 +123,7 @@ def make_env(database, model: FakeModel | None = None, **overrides):
         db_password=database["password"],
         heartbeat_seconds=0.2,
         cancel_poll_seconds=0.05,
-        **overrides,
+        **{"navigation_reasoning_effort": "medium", **overrides},
     )
     with TestClient(create_app(settings, content, model)) as client:
         yield Env(client, user, project, content, model, database)

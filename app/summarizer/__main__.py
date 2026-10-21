@@ -48,7 +48,7 @@ async def main() -> None:
     if not settings.openai_api_key:
         log.error("SUMMARY_OPENAI_API_KEY or OPENAI_API_KEY is not set")
         raise SystemExit(1)
-    client = AsyncOpenAI(api_key=settings.openai_api_key, max_retries=0)
+    client = AsyncOpenAI(api_key=settings.openai_api_key, max_retries=2)
     await wait_for_schema(settings, stop)
     if stop.is_set():
         await client.close()

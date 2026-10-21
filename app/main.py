@@ -58,7 +58,7 @@ def create_app(
                 log.error("OPENAI_API_KEY is not set; answers will fail")
                 answers = UnconfiguredModel(config.openai_model)
             if answers is None:
-                client = AsyncOpenAI(api_key=config.openai_api_key, max_retries=0)
+                client = AsyncOpenAI(api_key=config.openai_api_key, max_retries=2)
                 stack.push_async_callback(client.close)
                 answers = OpenAIModel(
                     client,
