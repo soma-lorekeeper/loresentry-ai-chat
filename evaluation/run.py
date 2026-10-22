@@ -110,21 +110,25 @@ class Seeder:
             )
         for chapter in dataset["chapters"]:
             self.save(ids[chapter["number"]], chapter["title"], chapter["body"])
-        outgoing = defaultdict(list)
+        touching = defaultdict(list)
         for relation in dataset["relations"]:
-            outgoing[relation["from"]].append(
-                {
-                    "target_document_id": ids[relation["to"]],
-                    "description": relation["description"],
-                }
-            )
+            for one, other in (
+                (relation["from"], relation["to"]),
+                (relation["to"], relation["from"]),
+            ):
+                touching[one].append(
+                    {
+                        "target_document_id": ids[other],
+                        "description": relation["description"],
+                    }
+                )
         for setting in dataset["settings"]:
             self.save(
                 ids[setting["key"]],
                 setting["title"],
                 setting["body"],
                 setting["properties"],
-                outgoing.get(setting["key"], []),
+                touching.get(setting["key"], []),
             )
         for memo in dataset["memos"]:
             payload = {"scope": memo["scope"], "body": memo["body"]}
