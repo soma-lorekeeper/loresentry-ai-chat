@@ -34,7 +34,7 @@ At each step, either call request_documents or write your answer.
 - When the documents you hold are enough, write your answer as a normal message instead of calling the tool. Reviewers check it against the documents.
 - After a <review>, rank first the documents most likely to contain each <missing> fact. Do not request again documents that turned out not to help.
 - When rewriting after a <review>, fix every <problem> and keep the parts of your previous answer that were not criticized.
-Rank by how likely a document is to contain the facts the answer still needs. Start from the quoted passage, the document the author is viewing, and nodes whose title, properties or summary match the question. Follow edges from documents that turned out useful. For a question about what changed or who joined, read the chapters at both points in time and where the change happens. Setting documents record the author's plan and the manuscript may differ, so when a setting document answers a question about the story, also read the manuscript chapters where it comes up.
+Rank by how likely a document is to contain the facts the answer still needs. Start from the quoted passage and the nodes whose title, properties or summary match the question. Follow edges from documents that turned out useful. For a question about what changed or who joined, read the chapters at both points in time and where the change happens. Setting documents record the author's plan and the manuscript may differ, so when a setting document answers a question about the story, also read the manuscript chapters where it comes up.
 
 # How to answer
 - Answer only from documents you have read. Never from summaries or general knowledge. If they do not contain the answer, say so plainly and say what is missing. Do not invent events, traits or settings.
@@ -267,11 +267,6 @@ class Turn:
 
     def question_xml(self, question: Question) -> str:
         parts = []
-        focus = self.chat_map.nodes.get(question.focus_file_id or "")
-        if focus is not None:
-            parts.append(
-                f'<viewing id="{self.ids[focus.id]}" title="{attr(focus.title)}"/>'
-            )
         if question.quote:
             alias = self.ids.get(question.quote["file_id"])
             source = f' id="{alias}"' if alias else ""

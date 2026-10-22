@@ -42,7 +42,7 @@ def make(model: FakeModel, **overrides) -> tuple[Agent, Turn, FakeContent]:
         project_id=content.project_id,
         chat_map=content.chat_map(),
         profile=Profile(),
-        question=Question("북쪽 문은 누가 열었어?", "ask", None, None),
+        question=Question("북쪽 문은 누가 열었어?", "ask", None),
         history=[],
         summaries={},
         held_documents=[],

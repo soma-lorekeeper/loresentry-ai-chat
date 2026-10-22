@@ -37,7 +37,6 @@ class Question:
     content: str
     intent: str
     quote: dict[str, Any] | None
-    focus_file_id: str | None
 
 
 @dataclass(frozen=True)

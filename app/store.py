@@ -427,7 +427,6 @@ class Store:
                             content=pending["content_md"],
                             intent=pending["intent"] or "ask",
                             quote=pending["quote"],
-                            focus_file_id=None,
                         ),
                         answer=row["content_md"],
                         citations=row["citations"],
