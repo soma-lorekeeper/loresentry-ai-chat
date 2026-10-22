@@ -143,6 +143,15 @@ def test_the_sufficiency_input_holds_no_text_the_model_wrote():
     assert "모델이 쓴 앞 답" in check and "<answer>\n이번 답\n</answer>" in check
 
 
+def test_the_judges_see_the_project_and_map_the_answer_model_sees():
+    current = turn()
+    overview = current.base_input()[0]["content"][0]["text"]
+
+    assert "<project" in overview and "<map" in overview
+    assert current.sufficiency_input().startswith(overview)
+    assert current.answer_input("이번 답").startswith(overview)
+
+
 def test_reviews_list_missing_facts_and_problems():
     review = Review(
         2, Sufficiency(False, ["첫 각성의 근거"]), AnswerCheck(False, ["인용이 틀렸다"])
