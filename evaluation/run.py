@@ -334,7 +334,6 @@ def run_dataset(args, dataset: dict, seeded: dict, chat: httpx.Client) -> list[d
                 "doc_type": "manuscript",
                 "text": question["quote"]["text"],
             }
-            payload["focus_file_id"] = file_id
         label = labels[question["id"]]
         result = ask(
             chat, seeded["project"], sessions.get(label) if label else None, payload

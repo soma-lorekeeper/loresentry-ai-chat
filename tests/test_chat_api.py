@@ -341,7 +341,7 @@ def test_profile_and_question_reach_the_model(env):
     prompt = env.model.inputs[0]
     assert '<author name="서윤주" locale="ko"/>' in prompt[0]["content"][0]["text"]
     final = prompt[-1]["content"][0]["text"]
-    assert f'<viewing id="{short(CH3)}"' in final and "<task>Explain" in final
+    assert "<viewing" not in final and "<task>Explain" in final
     assert f'<quote id="{short(CH3)}"' in final
     listed = env.client.get(
         f"/projects/{env.project}/chat/sessions", headers=env.headers

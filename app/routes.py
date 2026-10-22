@@ -218,7 +218,6 @@ async def send(
             content=started.question["content_md"],
             intent=started.question["intent"] or "ask",
             quote=started.question["quote"],
-            focus_file_id=str(body.focus_file_id) if body.focus_file_id else None,
         )
         channel = deps.runner.start(started, user, who, question)
     return StreamingResponse(

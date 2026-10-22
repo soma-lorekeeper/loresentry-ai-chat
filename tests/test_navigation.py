@@ -14,7 +14,7 @@ from app.navigation import (
 from app.prompt import Exchange, Profile, Question, select_history
 from tests.support import CH1, CH2, CH3, LENA, NOTE, FakeContent, short
 
-ASK = Question("레나는 언제 처음 나와?", "ask", None, None)
+ASK = Question("레나는 언제 처음 나와?", "ask", None)
 
 
 def turn(**overrides) -> Turn:
@@ -103,7 +103,7 @@ def test_held_documents_come_after_the_map_and_history_after_them():
     assert items[-1]["content"][0]["text"].startswith("<turn>")
 
 
-def test_the_question_carries_focus_quote_and_task():
+def test_the_question_carries_quote_and_task_but_not_the_open_document():
     question = Question(
         "이 부분을 설명해 줘",
         "explain",
@@ -113,11 +113,10 @@ def test_the_question_carries_focus_quote_and_task():
             "doc_type": "manuscript",
             "text": "문을 밀었다",
         },
-        CH2,
     )
     text = turn(question=question).base_input()[-1]["content"][0]["text"]
 
-    assert f'<viewing id="{short(CH2)}" title="2화 · 북쪽 문"/>' in text
+    assert "<viewing" not in text
     assert (
         f'<quote id="{short(CH3)}" title="3화 · 균열의 밤">\n문을 밀었다\n</quote>'
         in text
@@ -129,9 +128,7 @@ def test_the_sufficiency_input_holds_no_text_the_model_wrote():
     content = FakeContent(uuid4(), uuid4())
     current = turn(
         held_documents=[content.docs[CH3]],
-        history=[
-            Exchange(Question("앞 질문", "ask", None, None), "모델이 쓴 앞 답", [])
-        ],
+        history=[Exchange(Question("앞 질문", "ask", None), "모델이 쓴 앞 답", [])],
     )
 
     sufficiency = current.sufficiency_input()
@@ -168,8 +165,6 @@ def test_reviews_list_missing_facts_and_problems():
 
 
 def test_history_keeps_the_newest_turns_within_budget():
-    turns = [
-        Exchange(Question("q" * 10, "ask", None, None), "a" * 10, []) for _ in range(5)
-    ]
+    turns = [Exchange(Question("q" * 10, "ask", None), "a" * 10, []) for _ in range(5)]
 
     assert select_history(turns, 45) == turns[-2:]
