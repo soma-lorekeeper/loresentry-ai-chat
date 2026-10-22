@@ -16,6 +16,7 @@ from app.navigation import Turn
 from app.prompt import Profile, Question, select_history
 from app.settings import Settings
 from app.store import Metrics, Started, Store, message_json
+from app.usage import usage_json
 
 log = logging.getLogger("ai_chat.turns")
 
@@ -161,6 +162,7 @@ class TurnRunner:
         project_id = started.session["project_id"]
         begun = time.monotonic()
         metrics = Metrics(model=self.model.name)
+        spent = Outcome("NOT_ENOUGH", "")
         watcher = asyncio.create_task(
             self.watch(turn_id, asyncio.current_task())  # type: ignore[arg-type]
         )
@@ -177,7 +179,7 @@ class TurnRunner:
                 )
                 channel.put("phase", {"phase": "reading"})
                 result = await self.agent.run(
-                    turn, begun + self.settings.turn_deadline_seconds
+                    turn, begun + self.settings.turn_deadline_seconds, spent
                 )
                 metrics = replace(
                     finished(metrics, result),
@@ -214,28 +216,37 @@ class TurnRunner:
                 {
                     "question": message_json(started.question),
                     "answer": message_json(answer),
+                    "usage": await self.usage(user_id),
                 },
             )
         except (asyncio.CancelledError, Stopped):
             outcome = "stopped"
-            await self.settle_stop(turn_id, metrics, begun)
+            await self.settle_stop(turn_id, with_usage(metrics, spent.usage), begun)
             channel.put("error", CANCELLED_EVENT)
         except ChatFailure as failure:
             outcome = failure.code
-            await self.settle_failure(turn_id, failure.code, metrics, begun)
+            await self.settle_failure(
+                turn_id, failure.code, with_usage(metrics, spent.usage), begun
+            )
             channel.put("error", error_event(failure.code))
         except ModelFailure as failure:
             outcome = failure.code
-            await self.settle_failure(turn_id, failure.code, metrics, begun)
+            await self.settle_failure(
+                turn_id, failure.code, with_usage(metrics, spent.usage), begun
+            )
             channel.put("error", error_event("CHAT_MODEL_UNAVAILABLE"))
         except TimeoutError:
             outcome = "MODEL_DEADLINE"
-            await self.settle_failure(turn_id, "MODEL_DEADLINE", metrics, begun)
+            await self.settle_failure(
+                turn_id, "MODEL_DEADLINE", with_usage(metrics, spent.usage), begun
+            )
             channel.put("error", error_event("CHAT_MODEL_UNAVAILABLE"))
         except Exception:
             outcome = "INTERNAL"
             log.exception("turn failed", extra={"turn_id": str(turn_id)})
-            await self.settle_failure(turn_id, "INTERNAL", metrics, begun)
+            await self.settle_failure(
+                turn_id, "INTERNAL", with_usage(metrics, spent.usage), begun
+            )
             channel.put("error", error_event("INTERNAL_ERROR"))
         finally:
             watcher.cancel()
@@ -331,6 +342,10 @@ class TurnRunner:
                 )
             else:
                 channel.put("delta", {"text": item.text})
+
+    async def usage(self, user_id: UUID) -> dict[str, Any]:
+        used = await self.store.used_today(user_id)
+        return usage_json(used, self.settings.daily_credit_limit)
 
     async def settle_stop(self, turn_id: UUID, metrics: Metrics, begun: float) -> None:
         metrics = replace(metrics, total_ms=int((time.monotonic() - begun) * 1000))

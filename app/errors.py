@@ -24,6 +24,7 @@ CONTRACTS: dict[str, Contract] = {
     "CHAT_NOT_LAST_QUESTION": Contract(409, "Only the last question can be replaced"),
     "CHAT_ANSWER_IN_PROGRESS": Contract(409, "An answer is already being written"),
     "CHAT_CONTEXT_TOO_LARGE": Contract(422, "The project is too large to read at once"),
+    "CHAT_DAILY_LIMIT_REACHED": Contract(429, "Today's chat usage is used up"),
     "CHAT_MODEL_UNAVAILABLE": Contract(
         503, "The model is temporarily unavailable", "RETRY_LATER"
     ),

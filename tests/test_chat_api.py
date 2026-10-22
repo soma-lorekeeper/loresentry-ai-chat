@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from testcontainers.community.postgres import PostgresContainer
 
 from app.main import create_app
+from app.model import ModelFailure
 from app.navigation import AnswerCheck, Sufficiency
 from app.settings import Settings
 from tests.support import (
@@ -111,7 +112,7 @@ class Env:
 @contextmanager
 def make_env(database, model: FakeModel | None = None, **overrides):
     with psycopg.connect(**database, autocommit=True) as conn:
-        conn.execute("truncate chat_sessions cascade")
+        conn.execute("truncate chat_sessions, chat_usage cascade")
     user, project = uuid4(), uuid4()
     content = FakeContent(user, project)
     model = model or FakeModel()
@@ -804,3 +805,66 @@ def test_citing_a_node_that_was_not_read_drops_the_source(database):
     done = payload(events, "done")["answer"]
     assert done["citations"] == []
     assert done["content"] == "답이에요. 끝"
+
+
+def used(env) -> int:
+    response = env.client.get("/chat/usage", headers=env.headers)
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    return response.json()["used"]
+
+
+def test_usage_starts_empty_and_grows_with_each_answer(env):
+    response = env.client.get("/chat/usage", headers=env.headers)
+    body = response.json()
+    assert body["used"] == 0 and body["limit"] == 450_000
+    assert body["resets_at"].endswith(":00:00.000Z")
+
+    session = env.create()
+    status, events = env.send(session["id"])
+
+    assert status == 200
+    after = payload(events, "done")["usage"]
+    assert after["used"] > 0 and after["used"] == used(env)
+    assert env.query("select count(*) from chat_usage") == [(1,)]
+
+
+def test_a_used_up_day_refuses_new_questions(database):
+    with make_env(database, daily_credit_limit=1) as env:
+        session = env.create()
+        assert env.send(session["id"])[0] == 200
+
+        status, body = env.send(session["id"], "하나 더")
+
+        assert status == 429
+        assert body["code"] == "CHAT_DAILY_LIMIT_REACHED"
+        assert env.query("select count(*) from chat_turns") == [(1,)]
+
+
+def test_a_failed_turn_still_counts_what_it_used(env):
+    env.model.steps = [read(CH3), answer()]
+    first = env.model.step
+
+    async def fail_after_reading(*args):
+        if env.model.calls >= 1:
+            raise ModelFailure("MODEL_TIMEOUT")
+        return await first(*args)
+
+    env.model.step = fail_after_reading
+    session = env.create()
+    status, events = env.send(session["id"])
+
+    assert payload(events, "error")["code"] == "CHAT_MODEL_UNAVAILABLE"
+    assert env.query("select status from chat_turns") == [("FAILED",)]
+    assert used(env) > 0
+
+
+def test_usage_survives_project_data_deletion_but_not_account_deletion(env):
+    env.send(env.create()["id"])
+    spent = used(env)
+
+    env.client.delete(f"/projects/{env.project}/chat/data", headers=env.headers)
+    assert used(env) == spent
+
+    env.client.delete("/users/me/data", headers=env.headers)
+    assert used(env) == 0

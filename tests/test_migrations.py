@@ -38,6 +38,7 @@ def test_migrations_create_chat_tables(conn):
         "chat_held_documents",
         "document_summaries",
         "summary_queue",
+        "chat_usage",
     } <= {row[0] for row in rows}
 
 
