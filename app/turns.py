@@ -179,7 +179,10 @@ class TurnRunner:
                 )
                 channel.put("phase", {"phase": "reading"})
                 result = await self.agent.run(
-                    turn, begun + self.settings.turn_deadline_seconds, spent
+                    turn,
+                    begun + self.settings.turn_deadline_seconds,
+                    spent,
+                    lambda activity: channel.put("activity", activity),
                 )
                 metrics = replace(
                     finished(metrics, result),

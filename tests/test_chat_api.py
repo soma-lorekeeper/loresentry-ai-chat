@@ -234,12 +234,39 @@ def test_a_turn_streams_phases_sources_and_text_then_saves(env):
     )
 
     assert status == 200
-    assert names(events)[:3] == ["phase", "phase", "phase"]
+    assert names(events)[:2] == ["phase", "phase"]
     assert [data["phase"] for name, data in events if name == "phase"] == [
         "gathering",
         "reading",
         "writing",
     ]
+    activities = [data for name, data in events if name == "activity"]
+    assert [a["kind"] for a in activities] == [
+        "map",
+        "think",
+        "read",
+        "think",
+        "review",
+        "reviewed",
+    ]
+    assert activities[0]["documents"] == 6
+    assert activities[2] == {
+        "kind": "read",
+        "step": 1,
+        "documents": [
+            {"title": "3화 · 균열의 밤", "doc_type": "manuscript"},
+            {"title": "2화 · 북쪽 문", "doc_type": "manuscript"},
+        ],
+        "skipped": 0,
+    }
+    assert activities[-1] == {
+        "kind": "reviewed",
+        "step": 2,
+        "passed": True,
+        "missing": [],
+        "problems": 0,
+    }
+    assert names(events).index("activity") < names(events).index("citation")
     citations = [data for name, data in events if name == "citation"]
     assert [c["index"] for c in citations] == [1, 2]
     assert citations[0]["citation"] == {
@@ -770,6 +797,13 @@ def test_a_rejected_answer_is_reviewed_and_rewritten(database):
     ]
     assert "레나가 열었어요." not in model.sufficiency_inputs[0]
     assert "레나가 열었어요." in model.check_inputs[0]
+    rejected_review = next(
+        data
+        for name, data in events
+        if name == "activity" and data["kind"] == "reviewed" and not data["passed"]
+    )
+    assert rejected_review["missing"] == ["북쪽 문을 연 사람"]
+    assert rejected_review["problems"] == 1
 
 
 def test_without_a_passing_review_the_answer_says_so(database):

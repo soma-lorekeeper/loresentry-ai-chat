@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -22,6 +23,8 @@ from app.prompt import text_block
 from app.settings import Settings
 
 log = logging.getLogger("ai_chat.agent")
+
+Notify = Callable[[dict[str, Any]], None]
 
 TOOLS: list[dict[str, Any]] = [
     {
@@ -114,13 +117,29 @@ class Agent:
         self.content = content
         self.settings = settings
 
-    async def read(self, turn: Turn, step: int, ranking: list[str]) -> str:
+    async def read(
+        self, turn: Turn, step: int, ranking: list[str], notify: Notify
+    ) -> str:
         picked = pack(
             ranking,
             turn.by_short,
             {node.id: node.chars for node in turn.chat_map.ordered},
             turn.held_ids,
             self.settings.step_max_chars,
+        )
+        notify(
+            {
+                "kind": "read",
+                "step": step,
+                "documents": [
+                    {
+                        "title": turn.chat_map.nodes[target].title,
+                        "doc_type": turn.chat_map.nodes[target].doc_type,
+                    }
+                    for target in picked.targets
+                ],
+                "skipped": len(picked.skipped),
+            }
         )
         documents = [t for t in picked.targets if turn.kind_of(t) == "DOCUMENT"]
         memos = [t for t in picked.targets if turn.kind_of(t) == "MEMO"]
@@ -158,17 +177,24 @@ class Agent:
         return sufficiency, check, usage, len(checks)
 
     async def run(
-        self, turn: Turn, deadline: float, outcome: Outcome | None = None
+        self,
+        turn: Turn,
+        deadline: float,
+        outcome: Outcome | None = None,
+        notify: Notify | None = None,
     ) -> Outcome:
         items = turn.base_input()
         cache_key = str(turn.project_id)
         outcome = outcome or Outcome("NOT_ENOUGH", "")
+        notify = notify or (lambda _: None)
+        notify({"kind": "map", "documents": len(turn.chat_map.ordered)})
         sufficiency: Sufficiency | None = None
         idle = 0
         for step in range(1, self.settings.max_steps + 1):
             if deadline - time.monotonic() < self.settings.answer_reserve_seconds:
                 break
             force = step == self.settings.max_steps or idle >= 2
+            notify({"kind": "think", "step": step, "must_answer": force})
             out = await self.model.step(
                 NAVIGATE_INSTRUCTIONS,
                 items,
@@ -181,7 +207,7 @@ class Agent:
             if out.call is not None:
                 items += out.items
                 before = len(turn.read)
-                result = await self.read(turn, step, out.call.ranking)
+                result = await self.read(turn, step, out.call.ranking, notify)
                 idle = idle + 1 if len(turn.read) == before else 0
                 items.append(
                     {
@@ -194,6 +220,7 @@ class Agent:
             items += out.items
             if not out.text.strip():
                 raise ModelFailure("MODEL_EMPTY_RESPONSE")
+            notify({"kind": "review", "step": step})
             try:
                 sufficiency, check, usage, calls = await self.judge(
                     turn, out.text, sufficiency
@@ -204,13 +231,24 @@ class Agent:
                 return outcome
             outcome.judge_calls += calls
             outcome.usage = add(outcome.usage, usage)
-            if sufficiency.sufficient and check.answer_ok:
+            passed = sufficiency.sufficient and check.answer_ok
+            notify(
+                {
+                    "kind": "reviewed",
+                    "step": step,
+                    "passed": passed,
+                    "missing": [] if sufficiency.sufficient else sufficiency.missing,
+                    "problems": 0 if check.answer_ok else len(check.problems),
+                }
+            )
+            if passed:
                 outcome.level = "SUPPORTED"
                 outcome.text = out.text
                 return outcome
             review = Review(len(outcome.reviews) + 1, sufficiency, check)
             outcome.reviews.append(review)
             items.append({"role": "user", "content": [text_block(review_xml(review))]})
+        notify({"kind": "final"})
         final = await self.model.step(
             NAVIGATE_INSTRUCTIONS,
             items
