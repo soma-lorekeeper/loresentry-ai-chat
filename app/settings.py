@@ -33,7 +33,6 @@ class Settings:
     held_max_chars: int = 200_000
     history_max_chars: int = 40_000
     answer_reserve_seconds: float = 75.0
-    navigation_reasoning_effort: str = "low"
     judge_model: str = ""
     judge_reasoning_effort: str = "low"
     judge_max_output_tokens: int = 2000
@@ -86,9 +85,6 @@ class Settings:
             history_max_chars=_int("CHAT_HISTORY_MAX_CHARS", cls.history_max_chars),
             answer_reserve_seconds=_float(
                 "CHAT_ANSWER_RESERVE_SECONDS", cls.answer_reserve_seconds
-            ),
-            navigation_reasoning_effort=os.getenv(
-                "CHAT_NAVIGATION_REASONING_EFFORT", cls.navigation_reasoning_effort
             ),
             judge_model=os.getenv("CHAT_JUDGE_MODEL", cls.judge_model),
             judge_reasoning_effort=os.getenv(

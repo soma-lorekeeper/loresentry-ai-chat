@@ -51,6 +51,7 @@ Rank by how likely a document is to contain the facts the answer still needs. St
 {SOURCES}"""
 
 SUFFICIENCY_INSTRUCTIONS = """You decide whether a set of documents from a web novel project is enough to answer the author's question. You do not answer it.
+<project> and <map> describe the project as the author set it up: titles, chapter numbers and arcs, the author's <property> notes and the <edge> links between documents. They count like setting documents. A <summary> was written by a model to help choose what to read; it is never evidence. <documents> are the documents read in full.
 The documents are enough if a definite, plausible answer can be built from them alone, without outside knowledge and without treating the author's memos as story facts. The answer does not have to be right, only supported by the documents.
 - Every step of a multi-step answer must appear in the documents.
 - If the question is ambiguous, the documents must make clear which reading it has.
@@ -71,7 +72,8 @@ Question: 민호는 검을 쓸 줄 알아?
 Only a character setting document was read, saying "민호는 검술의 달인이다." -> {"sufficient": false, "missing": ["원고에서 민호가 검을 쓰는 장면"]}"""
 
 ANSWER_CHECK_INSTRUCTIONS = """You review an answer to an author's question about their web novel project against the documents it was based on. You do not rewrite it.
-The answer is ok if it addresses the question that was asked; every claim is supported by the documents; each <cite id="..."> points to a document that actually contains what it supports; it does not contradict the documents or present setting documents or memos as events of the manuscript; and it says so where the documents are ambiguous or silent. An answer that honestly says the documents do not contain something is ok when that is true.
+<project> and <map> describe the project as the author set it up: titles, chapter numbers and arcs, the author's <property> notes and the <edge> links between documents. The answer may rely on them like setting documents. A <summary> was written by a model to help choose what to read; it is never evidence, so a claim found only in a summary is unsupported. <documents> are the documents read in full.
+The answer is ok if it addresses the question that was asked; every claim is supported by the documents or the author's entries in <project> and <map>; each <cite id="..."> points to a document that actually contains what it supports; it does not contradict the documents or present setting documents or memos as events of the manuscript; and it says so where the documents are ambiguous or silent. An answer that honestly says the documents do not contain something is ok when that is true.
 Do not reject an answer because a quote attribute is not word for word; the server checks quotes against the documents itself. Judge the claims, not the wording.
 List each failure in `problems`, briefly and specifically, in the language of the question.
 The conversation is only for understanding what the question refers to. Earlier answers are not evidence; only the documents are.
@@ -283,15 +285,17 @@ class Turn:
         parts.append(f"<question>\n{question.content}\n</question>")
         return "\n".join(parts)
 
+    def overview(self) -> str:
+        return (
+            project_xml(self.chat_map, self.profile)
+            + "\n"
+            + map_xml(self.chat_map, self.ids, self.summaries)
+        )
+
     def base_input(self) -> list[dict[str, Any]]:
         held = self.held_xml(self.held_documents, self.held_memos)
         context = [
-            text_block(
-                project_xml(self.chat_map, self.profile)
-                + "\n"
-                + map_xml(self.chat_map, self.ids, self.summaries),
-                breakpoint=True,
-            ),
+            text_block(self.overview(), breakpoint=True),
             text_block(f"<held>\n{held}\n</held>" if held else "<held/>", True),
         ]
         self.context_chars = sum(len(block["text"]) for block in context)
@@ -328,6 +332,7 @@ class Turn:
             for exchange in self.history
         )
         return (
+            f"{self.overview()}\n"
             f"<earlier_questions>\n{earlier}\n</earlier_questions>\n"
             f"<documents>\n{self.documents_xml()}\n</documents>\n"
             f"{self.judged_question()}"
@@ -340,6 +345,7 @@ class Turn:
             for exchange in self.history
         )
         return (
+            f"{self.overview()}\n"
             f"<conversation>\n{conversation}\n</conversation>\n"
             f"<documents>\n{self.documents_xml()}\n</documents>\n"
             f"{self.judged_question()}\n"

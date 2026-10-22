@@ -36,7 +36,7 @@ def test_pack_reports_held_unknown_and_repeated_ids():
 
 def make(model: FakeModel, **overrides) -> tuple[Agent, Turn, FakeContent]:
     content = FakeContent(uuid4(), uuid4())
-    settings = Settings(**{"navigation_reasoning_effort": "medium", **overrides})
+    settings = Settings(**overrides)
     current = Turn(
         user_id=content.owner,
         project_id=content.project_id,
@@ -135,17 +135,3 @@ def test_a_sufficient_answer_that_keeps_failing_review_is_rewritten_not_disclaim
     assert outcome.level == "SUPPORTED"
     assert "Fix every problem below" in final and "장소가 틀렸다" in final
     assert "does not settle" not in final
-
-
-def test_navigation_runs_at_low_effort_and_the_answer_is_written_again():
-    model = FakeModel([read(CH3), answer("초안")])
-    agent, current, _ = make(model, navigation_reasoning_effort="low")
-    outcome = run(agent, current)
-
-    assert model.choices == ["auto", "auto", "none"]
-    assert model.efforts == ["low", "low", None]
-    assert outcome.text == "초안"
-    assert outcome.steps == 3
-    assert not any(item.get("role") == "assistant" for item in model.inputs[2][1:]), (
-        "the low-effort draft is not shown to the answer call"
-    )
