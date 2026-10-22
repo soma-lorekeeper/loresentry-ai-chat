@@ -113,9 +113,6 @@ class Agent:
         self.model = model
         self.content = content
         self.settings = settings
-        self.redraft = (
-            settings.navigation_reasoning_effort != settings.openai_reasoning_effort
-        )
 
     async def read(self, turn: Turn, step: int, ranking: list[str]) -> str:
         picked = pack(
@@ -170,19 +167,16 @@ class Agent:
             if deadline - time.monotonic() < self.settings.answer_reserve_seconds:
                 break
             force = step == self.settings.max_steps or idle >= 2
-            out = None
-            if not force:
-                out = await self.model.step(
-                    NAVIGATE_INSTRUCTIONS,
-                    items,
-                    TOOLS,
-                    "auto",
-                    cache_key,
-                    self.settings.navigation_reasoning_effort,
-                )
-                outcome.steps += 1
-                outcome.usage = add(outcome.usage, out.usage)
-            if out is not None and out.call is not None:
+            out = await self.model.step(
+                NAVIGATE_INSTRUCTIONS,
+                items,
+                TOOLS,
+                "none" if force else "auto",
+                cache_key,
+            )
+            outcome.steps += 1
+            outcome.usage = add(outcome.usage, out.usage)
+            if out.call is not None:
                 items += out.items
                 before = len(turn.read)
                 result = await self.read(turn, step, out.call.ranking)
@@ -195,12 +189,6 @@ class Agent:
                     }
                 )
                 continue
-            if out is None or self.redraft:
-                out = await self.model.step(
-                    NAVIGATE_INSTRUCTIONS, items, TOOLS, "none", cache_key
-                )
-                outcome.steps += 1
-                outcome.usage = add(outcome.usage, out.usage)
             items += out.items
             if not out.text.strip():
                 raise ModelFailure("MODEL_EMPTY_RESPONSE")

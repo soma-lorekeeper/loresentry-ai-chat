@@ -73,7 +73,6 @@ class AnswerModel(Protocol):
         tools: list[dict[str, Any]],
         tool_choice: str,
         cache_key: str,
-        reasoning_effort: str | None = None,
     ) -> StepResult: ...
 
     async def sufficiency(
@@ -207,7 +206,6 @@ class OpenAIModel:
         tools: list[dict[str, Any]],
         tool_choice: str,
         cache_key: str,
-        reasoning_effort: str | None = None,
     ) -> StepResult:
         response = await create(
             self.client,
@@ -221,9 +219,7 @@ class OpenAIModel:
             max_output_tokens=self.max_output_tokens,
             prompt_cache_key=cache_key,
             timeout=self.timeout_seconds,
-            **effort(
-                self.reasoning_effort if reasoning_effort is None else reasoning_effort
-            ),
+            **effort(self.reasoning_effort),
         )
         call = None
         for item in response.output:

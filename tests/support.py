@@ -197,8 +197,6 @@ class FakeModel:
         self.fail_with: str | None = None
         self.usage = Usage(1200, 800, 0, 90, 30)
         self.calls = 0
-        self.efforts: list[str | None] = []
-        self.drafted: str | None = None
 
     async def step(
         self,
@@ -207,11 +205,9 @@ class FakeModel:
         tools: list[dict[str, Any]],
         tool_choice: str,
         cache_key: str,
-        reasoning_effort: str | None = None,
     ) -> StepResult:
         self.inputs.append(json.loads(json.dumps(items)))
         self.choices.append(tool_choice)
-        self.efforts.append(reasoning_effort)
         if self.gate is not None:
             while not self.gate.is_set():
                 await asyncio.sleep(0.01)
@@ -219,14 +215,9 @@ class FakeModel:
             code, self.fail_with = self.fail_with, None
             raise ModelFailure(code)
         self.calls += 1
-        if tool_choice == "none" and self.drafted is not None:
-            action, self.drafted = ("answer", self.drafted), None
-        else:
-            action = self.steps.pop(0) if self.steps else answer()
+        action = self.steps.pop(0) if self.steps else answer()
         if action[0] == "read" and tool_choice == "none":
             action = answer()
-        if action[0] == "answer" and tool_choice == "auto":
-            self.drafted = action[1]
         if action[0] == "read":
             call = ToolCall(f"call_{self.calls}", "request_documents", action[1])
             item = {
