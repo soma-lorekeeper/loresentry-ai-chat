@@ -39,6 +39,7 @@ class Settings:
     heartbeat_seconds: float = 15.0
     cancel_poll_seconds: float = 2.0
     stale_turn_seconds: int = 300
+    daily_credit_limit: int = 3_500_000
     shutdown_grace_seconds: float = 15.0
 
     @property
@@ -98,6 +99,7 @@ class Settings:
                 "CHAT_CANCEL_POLL_SECONDS", cls.cancel_poll_seconds
             ),
             stale_turn_seconds=_int("CHAT_STALE_TURN_SECONDS", cls.stale_turn_seconds),
+            daily_credit_limit=_int("CHAT_DAILY_CREDIT_LIMIT", cls.daily_credit_limit),
             shutdown_grace_seconds=_float(
                 "CHAT_SHUTDOWN_GRACE_SECONDS", cls.shutdown_grace_seconds
             ),

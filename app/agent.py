@@ -157,10 +157,12 @@ class Agent:
         turn.read_since_check = False
         return sufficiency, check, usage, len(checks)
 
-    async def run(self, turn: Turn, deadline: float) -> Outcome:
+    async def run(
+        self, turn: Turn, deadline: float, outcome: Outcome | None = None
+    ) -> Outcome:
         items = turn.base_input()
         cache_key = str(turn.project_id)
-        outcome = Outcome("NOT_ENOUGH", "")
+        outcome = outcome or Outcome("NOT_ENOUGH", "")
         sufficiency: Sufficiency | None = None
         idle = 0
         for step in range(1, self.settings.max_steps + 1):

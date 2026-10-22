@@ -105,6 +105,11 @@ async def availability(project_id: str, user: User, deps: Deps) -> JSONResponse:
     return no_store({"status": "available", "size": size, "limit": size})
 
 
+@router.get("/chat/usage")
+async def usage(user: User, deps: Deps) -> JSONResponse:
+    return no_store(await deps.runner.usage(user))
+
+
 @router.get("/projects/{project_id}/chat/sessions")
 async def list_sessions(project_id: str, user: User, deps: Deps) -> JSONResponse:
     project = uuid_or(project_id, "PROJECT_NOT_FOUND")
@@ -186,6 +191,9 @@ async def send(
         raise ChatFailure("CHAT_QUESTION_REQUIRED")
     row = await deps.store.session(user, session)
     await deps.content.size(user, row["project_id"])
+    limit = deps.settings.daily_credit_limit
+    if limit > 0 and await deps.store.used_today(user) >= limit:
+        raise ChatFailure("CHAT_DAILY_LIMIT_REACHED")
     started = await deps.store.begin_turn(
         user,
         session,
@@ -197,7 +205,14 @@ async def send(
     )
     if isinstance(started, Replayed):
         channel = Channel()
-        channel.put("done", {"question": started.question, "answer": started.answer})
+        channel.put(
+            "done",
+            {
+                "question": started.question,
+                "answer": started.answer,
+                "usage": await deps.runner.usage(user),
+            },
+        )
     else:
         question = Question(
             content=started.question["content_md"],

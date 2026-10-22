@@ -13,6 +13,7 @@ from app.errors import ChatFailure
 from app.navigation import Summary
 from app.prompt import Exchange, Question
 from app.text import chat_preview, chat_title, search_text, snippet
+from app.usage import credits, today
 
 SESSION_COLUMNS = "id, project_id, title, updated_at, preview"
 MESSAGE_COLUMNS = (
@@ -169,6 +170,7 @@ class Store:
             await conn.execute(
                 "delete from chat_sessions where user_id = %s", (user_id,)
             )
+            await conn.execute("delete from chat_usage where user_id = %s", (user_id,))
         return turns
 
     async def delete_project_data(self, user_id: UUID, project_id: UUID) -> list[UUID]:
@@ -249,13 +251,21 @@ class Store:
             if session is None:
                 raise ChatFailure("CHAT_SESSION_NOT_FOUND")
             await conn.execute(
-                "update chat_turns set status = 'FAILED', failure_code = 'STALE', "
-                "finished_at = now() where session_id = %s and status = 'GENERATING' "
-                "and created_at <= now() - make_interval(secs => %s)",
-                (session_id, self.stale_seconds),
+                "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                (str(user_id),),
+            )
+            await conn.execute(
+                "update chat_turns t set status = 'FAILED', failure_code = 'STALE', "
+                "finished_at = now() from chat_sessions s "
+                "where t.session_id = s.id and s.user_id = %s "
+                "and t.status = 'GENERATING' "
+                "and t.created_at <= now() - make_interval(secs => %s)",
+                (user_id, self.stale_seconds),
             )
             if await self._busy(conn, session_id):
                 raise ChatFailure("CHAT_ANSWER_IN_PROGRESS")
+            if await self._user_busy(conn, user_id):
+                raise ChatFailure("CHAT_ANOTHER_ANSWER_IN_PROGRESS")
 
             existing = await (
                 await conn.execute(
@@ -334,6 +344,17 @@ class Store:
                 "select exists (select 1 from chat_turns where session_id = %s "
                 "and status = 'GENERATING') as busy",
                 (session_id,),
+            )
+        ).fetchone()
+        return row["busy"]
+
+    async def _user_busy(self, conn: AsyncConnection, user_id: UUID) -> bool:
+        row = await (
+            await conn.execute(
+                "select exists (select 1 from chat_turns t "
+                "join chat_sessions s on s.id = t.session_id "
+                "where s.user_id = %s and t.status = 'GENERATING') as busy",
+                (user_id,),
             )
         ).fetchone()
         return row["busy"]
@@ -565,6 +586,31 @@ class Store:
                 turn_id,
             ),
         )
+        spent = credits(
+            metrics.input_tokens,
+            metrics.cached_tokens,
+            metrics.output_tokens,
+            metrics.cache_write_tokens,
+        )
+        if spent:
+            await conn.execute(
+                "insert into chat_usage (turn_id, user_id, usage_date, credits) "
+                "select t.id, s.user_id, %s, %s from chat_turns t "
+                "join chat_sessions s on s.id = t.session_id where t.id = %s "
+                "on conflict (turn_id) do nothing",
+                (today(), spent, turn_id),
+            )
+
+    async def used_today(self, user_id: UUID) -> int:
+        async with self.pool.connection() as conn:
+            row = await (
+                await conn.execute(
+                    "select coalesce(sum(credits), 0) as used from chat_usage "
+                    "where user_id = %s and usage_date = %s",
+                    (user_id, today()),
+                )
+            ).fetchone()
+        return int(row["used"])
 
     async def cancel(self, user_id: UUID, session_id: UUID) -> list[UUID]:
         async with self.pool.connection() as conn:
