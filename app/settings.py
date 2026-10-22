@@ -39,7 +39,7 @@ class Settings:
     heartbeat_seconds: float = 15.0
     cancel_poll_seconds: float = 2.0
     stale_turn_seconds: int = 300
-    daily_credit_limit: int = 450_000
+    daily_credit_limit: int = 3_500_000
     shutdown_grace_seconds: float = 15.0
 
     @property

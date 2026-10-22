@@ -3,10 +3,11 @@ from datetime import UTC, datetime
 from app.usage import credits, resets_at, today
 
 
-def test_cached_input_is_cheap_and_output_is_dear():
+def test_credits_follow_the_price_of_each_kind_of_token():
     assert credits(1000, 0, 0) == 1000
     assert credits(1000, 1000, 0) == 100
-    assert credits(0, 0, 100) == 800
+    assert credits(1000, 0, 0, 1000) == 1250
+    assert credits(0, 0, 100) == 500
     assert credits(None, None, None) == 0
 
 

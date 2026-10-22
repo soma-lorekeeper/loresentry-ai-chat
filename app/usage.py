@@ -3,16 +3,21 @@ from typing import Any
 
 KST = timezone(timedelta(hours=9))
 CACHED_WEIGHT = 0.1
-OUTPUT_WEIGHT = 8
+CACHE_WRITE_EXTRA = 0.25
+OUTPUT_WEIGHT = 5
 
 
 def credits(
-    input_tokens: int | None, cached_tokens: int | None, output_tokens: int | None
+    input_tokens: int | None,
+    cached_tokens: int | None,
+    output_tokens: int | None,
+    cache_write_tokens: int | None = None,
 ) -> int:
     fresh = (input_tokens or 0) - (cached_tokens or 0)
     return round(
         fresh
         + (cached_tokens or 0) * CACHED_WEIGHT
+        + (cache_write_tokens or 0) * CACHE_WRITE_EXTRA
         + (output_tokens or 0) * OUTPUT_WEIGHT
     )
 

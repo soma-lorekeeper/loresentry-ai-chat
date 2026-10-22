@@ -251,13 +251,21 @@ class Store:
             if session is None:
                 raise ChatFailure("CHAT_SESSION_NOT_FOUND")
             await conn.execute(
-                "update chat_turns set status = 'FAILED', failure_code = 'STALE', "
-                "finished_at = now() where session_id = %s and status = 'GENERATING' "
-                "and created_at <= now() - make_interval(secs => %s)",
-                (session_id, self.stale_seconds),
+                "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                (str(user_id),),
+            )
+            await conn.execute(
+                "update chat_turns t set status = 'FAILED', failure_code = 'STALE', "
+                "finished_at = now() from chat_sessions s "
+                "where t.session_id = s.id and s.user_id = %s "
+                "and t.status = 'GENERATING' "
+                "and t.created_at <= now() - make_interval(secs => %s)",
+                (user_id, self.stale_seconds),
             )
             if await self._busy(conn, session_id):
                 raise ChatFailure("CHAT_ANSWER_IN_PROGRESS")
+            if await self._user_busy(conn, user_id):
+                raise ChatFailure("CHAT_ANOTHER_ANSWER_IN_PROGRESS")
 
             existing = await (
                 await conn.execute(
@@ -336,6 +344,17 @@ class Store:
                 "select exists (select 1 from chat_turns where session_id = %s "
                 "and status = 'GENERATING') as busy",
                 (session_id,),
+            )
+        ).fetchone()
+        return row["busy"]
+
+    async def _user_busy(self, conn: AsyncConnection, user_id: UUID) -> bool:
+        row = await (
+            await conn.execute(
+                "select exists (select 1 from chat_turns t "
+                "join chat_sessions s on s.id = t.session_id "
+                "where s.user_id = %s and t.status = 'GENERATING') as busy",
+                (user_id,),
             )
         ).fetchone()
         return row["busy"]
@@ -568,7 +587,10 @@ class Store:
             ),
         )
         spent = credits(
-            metrics.input_tokens, metrics.cached_tokens, metrics.output_tokens
+            metrics.input_tokens,
+            metrics.cached_tokens,
+            metrics.output_tokens,
+            metrics.cache_write_tokens,
         )
         if spent:
             await conn.execute(

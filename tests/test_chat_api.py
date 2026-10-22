@@ -494,23 +494,20 @@ def test_one_answer_at_a_time_per_session(env):
     assert names(result["value"][1])[-1] == "done"
 
 
-def test_different_sessions_answer_at_the_same_time(env):
+def test_one_answer_at_a_time_per_author_across_sessions(env):
     first, second = env.create(), env.create()
     env.model.gate = threading.Event()
     one, first_result = start_in_background(env, first["id"])
-    two, second_result = start_in_background(env, second["id"])
-    wait_for(
-        lambda: (
-            env.messages(first["id"])["generating"]
-            and env.messages(second["id"])["generating"]
-        )
-    )
+    wait_for(lambda: env.messages(first["id"])["generating"])
+
+    status, body = env.send(second["id"])
+
+    assert status == 409
+    assert body["code"] == "CHAT_ANOTHER_ANSWER_IN_PROGRESS"
     env.model.gate.set()
     one.join(5)
-    two.join(5)
-
     assert names(first_result["value"][1])[-1] == "done"
-    assert names(second_result["value"][1])[-1] == "done"
+    assert env.send(second["id"])[0] == 200
 
 
 def test_stop_during_reading_saves_nothing(env):
@@ -817,7 +814,7 @@ def used(env) -> int:
 def test_usage_starts_empty_and_grows_with_each_answer(env):
     response = env.client.get("/chat/usage", headers=env.headers)
     body = response.json()
-    assert body["used"] == 0 and body["limit"] == 450_000
+    assert body["used"] == 0 and body["limit"] == 3_500_000
     assert body["resets_at"].endswith(":00:00.000Z")
 
     session = env.create()
