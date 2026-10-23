@@ -2,13 +2,18 @@ import json
 from dataclasses import dataclass
 
 TYPES = {"FileChanged", "ProjectDeleted"}
-GONE = {"TRASHED", "DELETED"}
+STATES = {"ACTIVE", "TRASHED"}
+
+
+class Malformed(ValueError):
+    """A FileChanged that does not follow content's current contract."""
 
 
 @dataclass(frozen=True)
 class Upsert:
     document_id: str
     project_id: str
+    sequence: int
     revision_no: int
     folder_code: str
     title: str
@@ -18,6 +23,7 @@ class Upsert:
 @dataclass(frozen=True)
 class Remove:
     document_id: str
+    sequence: int
 
 
 @dataclass(frozen=True)
@@ -35,6 +41,15 @@ def header_map(headers: list[tuple[str, bytes | None]] | None) -> dict[str, str]
     }
 
 
+def sequence_of(headers: dict[str, str]) -> int:
+    # content's outbox seq grows in commit order for each document. revision_no
+    # cannot order events: a rename or a move leaves it as it was.
+    raw = headers.get("ce_sequence", "")
+    if not (raw.isascii() and raw.isdigit()):
+        raise Malformed("ce_sequence")
+    return int(raw)
+
+
 def parse(headers: dict[str, str], value: bytes | None) -> Change | None:
     kind = headers.get("ce_type")
     if kind not in TYPES or value is None:
@@ -42,14 +57,26 @@ def parse(headers: dict[str, str], value: bytes | None) -> Change | None:
     payload = json.loads(value)
     if kind == "ProjectDeleted":
         return RemoveProject(str(payload["project_id"]))
+    sequence = sequence_of(headers)
     file_id = str(payload["file_id"])
+    if payload.get("change_type") == "DELETED":
+        return Remove(file_id, sequence)
     document = payload.get("file")
-    if payload.get("change_type") in GONE or document is None:
-        return Remove(file_id)
+    if (
+        not isinstance(document, dict)
+        or document.get("state") not in STATES
+        or not isinstance(document.get("revision_no"), int)
+    ):
+        raise Malformed("file")
+    # A trashed document keeps its whole snapshot and can still get an UPDATED,
+    # so its state, not change_type, says whether it is gone.
+    if document["state"] == "TRASHED":
+        return Remove(file_id, sequence)
     return Upsert(
         document_id=file_id,
         project_id=str(payload["project_id"]),
-        revision_no=int(payload["revision_no"]),
+        sequence=sequence,
+        revision_no=document["revision_no"],
         folder_code=document["folder_code"],
         title=document["title"] or "",
         body=document["body_text"] or "",

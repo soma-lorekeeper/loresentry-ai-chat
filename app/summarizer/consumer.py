@@ -29,18 +29,38 @@ def consumer_config(settings: SummarizerSettings) -> dict:
     }
 
 
-def changes_of(messages) -> list[Change]:
+def changes_of(messages) -> tuple[list[Change], int]:
     changes: list[Change] = []
+    skipped = 0
     for message in messages:
         error = message.error()
         if error is not None:
             if error.code() == KafkaError._PARTITION_EOF:
                 continue
             raise KafkaException(error)
-        change = parse(header_map(message.headers()), message.value())
+        headers: dict[str, str] = {}
+        try:
+            headers = header_map(message.headers())
+            change = parse(headers, message.value())
+        except (ValueError, KeyError, TypeError) as reason:
+            # A summary is a cache the document's next event rebuilds. One event off
+            # the contract is logged without its text and passed over, instead of
+            # stopping every project's summaries on the same offset.
+            skipped += 1
+            log.error(
+                "event skipped",
+                extra={
+                    "topic": message.topic(),
+                    "partition": message.partition(),
+                    "offset": message.offset(),
+                    "ce_type": headers.get("ce_type"),
+                    "reason": repr(reason),
+                },
+            )
+            continue
         if change is not None:
             changes.append(change)
-    return changes
+    return changes, skipped
 
 
 def consume(settings: SummarizerSettings, stop: threading.Event) -> None:
@@ -52,7 +72,7 @@ def consume(settings: SummarizerSettings, stop: threading.Event) -> None:
                 messages = consumer.consume(num_messages=BATCH, timeout=1.0)
                 if not messages:
                     continue
-                changes = changes_of(messages)
+                changes, skipped = changes_of(messages)
                 if changes:
                     apply(conn, changes, settings.prompt_version)
                 for message in messages:
@@ -61,7 +81,11 @@ def consume(settings: SummarizerSettings, stop: threading.Event) -> None:
                 consumer.commit(asynchronous=False)
                 log.info(
                     "changes applied",
-                    extra={"messages": len(messages), "changes": len(changes)},
+                    extra={
+                        "messages": len(messages),
+                        "changes": len(changes),
+                        "skipped": skipped,
+                    },
                 )
     finally:
         consumer.close()

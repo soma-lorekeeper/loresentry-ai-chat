@@ -107,7 +107,16 @@ question. Errors are `{code, message, next_action}`.
 ### Summarizer
 
 Consumes `FileChanged`/`ProjectDeleted` (group `ai-chat-summarizer`) into
-`summary_queue`, newest revision only. Every `SUMMARY_TICK_SECONDS` it takes up
+`summary_queue`, newest event only. Events of one document are ordered by the
+`ce_sequence` header (`event_seq`); `file.revision_no` is only kept to show which
+revision a summary was written from, since a rename or a move does not raise it.
+A document is removed when the event is `DELETED` or its `file.state` is
+`TRASHED`, whatever the `change_type`. An event that does not follow content's
+current contract (for example without `file.state` or `ce_sequence`) is logged
+without its text and skipped. A removal that arrives after a newer change does
+not undo it, but a change that arrives after a newer removal is summarized again
+until the next event; a trashed document is not on the chat map, so it is never
+shown. Every `SUMMARY_TICK_SECONDS` it takes up
 to `SUMMARY_MAX_PER_MINUTE` documents untouched for `SUMMARY_IDLE_MINUTES`,
 compares sentence fingerprints with the last summary and summarizes again only
 when at least `min(SUMMARY_MIN_CHANGE_CHARS, length × SUMMARY_MIN_CHANGE_RATIO)`
@@ -150,8 +159,8 @@ keeps the pod from becoming ready.
 | `chat_messages` | Finished questions (intent, quote, `client_message_id`) and answers (citations); streaming chunks are not stored |
 | `chat_turns` | One row per attempt: status, failure code, model, tokens, timings, steps, reviews and grounding. At most one `GENERATING` per session |
 | `chat_held_documents` | Documents and memos a session has read, in reading order |
-| `document_summaries` | One summary per document with its revision and sentence fingerprint |
-| `summary_queue` | Latest change per document waiting to be summarized |
+| `document_summaries` | One summary per document with its revision, sentence fingerprint and the `event_seq` it stands for |
+| `summary_queue` | Latest change per document (by `event_seq`) waiting to be summarized |
 
 Project and user ids are plain values; there are no cross-database foreign keys.
 Running uvicorn directly, as below, skips the migration step.
