@@ -26,7 +26,10 @@ async def wait_for_schema(settings: SummarizerSettings, stop: asyncio.Event) -> 
             async with await psycopg.AsyncConnection.connect(
                 settings.base.conninfo
             ) as conn:
-                await conn.execute("select 1 from summary_queue limit 1")
+                # This pod does not run flyway; the API pod does. Wait until the
+                # columns this code writes exist, not just the tables.
+                await conn.execute("select event_seq from summary_queue limit 0")
+                await conn.execute("select event_seq from document_summaries limit 0")
                 return
         except psycopg.Error as error:
             log.warning("waiting for schema", extra={"error": type(error).__name__})

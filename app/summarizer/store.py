@@ -14,6 +14,7 @@ BACKOFF_SECONDS = (60, 300, 1800)
 class Job:
     document_id: str
     project_id: str
+    sequence: int
     revision_no: int
     folder_code: str
     title: str
@@ -28,28 +29,34 @@ class Previous:
     prompt_version: str
 
 
+# event_seq is the ce_sequence of the event a row came from and orders everything
+# here. revision_no is only recorded, so the map can say which revision a summary
+# was written from.
 def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
     with conn.transaction():
         for change in changes:
             if isinstance(change, Upsert):
                 conn.execute(
-                    "insert into summary_queue (document_id, project_id, revision_no, "
-                    "folder_code, title, body, changed_at, attempts, next_attempt_at) "
-                    "select %(id)s, %(project)s, %(revision)s, %(folder)s, %(title)s, "
-                    "%(body)s, now(), 0, now() "
+                    "insert into summary_queue (document_id, project_id, event_seq, "
+                    "revision_no, folder_code, title, body, changed_at, attempts, "
+                    "next_attempt_at) "
+                    "select %(id)s, %(project)s, %(seq)s, %(revision)s, %(folder)s, "
+                    "%(title)s, %(body)s, now(), 0, now() "
                     "where not exists (select 1 from document_summaries s "
-                    "where s.document_id = %(id)s and s.revision_no >= %(revision)s "
+                    "where s.document_id = %(id)s and s.event_seq >= %(seq)s "
                     "and s.prompt_version = %(version)s) "
                     "on conflict (document_id) do update set "
                     "project_id = excluded.project_id, "
+                    "event_seq = excluded.event_seq, "
                     "revision_no = excluded.revision_no, "
                     "folder_code = excluded.folder_code, title = excluded.title, "
                     "body = excluded.body, changed_at = excluded.changed_at, "
                     "attempts = 0, next_attempt_at = excluded.next_attempt_at "
-                    "where summary_queue.revision_no < excluded.revision_no",
+                    "where summary_queue.event_seq < excluded.event_seq",
                     {
                         "id": change.document_id,
                         "project": change.project_id,
+                        "seq": change.sequence,
                         "revision": change.revision_no,
                         "folder": change.folder_code,
                         "title": change.title,
@@ -58,10 +65,12 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
                     },
                 )
             elif isinstance(change, Remove):
+                # A removal that arrives late must not take away a newer change.
                 for table in ("summary_queue", "document_summaries"):
                     conn.execute(
-                        f"delete from {table} where document_id = %s",
-                        (change.document_id,),
+                        f"delete from {table} where document_id = %s "
+                        "and event_seq < %s",
+                        (change.document_id, change.sequence),
                     )
             elif isinstance(change, RemoveProject):
                 for table in ("summary_queue", "document_summaries"):
@@ -85,8 +94,8 @@ class SummaryStore:
                     "where changed_at <= now() - make_interval(secs => %(idle)s) "
                     "and next_attempt_at <= now() "
                     "order by changed_at desc limit %(limit)s for update skip locked) "
-                    "returning q.document_id, q.project_id, q.revision_no, "
-                    "q.folder_code, q.title, q.body, q.attempts",
+                    "returning q.document_id, q.project_id, q.event_seq, "
+                    "q.revision_no, q.folder_code, q.title, q.body, q.attempts",
                     {"lease": lease, "idle": idle_seconds, "limit": limit},
                 )
             ).fetchall()
@@ -94,6 +103,7 @@ class SummaryStore:
             Job(
                 str(row["document_id"]),
                 str(row["project_id"]),
+                row["event_seq"],
                 row["revision_no"],
                 row["folder_code"],
                 row["title"],
@@ -126,18 +136,20 @@ class SummaryStore:
     ) -> None:
         async with self.pool.connection() as conn, conn.transaction():
             await conn.execute(
-                "insert into document_summaries (document_id, project_id, revision_no, "
-                "summary, fingerprint, model, prompt_version) "
-                "values (%s, %s, %s, %s, %s, %s, %s) "
+                "insert into document_summaries (document_id, project_id, event_seq, "
+                "revision_no, summary, fingerprint, model, prompt_version) "
+                "values (%s, %s, %s, %s, %s, %s, %s, %s) "
                 "on conflict (document_id) do update set "
-                "project_id = excluded.project_id, revision_no = excluded.revision_no, "
+                "project_id = excluded.project_id, event_seq = excluded.event_seq, "
+                "revision_no = excluded.revision_no, "
                 "summary = excluded.summary, fingerprint = excluded.fingerprint, "
                 "model = excluded.model, prompt_version = excluded.prompt_version, "
                 "created_at = now() "
-                "where document_summaries.revision_no <= excluded.revision_no",
+                "where document_summaries.event_seq <= excluded.event_seq",
                 (
                     job.document_id,
                     job.project_id,
+                    job.sequence,
                     job.revision_no,
                     summary,
                     Jsonb(fingerprint),
@@ -151,19 +163,28 @@ class SummaryStore:
         async with self.pool.connection() as conn, conn.transaction():
             await conn.execute(
                 "delete from document_summaries where document_id = %s "
-                "and revision_no <= %s",
-                (job.document_id, job.revision_no),
+                "and event_seq <= %s",
+                (job.document_id, job.sequence),
             )
             await self._done(conn, job)
 
     async def skip(self, job: Job) -> None:
-        async with self.pool.connection() as conn:
+        # The summary keeps its text, revision and fingerprint, but it now stands
+        # for this event too, so an older event that arrives late is not queued.
+        async with self.pool.connection() as conn, conn.transaction():
+            await conn.execute(
+                "update document_summaries set event_seq = greatest(event_seq, %s) "
+                "where document_id = %s",
+                (job.sequence, job.document_id),
+            )
             await self._done(conn, job)
 
     async def _done(self, conn: Any, job: Job) -> None:
+        # A rename during the model call queues a newer event with the same
+        # revision, so the queued row is matched by its event.
         await conn.execute(
-            "delete from summary_queue where document_id = %s and revision_no = %s",
-            (job.document_id, job.revision_no),
+            "delete from summary_queue where document_id = %s and event_seq = %s",
+            (job.document_id, job.sequence),
         )
 
     async def retry(self, job: Job, max_attempts: int) -> bool:
@@ -176,7 +197,7 @@ class SummaryStore:
             await conn.execute(
                 "update summary_queue set attempts = %s, "
                 "next_attempt_at = now() + make_interval(secs => %s) "
-                "where document_id = %s and revision_no = %s",
-                (attempts, delay, job.document_id, job.revision_no),
+                "where document_id = %s and event_seq = %s",
+                (attempts, delay, job.document_id, job.sequence),
             )
         return True

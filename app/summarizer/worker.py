@@ -69,6 +69,7 @@ class Worker:
             "summary written",
             extra={
                 "document_id": job.document_id,
+                "sequence": job.sequence,
                 "revision_no": job.revision_no,
                 "input_tokens": usage.input_tokens if usage else None,
                 "output_tokens": usage.output_tokens if usage else None,
@@ -86,6 +87,7 @@ class Worker:
                     "summary failed",
                     extra={
                         "document_id": job.document_id,
+                        "sequence": job.sequence,
                         "code": failure.code,
                         "retry": again,
                     },

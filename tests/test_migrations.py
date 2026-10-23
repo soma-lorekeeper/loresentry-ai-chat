@@ -91,3 +91,24 @@ def test_question_ids_are_unique_per_session(conn):
 
     with pytest.raises(psycopg.errors.UniqueViolation):
         conn.execute(insert, (session_id, client_id))
+
+
+def test_summary_rows_written_without_event_seq_start_before_any_event(conn):
+    document = conn.execute("select uuidv7()").fetchone()[0]
+    conn.execute(
+        "insert into summary_queue (document_id, project_id, revision_no, "
+        "folder_code, title, body, changed_at, attempts, next_attempt_at) "
+        "values (%s, uuidv7(), 1, 'MANUSCRIPT', 't', 'b', now(), 0, now())",
+        (document,),
+    )
+    conn.execute(
+        "insert into document_summaries (document_id, project_id, revision_no, "
+        "summary, fingerprint, model, prompt_version) "
+        "values (%s, uuidv7(), 1, 's', '[]', 'm', 'v')",
+        (document,),
+    )
+
+    for table in ("summary_queue", "document_summaries"):
+        assert conn.execute(
+            f"select event_seq from {table} where document_id = %s", (document,)
+        ).fetchone() == (0,)
