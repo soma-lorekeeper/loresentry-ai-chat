@@ -471,6 +471,8 @@ def load_datasets(names: list[str] | None = None) -> dict:
     datasets = {}
     for path in sorted((HERE / "datasets").glob("*.json")):
         dataset = json.loads(path.read_text())
+        if "questions" not in dataset:
+            continue
         if not names or dataset["name"] in names:
             datasets[dataset["name"]] = dataset
     return datasets
