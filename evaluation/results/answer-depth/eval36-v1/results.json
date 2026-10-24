@@ -1,0 +1,3327 @@
+[
+ {
+  "question": {
+   "id": "H01",
+   "type": "simple",
+   "question": "선장이 숨진 시각은 언제로 추정됐어?",
+   "points": [
+    "새벽 2시 무렵"
+   ],
+   "sources": [
+    1
+   ]
+  },
+  "result": {
+   "session": "01a16cad-df16-7eb6-b5f7-f9b0d4f54352",
+   "answer": "선장의 사망 시각은 **새벽 2시 무렵**으로 추정됐어. 1화에서 그렇게 제시되고, 한도윤도 3화와 5화에서 같은 추정 시각을 언급해. [[1]][[2]][[3]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3206-788e-b6f0-fb8708b4de9b",
+     "title": "1화 · 새벽의 선실",
+     "doc_type": "manuscript",
+     "quote": "사망 시각은 새벽 2시 무렵으로 추정되었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-321b-76a0-afcd-4b8de3c59a90",
+     "title": "3화 · 항해사의 진술",
+     "doc_type": "manuscript",
+     "quote": "사망 시각은 새벽 2시 무렵으로 추정되고요."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-322c-7281-b13e-032ea5f3b94a",
+     "title": "5화 · 선주의 진술",
+     "doc_type": "manuscript",
+     "quote": "배무혁 선장의 사망 시각은 새벽 2시 무렵으로 추정되고 있습니다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 4
+   },
+   "error": null,
+   "seconds": 5.8,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 7977,
+    "input_tokens": 38645,
+    "cached_tokens": 6242,
+    "output_tokens": 239,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "원고에 사망 시각이 새벽 2시 무렵으로 추정되었다고 명시되어 있으며, 답변이 이를 정확히 전달했습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H02",
+   "type": "simple",
+   "question": "고만수는 그날 밤 몇 시에 잠들었다고 했어?",
+   "points": [
+    "밤 11시"
+   ],
+   "sources": [
+    4
+   ]
+  },
+  "result": {
+   "session": "01a16cad-f645-7e75-ac80-a3b26eed91e1",
+   "answer": "고만수는 밤 11시에 주방 문을 잠그고 잠들었다고 진술했어. [[1]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3224-722c-93fe-8ad134bdf551",
+     "title": "4화 · 요리사의 진술",
+     "doc_type": "manuscript",
+     "quote": "고만수는 밤 11시에 주방 문을 잠그고 잠들었다고 진술했다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 1
+   },
+   "error": null,
+   "seconds": 5.2,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 1822,
+    "input_tokens": 27165,
+    "cached_tokens": 12457,
+    "output_tokens": 202,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "원문에 고만수가 밤 11시에 주방 문을 잠그고 잠들었다고 진술한 내용이 있다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H03",
+   "type": "multihop",
+   "question": "진세라의 알리바이는 어떻게 무너졌어?",
+   "points": [
+    "1시 기록이 진세라 필체가 아니었다",
+    "고만수에게 대신 적게 했다",
+    "1시 반에 선장 선실에서 선장과 다퉜다"
+   ],
+   "sources": [
+    7,
+    11,
+    12
+   ]
+  },
+  "result": {
+   "session": "01a16cae-0abf-723b-aa53-18c678eab5a0",
+   "answer": "진세라의 알리바이는 항해일지와 대질하면서 먼저 흔들렸고, 이어 숨겼던 갑판 방문과 선장실 말다툼을 털어놓으면서 무너졌어. 다만 그게 곧 살인을 입증한 건 아니야. [[1]]\n\n처음 진세라는 자정부터 새벽 1시까지 조타실에서 당직을 섰고, 그 뒤에는 자기 자리로 갔으며 선장실에 간 적도 없다고 진술했어. [[2]]\n\n그런데 새벽 1시 항해일지 기록이 본인 글씨가 아니자, 진세라는 고만수에게 대신 적게 했고 당직 중 잠시 조타실을 비웠다고 인정했어. 그때 간 곳은 갑판이었고, 고만수에게는 곧 돌아오겠다고 했다고 밝혔지. [[3]][[4]]\n\n이후 한도윤이 말하지 않은 시간에 관해 다시 묻자, 진세라는 새벽 1시 반에 선장 선실에서 선장과 크게 다퉜고 그때 선장은 살아 있었다고 고백했어. 이는 당직 뒤 자기 자리로 갔다는 첫 진술과 맞지 않는 숨겨진 행적이었고, 사망 시각이 새벽 2시 무렵으로 추정된다는 점에서 의심을 더했어. [[5]][[6]]\n\n다만 진세라는 다툰 뒤의 행적과 다툼의 이유는 밝히지 않았어. 그래서 그녀의 말은 알리바이가 사실과 달랐음을 드러냈지만, 그 자체로 범행을 확정하지는 못했어. [[7]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-323b-70c2-948a-38f04649f841",
+     "title": "7화 · 항해일지",
+     "doc_type": "manuscript",
+     "quote": "항해일지의 새벽 1시 기록은 진세라의 필체가 아니었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-321b-76a0-afcd-4b8de3c59a90",
+     "title": "3화 · 항해사의 진술",
+     "doc_type": "manuscript",
+     "quote": null
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-325c-7759-9320-1cbe4ee99f72",
+     "title": "11화 · 대리 당직",
+     "doc_type": "manuscript",
+     "quote": "진세라는 1시 기록을 고만수에게 부탁해 대신 적게 했다고 털어놓았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-325c-7759-9320-1cbe4ee99f72",
+     "title": "11화 · 대리 당직",
+     "doc_type": "manuscript",
+     "quote": "갑판이었어요."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3265-78d1-acde-4044c07f5044",
+     "title": "12화 · 말다툼",
+     "doc_type": "manuscript",
+     "quote": "새벽 1시 반에 선장 선실에서 선장과 크게 다퉜고 그때 선장은 살아 있었다고 말했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3206-788e-b6f0-fb8708b4de9b",
+     "title": "1화 · 새벽의 선실",
+     "doc_type": "manuscript",
+     "quote": "사망 시각은 새벽 2시 무렵으로 추정되었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3265-78d1-acde-4044c07f5044",
+     "title": "12화 · 말다툼",
+     "doc_type": "manuscript",
+     "quote": "말다툼의 이유도, 그 뒤에 어떤 일이 있었는지도 아직 그녀의 입에서 나오지 않았다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 7
+   },
+   "error": null,
+   "seconds": 13.7,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 13784,
+    "input_tokens": 50574,
+    "cached_tokens": 12454,
+    "output_tokens": 1106,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "답변은 1시 기록이 진세라의 필체가 아니었고 고만수에게 대신 쓰게 했다는 점, 그리고 새벽 1시 반 선장 선실에서 선장과 다퉜다는 점을 모두 설명했습니다. 알리바이와 진술의 모순을 짚으면서도 이것만으로 살인이 입증된 것은 아니라고 구분한 것도 원문과 부합합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H04",
+   "type": "multihop",
+   "question": "선장 선실의 예비 열쇠는 어떻게 범인 손에 들어갔고 어떻게 쓰였어?",
+   "points": [
+    "주방 보관함에서 사라짐",
+    "고만수가 새벽 2시에 윤태석에게 넘김",
+    "윤태석이 밖에서 잠가 밀실을 꾸밈"
+   ],
+   "sources": [
+    8,
+    15,
+    17
+   ]
+  },
+  "result": {
+   "session": "01a16cae-405e-7970-87a4-6507d31486c3",
+   "answer": "예비 열쇠는 주방 보관함에 두었고, 고만수는 새벽 2시에 윤태석에게 그 열쇠를 넘겼어. [[1]][[2]]\n고만수는 빚을 빌미로 협박을 받아 열쇠를 건넸다고 했어. [[3]]\n윤태석은 그 열쇠로 선실 문을 밖에서 잠가, 문이 안에서 잠긴 것처럼 보이게 밀실을 꾸몄어. [[4]]\n다만 열쇠가 보관함에서 언제, 어떤 방식으로 빠져나왔는지는 본문에서 밝혀지지 않아. [[5]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3243-7f81-a171-44e0acb958e2",
+     "title": "8화 · 빈 자리",
+     "doc_type": "manuscript",
+     "quote": "예. 필요한 사람이 꺼내 쓰고 다시 걸어 두는 곳입니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3292-7979-b66f-8a02ea67f895",
+     "title": "15화 · 예비 열쇠",
+     "doc_type": "manuscript",
+     "quote": "고만수는 새벽 2시에 윤태석에게 예비 열쇠를 넘겼다고 털어놓았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3292-7979-b66f-8a02ea67f895",
+     "title": "15화 · 예비 열쇠",
+     "doc_type": "manuscript",
+     "quote": "윤태석은 고만수의 빚을 빌미로 그를 협박했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "당신은 열쇠를 받아 선실 문을 밖에서 잠갔습니다. 안에서 잠긴 문처럼 보이게 하려고."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3243-7f81-a171-44e0acb958e2",
+     "title": "8화 · 빈 자리",
+     "doc_type": "manuscript",
+     "quote": "그것이 언제부터 비어 있었는지까지 알려 주지는 않았다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 5
+   },
+   "error": null,
+   "seconds": 10.8,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 9560,
+    "input_tokens": 42528,
+    "cached_tokens": 12465,
+    "output_tokens": 876,
+    "reviews": []
+   },
+   "recall": 0.6666666666666666
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "주방 보관함에서 예비 열쇠가 사라졌고, 고만수가 새벽 2시에 윤태석에게 넘겼으며, 윤태석이 밖에서 문을 잠가 밀실을 꾸몄다는 내용이 모두 답변에 담겼습니다. 열쇠가 보관함에서 언제 어떻게 빠져나왔는지 본문에 나오지 않는다는 설명도 근거와 일치합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H05",
+   "type": "complex",
+   "question": "그날 밤 자정부터 새벽 3시까지 윤태석의 행적을 시간순으로 정리해 줘.",
+   "points": [
+    "12시 반 호텔을 나감",
+    "새벽 2시 고만수에게서 예비 열쇠를 받음",
+    "새벽 3시 호텔로 돌아옴"
+   ],
+   "sources": [
+    9,
+    15
+   ]
+  },
+  "result": {
+   "session": "01a16cae-6af8-7f84-8654-4c72c826df32",
+   "answer": "- **자정~새벽 0시 30분:** 윤태석은 그날 밤 내내 항구 호텔에 있었다고 주장했습니다. 호텔 직원은 그가 0시 30분에 나가는 것을 봤다고 했지만, 자정부터 그때까지 호텔에 있었는지는 별도로 확인되지 않습니다. [[1]][[2]]\n- **새벽 0시 30분~2시:** 호텔을 나간 뒤 행선지와 행적은 밝혀지지 않았습니다. [[3]]\n- **새벽 2시:** 고만수는 윤태석에게 선실 예비 열쇠를 넘겼다고 털어놓았습니다. 열쇠를 건넨 장소나 그때 윤태석이 어디에 있었는지는 나오지 않습니다. [[4]]\n- **새벽 2시~3시:** 이 시간대의 구체적인 행적은 밝혀지지 않았고, 직원은 윤태석이 새벽 3시에 호텔로 돌아왔다고 진술했습니다. [[2]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-322c-7281-b13e-032ea5f3b94a",
+     "title": "5화 · 선주의 진술",
+     "doc_type": "manuscript",
+     "quote": "그날 밤 내내 항구 호텔에 있었다고 진술했다"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-324b-7a35-96e5-3bf4863acaa7",
+     "title": "9화 · 호텔 직원",
+     "doc_type": "manuscript",
+     "quote": "밤 12시 반에 나갔다가 새벽 3시에 돌아왔다고 말했다"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-324b-7a35-96e5-3bf4863acaa7",
+     "title": "9화 · 호텔 직원",
+     "doc_type": "manuscript",
+     "quote": "그 사이의 행선지는 여전히 비어 있었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3292-7979-b66f-8a02ea67f895",
+     "title": "15화 · 예비 열쇠",
+     "doc_type": "manuscript",
+     "quote": "고만수는 새벽 2시에 윤태석에게 예비 열쇠를 넘겼다고 털어놓았다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 8
+   },
+   "error": null,
+   "seconds": 37.1,
+   "metrics": {
+    "steps": 5,
+    "judge_calls": 4,
+    "rejections": 2,
+    "chars_read": 13483,
+    "input_tokens": 119574,
+    "cached_tokens": 55548,
+    "output_tokens": 3283,
+    "reviews": [
+     {
+      "n": 1,
+      "missing": [
+       "자정부터 12시 반까지 윤태석의 행적"
+      ],
+      "problems": [],
+      "answer_ok": true,
+      "sufficient": false
+     },
+     {
+      "n": 2,
+      "missing": [],
+      "problems": [
+       "질문은 자정부터 새벽 3시까지의 행적을 시간순으로 정리해 달라는 것인데, 답변은 자정부터 0시 30분까지만 다루고 이후의 행적을 빠뜨렸습니다. 문서에는 윤태석이 0시 30분에 호텔을 나가 새벽 3시에 돌아왔다는 직원의 진술이 있습니다."
+      ],
+      "answer_ok": false,
+      "sufficient": true
+     }
+    ]
+   },
+   "recall": 1.0
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "호텔을 밤 12시 30분에 나간 사실, 새벽 2시에 고만수에게 예비 열쇠를 받은 사실, 새벽 3시에 호텔로 돌아온 사실을 시간순으로 정리했습니다. 중간 행적과 열쇠를 받은 장소가 원고에 나오지 않는다고 한 설명도 근거와 일치합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H06",
+   "type": "complex",
+   "question": "범인은 누구고 동기와 방법은 뭐야?",
+   "points": [
+    "윤태석",
+    "보험금",
+    "독을 찻잎에 섞음",
+    "예비 열쇠로 밀실"
+   ],
+   "sources": [
+    17,
+    18
+   ]
+  },
+  "result": {
+   "session": "01a16cae-fc2b-716e-a805-f4cee95b1f62",
+   "answer": "범인은 선주 윤태석이고, 선장 앞으로 든 보험금을 노려 살해했습니다. 18화에서 윤태석은 “선장 앞으로 든 보험금을 노리고 독을 찻잎에 섞었다”고 자백합니다. [[1]]\n\n방법은 독을 찻잎에 섞어 선장의 차에 넣는 것이었습니다. 부검에서 선장의 찻잔에 독성 물질이 확인됐고, 윤태석의 지갑에서는 독초 구매 영수증이 나왔습니다. [[2]]\n\n그 뒤 고만수에게 협박해 받은 예비 열쇠로 선실 문을 밖에서 잠가, 안에서 잠긴 밀실처럼 꾸몄습니다. [[3]]\n\n고만수는 빚을 빌미로 협박받아 새벽 2시에 열쇠를 넘겼고, 윤태석은 호텔에 밤새 있었다는 거짓 알리바이를 댔습니다. [[4]][[5]]\n\n윤태석 차 트렁크의 젖은 오른손 장갑과 갑판에서 발견된 젖은 왼손 장갑도 그를 가리키는 단서로 제시됩니다. [[6]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "윤태석은 선장 앞으로 든 보험금을 노리고 독을 찻잎에 섞었다고 자백했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "찻잔에서 독이 나왔고, 독초를 산 영수증은 당신의 지갑에서 발견됐습니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "당신은 열쇠를 받아 선실 문을 밖에서 잠갔습니다. 안에서 잠긴 문처럼 보이게 하려고."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "그는 빚을 빌미로 협박을 받았다고 털어놓았죠."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "그날 밤 내내 호텔에 있었다는 말도 거짓이었지요."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "차 트렁크에서는 젖은 오른손 장갑이 나왔고, 갑판 난간 아래에서는 젖은 왼손 장갑이 발견됐습니다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 2
+   },
+   "error": null,
+   "seconds": 8.2,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 3593,
+    "input_tokens": 31178,
+    "cached_tokens": 12452,
+    "output_tokens": 674,
+    "reviews": []
+   },
+   "recall": 0.5
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "윤태석이 범인이고 동기는 보험금이며, 독을 찻잎에 섞고 예비 열쇠로 선실을 밖에서 잠가 밀실을 꾸몄다는 사실을 모두 답했습니다. 덧붙인 알리바이와 장갑에 관한 내용도 원문에 근거합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H07",
+   "type": "contradiction",
+   "question": "선장이 찻잔의 독으로 죽었다는 게 인물 설정과 맞아?",
+   "points": [
+    "원고에서는 찻잔에서 독이 나왔다",
+    "설정에는 선장이 차를 입에 대지 않는다고 되어 있어 어긋난다"
+   ],
+   "sources": [
+    13,
+    "bae"
+   ]
+  },
+  "result": {
+   "session": "01a16caf-1c51-7cf1-b85e-3bc38a17f9fa",
+   "answer": "아니요. 인물 설정에는 배무혁이 “커피만 마시고 차는 입에 대지 않는다”고 되어 있지만, 13화에서는 찻잔의 독을 섭취해 사망했다고 확인합니다. [[1]][[2]]\n\n18화에서도 윤태석이 “독을 찻잎에 섞었다”고 자백하므로, 현재 설정과 원고 사이에 모순이 있습니다. [[3]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32fb-75b6-9b52-b9759f554835",
+     "title": "배무혁",
+     "doc_type": "character",
+     "quote": "커피만 마시고 차는 입에 대지 않는다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3272-7ab6-b290-26787eddf1a7",
+     "title": "13화 · 부검",
+     "doc_type": "manuscript",
+     "quote": "그렇습니다. 사망에 이르게 한 독성 물질이 잔에서 확인됐습니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "윤태석은 선장 앞으로 든 보험금을 노리고 독을 찻잎에 섞었다고 자백했다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 4
+   },
+   "error": null,
+   "seconds": 7.2,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 5616,
+    "input_tokens": 34994,
+    "cached_tokens": 12459,
+    "output_tokens": 492,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "찻잔에서 독이 확인되어 선장이 그 잔을 통해 독을 섭취했다는 내용과, 배무혁이 차를 입에 대지 않는다는 설정을 모두 언급해 모순을 정확히 짚었습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H08",
+   "type": "complex",
+   "question": "갑판에서 나온 왼손 장갑 때문에 왼손잡이인 진세라가 범인이라고 볼 수 있어?",
+   "points": [
+    "단정할 수 없다",
+    "오른손 짝이 윤태석 차 트렁크에서 나왔다"
+   ],
+   "sources": [
+    6,
+    10
+   ]
+  },
+  "result": {
+   "session": "01a16caf-38d4-74a5-90cd-9adeada43c94",
+   "answer": "진세라는 인물 설정상 왼손잡이지만, 갑판에서 나온 왼손 장갑이 그녀의 것이라고 확인되지는 않으므로 그 장갑만으로 범인이라고 볼 수는 없습니다. 6화에서 한도윤은 장갑의 주인을 모른다고 답합니다. [[1]][[2]]\n\n뒤에 윤태석의 차에서 오른손 장갑이 발견되고, 17화에서 한도윤은 두 장갑이 한 쌍이라고 보고 윤태석을 지목합니다. 18화에는 윤태석의 자백이 나오지만, 원고가 제시하는 것은 한도윤의 지목과 윤태석의 자백이며, 장갑만으로 진세라의 범행 여부가 확정되지는 않습니다. [[3]][[4]][[5]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3305-7a11-ae8d-66b78a8c0dd9",
+     "title": "진세라",
+     "doc_type": "character",
+     "quote": "해풍호 항해사. 왼손잡이다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3233-7e70-b70a-1043ed3ebbaf",
+     "title": "6화 · 젖은 장갑",
+     "doc_type": "manuscript",
+     "quote": "아직은 모릅니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3254-702b-b2fd-89adaf0d7a42",
+     "title": "10화 · 트렁크",
+     "doc_type": "manuscript",
+     "quote": "젖은 오른손 장갑 한 짝이 발견되었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32dd-7d89-8205-cb87cf6e974f",
+     "title": "17화 · 지목",
+     "doc_type": "manuscript",
+     "quote": "한도윤은 윤태석이 예비 열쇠로 선실을 밖에서 잠가 밀실을 꾸몄다고 지목했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "윤태석은 선장 앞으로 든 보험금을 노리고 독을 찻잎에 섞었다고 자백했다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 19
+   },
+   "error": null,
+   "seconds": 38.0,
+   "metrics": {
+    "steps": 5,
+    "judge_calls": 4,
+    "rejections": 2,
+    "chars_read": 34877,
+    "input_tokens": 167989,
+    "cached_tokens": 65382,
+    "output_tokens": 3552,
+    "reviews": [
+     {
+      "n": 1,
+      "missing": [
+       "원고에서 진세라가 왼손잡이라는 근거"
+      ],
+      "problems": [],
+      "answer_ok": true,
+      "sufficient": false
+     },
+     {
+      "n": 2,
+      "missing": [],
+      "problems": [
+       "원고 본문에 진세라가 왼손잡이라는 말이 없다는 지적은 맞지만, 문서가 실제로 침묵한다고 단정할 수는 없습니다. 인물 설정 문서에 왼손잡이라고 명시되어 있습니다.",
+       "질문은 장갑 때문에 진세라를 범인으로 볼 수 있는지 묻는데, 답은 이를 부정하면서 윤태석의 유죄까지 단정합니다. 17화의 지목은 한도윤의 주장이고 18화의 자백도 윤태석의 자백으로 제시될 뿐, 문서만으로 자백의 진실성까지 확정할 수는 없습니다."
+      ],
+      "answer_ok": false,
+      "sufficient": true
+     }
+    ]
+   },
+   "recall": 1.0
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "왼손 장갑만으로 진세라를 범인이라고 단정할 수 없다고 답했고, 윤태석의 차 트렁크에서 오른손 장갑이 발견되었으며 두 장갑이 한 쌍으로 제시된 점도 언급했습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H09",
+   "type": "negative",
+   "question": "고만수가 그날 밤 선장 선실에 들어간 장면이 있어?",
+   "points": [
+    "원고에서 그런 장면을 찾지 못했다"
+   ],
+   "sources": [],
+   "absent": true
+  },
+  "result": {
+   "session": "01a16caf-cd78-78fa-bf0b-7a5776603734",
+   "answer": "아니요. **고만수가 그날 밤 선장 선실에 들어가는 장면은 나오지 않습니다.** 14화에서 한도윤이 찻잎을 보충할 때 선실에 들어가느냐고 묻자, 고만수는 “다만 그날 밤에는 가지 않았습니다”라고 진술합니다. [[1]]\n\n다만 15화에서 고만수는 새벽 2시에 윤태석에게 예비 열쇠를 건넸다고 털어놓습니다. 이는 열쇠를 넘긴 장면이지, 고만수가 선실에 들어간 장면은 아닙니다. [[2]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3281-729e-9d4e-5dd58d3a1ac8",
+     "title": "14화 · 찻잎 통",
+     "doc_type": "manuscript",
+     "quote": "다만 그날 밤에는 가지 않았습니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3292-7979-b66f-8a02ea67f895",
+     "title": "15화 · 예비 열쇠",
+     "doc_type": "manuscript",
+     "quote": "고만수는 새벽 2시에 윤태석에게 예비 열쇠를 넘겼다고 털어놓았다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 5
+   },
+   "error": null,
+   "seconds": 8.3,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 9659,
+    "input_tokens": 42810,
+    "cached_tokens": 12458,
+    "output_tokens": 577,
+    "reviews": []
+   },
+   "recall": null
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "원고에서 고만수가 그날 밤 선장 선실에 들어가는 장면을 찾지 못했다고 명확히 답했습니다. 14화의 진술과 15화의 예비 열쇠 전달을 구분한 설명도 원문과 일치합니다.",
+   "votes": [
+    "correct",
+    "partial",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H10",
+   "type": "memo",
+   "question": "이 이야기의 범인은 진세라야?",
+   "points": [
+    "아니다, 원고의 범인은 윤태석"
+   ],
+   "sources": [
+    17,
+    18
+   ],
+   "forbid": [
+    "진세라가 범인이다"
+   ],
+   "note": "메모의 진세라 범인 구상은 계획일 뿐이다."
+  },
+  "result": {
+   "session": "01a16caf-ee8b-7f4e-bf37-425ada6e990a",
+   "answer": "아니요. 원고에서 범인은 진세라가 아니라 윤태석으로 드러납니다. 윤태석은 선장 앞으로 든 보험금을 노리고 “독을 찻잎에 섞었다고 자백”합니다.[[1]]\n\n진세라는 새벽 1시 반에 선장과 다퉜고 항해일지 기록을 고만수에게 대신 쓰게 했지만, 그때 선장이 살아 있었다고 진술합니다.[[2]][[3]]\n\n반면 윤태석은 예비 열쇠를 받아 선실 문을 밖에서 잠갔고, 호텔에 있었다는 알리바이도 거짓으로 드러납니다.[[4]][[5]]\n\n따라서 진세라의 거짓말과 다툼은 의심을 사는 정황이지만, 이야기의 자백과 결말은 윤태석을 범인으로 확정합니다.[[1]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "윤태석은 선장 앞으로 든 보험금을 노리고 독을 찻잎에 섞었다고 자백했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "선장은 새벽 1시 반에도 살아 있었습니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "진세라는 그 기록을 고만수에게 대신 적어 달라고 부탁했다고 털어놓았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "당신은 열쇠를 받아 선실 문을 밖에서 잠갔습니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "직원은 당신이 밤 12시 반에 나갔다가 새벽 3시에 돌아왔다고 했습니다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 2
+   },
+   "error": null,
+   "seconds": 8.2,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 3593,
+    "input_tokens": 31122,
+    "cached_tokens": 12450,
+    "output_tokens": 624,
+    "reviews": []
+   },
+   "recall": 0.5
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "partial",
+   "covered": [
+    true
+   ],
+   "false_claims": [
+    "진세라가 거짓말을 했다고 단정한 부분은 원고에 명시되지 않습니다. 원고는 항해일지 기록이 진세라의 필체가 아니며, 그녀가 고만수에게 대신 적어 달라고 부탁했다고 설명합니다."
+   ],
+   "reason": "윤태석이 범인이라는 점과 진세라가 범인이 아니라는 점을 정확히 답했습니다. 다만 진세라가 거짓말을 했다는 표현은 원고가 확인해 주지 않습니다.",
+   "votes": [
+    "correct",
+    "partial",
+    "partial"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H11",
+   "type": "followup",
+   "session": "h-a",
+   "after": "H06",
+   "question": "그 사람은 독을 어디서 구했어?",
+   "points": [
+    "독초를 산 영수증이 지갑에서 나왔다"
+   ],
+   "sources": [
+    16
+   ]
+  },
+  "result": {
+   "session": "01a16cae-fc2b-716e-a805-f4cee95b1f62",
+   "answer": "원고는 윤태석이 독초를 산 곳이나 독을 구한 경로는 밝히지 않습니다. [[1]]\n\n원고에서 확인되는 것은 윤태석의 지갑에서 독초 구매 영수증이 발견됐고, 그가 독을 찻잎에 섞었다고 자백했다는 점입니다. [[1]][[2]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32d1-7f74-b929-c91fb745b237",
+     "title": "16화 · 영수증",
+     "doc_type": "manuscript",
+     "quote": "윤태석의 지갑에서 독초를 산 영수증이 나왔다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "윤태석은 선장 앞으로 든 보험금을 노리고 독을 찻잎에 섞었다고 자백했다."
+    }
+   ],
+   "grounding": {
+    "level": "NOT_ENOUGH",
+    "missing": [
+     "윤태석이 독초를 산 곳 또는 독을 구한 경로"
+    ],
+    "documents_read": 7
+   },
+   "error": null,
+   "seconds": 22.2,
+   "metrics": {
+    "steps": 5,
+    "judge_calls": 4,
+    "rejections": 2,
+    "chars_read": 8062,
+    "input_tokens": 121651,
+    "cached_tokens": 58926,
+    "output_tokens": 1404,
+    "reviews": [
+     {
+      "n": 1,
+      "missing": [
+       "독초를 구매한 장소"
+      ],
+      "problems": [],
+      "answer_ok": true,
+      "sufficient": false
+     },
+     {
+      "n": 2,
+      "missing": [
+       "윤태석이 독초를 산 곳 또는 독을 구한 경로"
+      ],
+      "problems": [],
+      "answer_ok": true,
+      "sufficient": false
+     }
+    ]
+   },
+   "recall": 1.0
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "윤태석의 지갑에서 독초 구매 영수증이 발견됐다고 밝혔고, 원고에 구매 장소나 구체적인 입수 경로가 나오지 않는다는 설명도 근거와 일치합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "H12",
+   "type": "intent",
+   "intent": "related",
+   "quote": {
+    "chapter": 6,
+    "text": "갑판 난간 아래에서 젖은 왼손 장갑 한 짝이 발견되었다."
+   },
+   "question": "관련 설정과 이어지는 장면을 알려 줘",
+   "points": [
+    "윤태석 차 트렁크의 오른손 장갑",
+    "진세라가 왼손잡이라는 설정"
+   ],
+   "sources": [
+    6,
+    10
+   ]
+  },
+  "result": {
+   "session": "01a16cb0-6562-7c92-a54a-970c5354338f",
+   "answer": "설정상 해풍호는 안개 항구에 정박한 화물선이고, 한도윤과 해풍호는 ‘조사한 곳’으로 연결되어 있어 6화의 갑판 수색 장면과 맞닿습니다. [[1]][[2]]\n\n6화에서 한도윤과 진세라는 난간 아래에서 젖은 왼손 장갑을 발견하지만, 한도윤은 주인을 모른다고 하고 장갑만으로 누구 것인지 단정하지 않습니다. [[3]][[4]]\n\n진세라 설정에는 그녀가 왼손잡이라고 적혀 있지만, 6화에서는 장갑의 주인이 밝혀지지 않으므로 이 설정만으로 장갑을 진세라의 것이라고 연결할 수는 없습니다. [[5]][[6]]\n\n이어지는 10화에서는 윤태석의 차 트렁크에서 젖은 오른손 장갑 한 짝이 발견됩니다. 한도윤은 6화의 왼손 장갑과 한 쌍인지 아직 단정하지 않고, 다른 장소에서 나온 물건으로 따로 확인합니다. [[7]][[8]]\n\n17화에서 한도윤은 두 장갑을 서로 다른 장소에서 나온 한 쌍이라고 제시하며 윤태석을 추궁하고, 18화에서는 오른손 장갑이 윤태석의 트렁크에서, 왼손 장갑이 갑판 난간 아래에서 발견됐다고 다시 짚습니다. [[9]][[10]]\n\n장갑 단서는 처음엔 주인과 경로가 미상인 흔적이었다가, 뒤의 추궁 장면에서 윤태석을 가리키는 증거 조각으로 쓰입니다. 다만 자백 장면이 장갑의 발견 사실을 되짚기는 해도, 장갑이 난간 아래에 놓이게 된 정확한 경위는 이 장면들에서 설명되지 않습니다. [[11]][[12]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3324-78f9-b6d3-92dd8d59ec07",
+     "title": "해풍호",
+     "doc_type": "place",
+     "quote": "안개 항구에 정박한 화물선."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32ef-7505-b103-f9d9a6b9055d",
+     "title": "한도윤",
+     "doc_type": "character",
+     "quote": "조사한 곳"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3233-7e70-b70a-1043ed3ebbaf",
+     "title": "6화 · 젖은 장갑",
+     "doc_type": "manuscript",
+     "quote": "누구 것인지 아십니까?"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3233-7e70-b70a-1043ed3ebbaf",
+     "title": "6화 · 젖은 장갑",
+     "doc_type": "manuscript",
+     "quote": "아직은 모릅니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3305-7a11-ae8d-66b78a8c0dd9",
+     "title": "진세라",
+     "doc_type": "character",
+     "quote": "왼손잡이다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3233-7e70-b70a-1043ed3ebbaf",
+     "title": "6화 · 젖은 장갑",
+     "doc_type": "manuscript",
+     "quote": "이 장갑이 누구 것인지"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3254-702b-b2fd-89adaf0d7a42",
+     "title": "10화 · 트렁크",
+     "doc_type": "manuscript",
+     "quote": "젖은 오른손 장갑 한 짝이 발견되었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3254-702b-b2fd-89adaf0d7a42",
+     "title": "10화 · 트렁크",
+     "doc_type": "manuscript",
+     "quote": "같은 한 쌍인지, 그저 비슷한 물건인지 아직 단정할 수 없었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32dd-7d89-8205-cb87cf6e974f",
+     "title": "17화 · 지목",
+     "doc_type": "manuscript",
+     "quote": "서로 다른 장소에서 나온 한 쌍이죠."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32e6-7374-8f61-4c6cdd278b4f",
+     "title": "18화 · 자백",
+     "doc_type": "manuscript",
+     "quote": "차 트렁크에서는 젖은 오른손 장갑이 나왔고, 갑판 난간 아래에서는 젖은 왼손 장갑이 발견됐습니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3233-7e70-b70a-1043ed3ebbaf",
+     "title": "6화 · 젖은 장갑",
+     "doc_type": "manuscript",
+     "quote": "어떤 경로로 난간 아래에 이르게 되었는지."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-32dd-7d89-8205-cb87cf6e974f",
+     "title": "17화 · 지목",
+     "doc_type": "manuscript",
+     "quote": "젖은 왼손 장갑이 나왔고, 당신 차 트렁크에서는 젖은 오른손 장갑이 발견됐습니다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 11
+   },
+   "error": null,
+   "seconds": 25.2,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 7412,
+    "input_tokens": 40593,
+    "cached_tokens": 12554,
+    "output_tokens": 2541,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "fog-harbor",
+  "grade": {
+   "verdict": "partial",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [
+    "한도윤과 해풍호가 ‘조사한 곳’으로 연결되어 있다는 설명은 원문 근거에 없습니다."
+   ],
+   "reason": "윤태석 차 트렁크에서 젖은 오른손 장갑이 발견된 사실과 진세라가 왼손잡이라는 설정을 모두 다뤘습니다. 다만 근거에 없는 연결 설명을 덧붙였습니다.",
+   "votes": [
+    "partial",
+    "correct",
+    "partial"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G01",
+   "type": "simple",
+   "question": "레나가 처음 각성한 곳은 어디야?",
+   "points": [
+    "무너진 성당의 제단 앞"
+   ],
+   "sources": [
+    7
+   ],
+   "forbid": [
+    "5화에서 처음 각성"
+   ]
+  },
+  "result": {
+   "session": "01a16cb0-c824-7c8a-b664-c073c23575da",
+   "answer": "레나가 처음 각성한 곳은 도시 북쪽 언덕의 **무너진 성당**, 제단 앞이야. 7화 「첫 번째 빛」에서 레나의 손가락 사이로 빛이 처음 태어나 어둠을 가르는 장면이 나온다. [[1]][[2]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3709-72c9-82c4-52e88cdf7104",
+     "title": "7화 · 첫 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "레나는 무너진 성당의 제단 앞에서 처음으로 빛을 끌어냈다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-387b-7a5b-aa40-bd3a7ec77a5c",
+     "title": "무너진 성당",
+     "doc_type": "place",
+     "quote": "도시 북쪽 언덕의 폐허가 된 성당."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 2
+   },
+   "error": null,
+   "seconds": 5.4,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 2178,
+    "input_tokens": 32201,
+    "cached_tokens": 7276,
+    "output_tokens": 221,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "답변은 레나가 처음 각성한 곳이 무너진 성당의 제단 앞이라고 정확히 답했으며, 5화에서 처음 각성했다고 주장하지 않았습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G02",
+   "type": "followup",
+   "session": "g-a",
+   "after": "G01",
+   "question": "그때 곁에 누가 있었어?",
+   "points": [
+    "서윤"
+   ],
+   "sources": [
+    7
+   ]
+  },
+  "result": {
+   "session": "01a16cb0-c824-7c8a-b664-c073c23575da",
+   "answer": "그때 곁에는 서윤이 있었어. 레나가 “가까이 있어 줘”라고 했고, 서윤은 “그럴게요”라고 답했어. [[1]] [[2]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3709-72c9-82c4-52e88cdf7104",
+     "title": "7화 · 첫 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "“가까이 있어 줘.”"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3709-72c9-82c4-52e88cdf7104",
+     "title": "7화 · 첫 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "“그럴게요.”"
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 0
+   },
+   "error": null,
+   "seconds": 4.3,
+   "metrics": {
+    "steps": 1,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 0,
+    "input_tokens": 25058,
+    "cached_tokens": 7245,
+    "output_tokens": 288,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "7화에서 레나가 빛을 끌어낼 때 서윤이 곁에 있었으며, 답변은 이를 정확히 밝혔습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G03",
+   "type": "simple",
+   "question": "유리 열쇠를 처음 발견한 사람과 장소는?",
+   "points": [
+    "서윤",
+    "북쪽 온실의 화분 밑"
+   ],
+   "sources": [
+    12
+   ]
+  },
+  "result": {
+   "session": "01a16cb0-eeb0-72c7-8cef-73607e8dabe8",
+   "answer": "유리 열쇠를 처음 발견한 사람은 서윤이고, 장소는 북쪽의 낡은 온실입니다. 서윤이 비스듬히 놓인 화분을 찾아내고, 레나가 그 아래에서 열쇠를 꺼냈습니다. [[1]][[2]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3763-70b3-ab01-3c5889113ba2",
+     "title": "12화 · 화분 밑의 열쇠",
+     "doc_type": "manuscript",
+     "quote": "서윤은 북쪽 온실의 화분 밑에서 유리 열쇠를 처음 발견했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3763-70b3-ab01-3c5889113ba2",
+     "title": "12화 · 화분 밑의 열쇠",
+     "doc_type": "manuscript",
+     "quote": "레나가 그 틈에서 열쇠를 빼냈다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 1
+   },
+   "error": null,
+   "seconds": 5.0,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 1662,
+    "input_tokens": 31174,
+    "cached_tokens": 14526,
+    "output_tokens": 183,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "서윤이 처음 발견했고, 장소는 북쪽 온실의 화분 밑이라고 답했습니다. 레나가 열쇠를 꺼냈다는 설명도 원문에 부합합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G04",
+   "type": "multihop",
+   "question": "카엘이 유리 정원의 문을 열기까지 유리 열쇠가 어떤 경로를 거쳤는지 순서대로 알려줘.",
+   "points": [
+    "서윤이 북쪽 온실에서 발견",
+    "서윤이 오렌에게 맡김",
+    "오렌이 카엘에게 숨긴 곳을 알려 줌",
+    "카엘이 오렌의 서랍에서 훔침",
+    "카엘이 그 열쇠로 정원 문을 엶"
+   ],
+   "sources": [
+    12,
+    13,
+    15,
+    20,
+    21
+   ]
+  },
+  "result": {
+   "session": "01a16cb1-0252-7a89-8436-cef5a74124f6",
+   "answer": "유리 열쇠는 북쪽의 낡은 온실에서 발견된 뒤 오렌에게 맡겨졌고, 오렌이 숨긴 저택 서랍에서 카엘의 손으로 넘어가 유리 정원의 문을 여는 데 쓰였습니다. [[1]][[2]][[3]][[4]]\n\n- 12화 「화분 밑의 열쇠」에서 서윤과 레나는 지도에 표시된 북쪽 온실을 찾아가고, 레나가 화분 밑에 끼어 있던 작은 투명 유리 열쇠를 꺼냅니다. [[1]]\n\n- 13화 「열쇠의 무게」에서 서윤은 열쇠를 계속 지니기보다 오렌에게 맡기기로 하고, 오렌은 저택의 서랍에 숨기되 “어느 서랍인지까지 말해 두지는 않겠다”고 합니다. [[5]][[6]]\n\n- 15화 「거래」에서 오렌은 카엘에게 열쇠가 저택 서랍에 있다고 몰래 알려 줍니다. 다음 화에서는 카엘이 그 대가로 오렌에게 은화 서른 닢을 건넨 사실이 드러납니다. [[7]][[8]]\n\n- 20화 「빈 서랍」에서 서윤은 카엘이 오렌의 방 책상 아래 서랍을 열어 열쇠를 꺼내 주머니에 넣는 장면을 목격합니다. 서윤은 이를 훔친 것으로 받아들이지만, 카엘이 열쇠를 옮기는 것인지 확인하지 못해 망설입니다. [[9]][[10]]\n\n- 21화 「열린 문」에서는 열쇠가 오렌의 서랍에서 사라진 뒤 줄곧 카엘의 손에 있었다고 확인됩니다. 카엘은 숲에 나타난 유리문에 열쇠를 꽂아 문을 열고, 그 너머로 유리 정원이 드러납니다. [[11]][[12]][[13]]\n\n- 문서상 카엘은 15화에서 서랍의 위치를 전해 들은 뒤 20화에서 그 서랍에서 열쇠를 가져갑니다. [[14]][[3]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3763-70b3-ab01-3c5889113ba2",
+     "title": "12화 · 화분 밑의 열쇠",
+     "doc_type": "manuscript",
+     "quote": "레나가 그 틈에서 열쇠를 빼냈다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3776-7420-b5ae-753425d3e3ba",
+     "title": "13화 · 열쇠의 무게",
+     "doc_type": "manuscript",
+     "quote": "오렌은 열쇠를 받았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-381b-7f5e-906c-58cdbc26a6d7",
+     "title": "20화 · 빈 서랍",
+     "doc_type": "manuscript",
+     "quote": "카엘은 오렌의 서랍에서 유리 열쇠를 훔쳤다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3829-7d57-88d7-b37bf8b96cdc",
+     "title": "21화 · 열린 문",
+     "doc_type": "manuscript",
+     "quote": "카엘은 훔친 유리 열쇠로 유리 정원의 문을 열었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3776-7420-b5ae-753425d3e3ba",
+     "title": "13화 · 열쇠의 무게",
+     "doc_type": "manuscript",
+     "quote": "저택 서랍에 숨겨 달라고 부탁했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3776-7420-b5ae-753425d3e3ba",
+     "title": "13화 · 열쇠의 무게",
+     "doc_type": "manuscript",
+     "quote": "어느 서랍인지까지 말해 두지는 않겠다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37b1-7cea-a860-0c831c2b9178",
+     "title": "15화 · 거래",
+     "doc_type": "manuscript",
+     "quote": "저택 서랍에 있습니다. 그 이상은 알려 드릴 수 없습니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37c4-7fe7-a5c7-4f8a5fac6b2a",
+     "title": "16화 · 은화 서른 닢",
+     "doc_type": "manuscript",
+     "quote": null
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-381b-7f5e-906c-58cdbc26a6d7",
+     "title": "20화 · 빈 서랍",
+     "doc_type": "manuscript",
+     "quote": "그는 오렌의 방 안에 서 있었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-381b-7f5e-906c-58cdbc26a6d7",
+     "title": "20화 · 빈 서랍",
+     "doc_type": "manuscript",
+     "quote": "열쇠를 주머니에 넣고 서랍을 밀어 닫았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3829-7d57-88d7-b37bf8b96cdc",
+     "title": "21화 · 열린 문",
+     "doc_type": "manuscript",
+     "quote": "열쇠는 줄곧 카엘의 손에 있었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3829-7d57-88d7-b37bf8b96cdc",
+     "title": "21화 · 열린 문",
+     "doc_type": "manuscript",
+     "quote": "카엘은 열쇠를 자물쇠에 넣었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3829-7d57-88d7-b37bf8b96cdc",
+     "title": "21화 · 열린 문",
+     "doc_type": "manuscript",
+     "quote": "문틈은 점점 넓어졌다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37b1-7cea-a860-0c831c2b9178",
+     "title": "15화 · 거래",
+     "doc_type": "manuscript",
+     "quote": "오렌은 카엘에게 유리 열쇠가 숨겨진 곳을 몰래 알려 주었다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 6
+   },
+   "error": null,
+   "seconds": 14.9,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 11471,
+    "input_tokens": 51385,
+    "cached_tokens": 14544,
+    "output_tokens": 1532,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "partial",
+   "covered": [
+    false,
+    true,
+    true,
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "열쇠가 북쪽 온실에서 발견되었다는 점은 말하지만, 서윤이 발견했다는 사실은 명시하지 않습니다. 나머지 경로인 오렌에게 맡김, 오렌이 카엘에게 숨긴 곳을 알려 줌, 카엘이 서랍에서 훔침, 그 열쇠로 정원 문을 엶은 다뤘습니다.",
+   "votes": [
+    "partial",
+    "correct",
+    "partial"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G05",
+   "type": "multihop",
+   "question": "오렌이 말한 거래에서 오렌은 무엇을 받았어?",
+   "points": [
+    "카엘에게서 은화 서른 닢"
+   ],
+   "sources": [
+    16
+   ]
+  },
+  "result": {
+   "session": "01a16cb1-3cd3-746e-8dac-12e89368f5cd",
+   "answer": "오렌은 카엘에게 유리 열쇠가 숨겨진 곳을 알려 준 대가로 **은화 서른 닢**을 받았어. 16화 「은화 서른 닢」에서 카엘이 돈을 건넨 장면이 나오고, 22화 「남은 사람들」에서 오렌도 그 대가를 고백해. [[1]][[2]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37c4-7fe7-a5c7-4f8a5fac6b2a",
+     "title": "16화 · 은화 서른 닢",
+     "doc_type": "manuscript",
+     "quote": "카엘은 그 대가로 오렌에게 은화 서른 닢을 건넸다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3839-7ac5-ac48-8f24ca6af6de",
+     "title": "22화 · 남은 사람들",
+     "doc_type": "manuscript",
+     "quote": "대가로 은화 서른 닢을 받았습니다. 그 일을 거래라고 불렀습니다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 3
+   },
+   "error": null,
+   "seconds": 5.3,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 6463,
+    "input_tokens": 40201,
+    "cached_tokens": 14528,
+    "output_tokens": 278,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "오렌이 카엘에게서 은화 서른 닢을 받았다고 답해 기대 사실을 정확히 다뤘습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G06",
+   "type": "complex",
+   "question": "레나는 모두 몇 번 각성했고 각각 어디서였어?",
+   "points": [
+    "세 번",
+    "무너진 성당의 제단 앞",
+    "무너진 성당(첨탑이 무너짐)",
+    "유리 정원 한가운데"
+   ],
+   "sources": [
+    7,
+    18,
+    23
+   ]
+  },
+  "result": {
+   "session": "01a16cb1-51d2-7e55-8401-417394e6f6b4",
+   "answer": "레나는 **총 세 번 각성했어**. 첫 번째는 무너진 성당의 제단 앞, 두 번째도 무너진 성당의 제단 근처, 세 번째는 유리 정원 한가운데야. [[1]][[2]][[3]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3709-72c9-82c4-52e88cdf7104",
+     "title": "7화 · 첫 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "레나는 무너진 성당의 제단 앞에서 처음으로 빛을 끌어냈다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37e5-728b-a6a0-a1bfe4955384",
+     "title": "18화 · 두 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "레나가 두 번째로 각성하던 순간 무너진 성당의 첨탑이 완전히 무너져 내렸다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-384b-7726-a76c-ab992f73b96b",
+     "title": "23화 · 세 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "레나는 유리 정원 한가운데서 세 번째로 빛을 끌어내 카엘을 막아섰다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 3
+   },
+   "error": null,
+   "seconds": 6.2,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 5922,
+    "input_tokens": 39699,
+    "cached_tokens": 14526,
+    "output_tokens": 350,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "partial",
+   "covered": [
+    true,
+    true,
+    false,
+    true
+   ],
+   "false_claims": [
+    "두 번째 각성이 제단 근처에서 일어났다고 단정했지만, 원고는 레나가 성당 안에서 제단을 바라보고 있었다고만 서술합니다."
+   ],
+   "reason": "총 세 번 각성했다는 점, 첫 번째 장소인 무너진 성당의 제단 앞, 세 번째 장소인 유리 정원 한가운데는 맞습니다. 하지만 두 번째 각성 때 첨탑이 무너졌다는 핵심 상황을 빠뜨렸고, 제단 근처였다고 단정할 근거도 원고에 없습니다.",
+   "votes": [
+    "partial",
+    "correct",
+    "partial"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G07",
+   "type": "contradiction",
+   "question": "레나는 바다에 나가 본 적이 있어?",
+   "points": [
+    "8화에서 은빛 항구에서 배를 타고 바다에 나갔다",
+    "설정 문서에는 바다를 두려워해 배에 오르지 않는다고 되어 있어 원고와 어긋난다"
+   ],
+   "sources": [
+    8,
+    "lena"
+   ]
+  },
+  "result": {
+   "session": "01a16cb1-6a69-7039-9785-909f337e3250",
+   "answer": "네. 8화 「은빛 항구」에서 레나는 바다를 멀리서 본 적은 있지만, 가까이서 보는 건 처음이라고 말하고 작은 배를 타고 바다에 나갑니다. [[1]] [[2]]\n\n다만 레나 설정에는 “바다를 몹시 두려워해 배에 오르지 않는다”고 적혀 있어, 이 장면과 설정이 서로 어긋납니다. [[3]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-371d-74b7-93fc-28c96f9abdb6",
+     "title": "8화 · 은빛 항구",
+     "doc_type": "manuscript",
+     "quote": "멀리서만. 이렇게 가까이서 보는 건 처음이야."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-371d-74b7-93fc-28c96f9abdb6",
+     "title": "8화 · 은빛 항구",
+     "doc_type": "manuscript",
+     "quote": "레나는 은빛 항구에서 작은 배를 타고 처음으로 바다에 나갔다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-385e-739f-8cf5-d8f2909545bb",
+     "title": "레나 아르벨",
+     "doc_type": "character",
+     "quote": "바다를 몹시 두려워해 배에 오르지 않는다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 2
+   },
+   "error": null,
+   "seconds": 7.4,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 1973,
+    "input_tokens": 31960,
+    "cached_tokens": 14524,
+    "output_tokens": 390,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "8화에서 레나가 작은 배를 타고 바다에 나간 사실과, 설정 문서의 ‘바다를 두려워해 배에 오르지 않는다’는 내용이 장면과 어긋난다는 점을 모두 설명했습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G08",
+   "type": "memo",
+   "question": "레나의 첫 각성은 몇 화야?",
+   "points": [
+    "7화"
+   ],
+   "sources": [
+    7
+   ],
+   "forbid": [
+    "5화에서 각성했다"
+   ],
+   "note": "메모의 5화 이동 구상은 계획일 뿐 사실로 말하면 안 된다. 메모를 언급한다면 계획이라고 구분해야 한다."
+  },
+  "result": {
+   "session": "01a16cb1-8786-7cad-993c-6137aa395262",
+   "answer": "레나의 첫 각성은 **7화 「첫 번째 빛」**에서 일어나요. 무너진 성당의 제단 앞에서 레나의 손가락 사이로 처음 빛이 태어납니다. [[1]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3709-72c9-82c4-52e88cdf7104",
+     "title": "7화 · 첫 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "레나는 무너진 성당의 제단 앞에서 처음으로 빛을 끌어냈다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 2
+   },
+   "error": null,
+   "seconds": 5.3,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 2180,
+    "input_tokens": 32127,
+    "cached_tokens": 14523,
+    "output_tokens": 232,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "레나의 첫 각성이 7화 「첫 번째 빛」에서 일어난다고 정확히 답했고, 원문에 없는 내용을 주장하지 않았습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G09",
+   "type": "negative",
+   "question": "레나와 카엘이 손을 잡는 장면이 있어?",
+   "points": [
+    "원고에서 그런 장면을 찾지 못했다"
+   ],
+   "sources": [],
+   "absent": true
+  },
+  "result": {
+   "session": "01a16cb1-9c8b-7bdd-9c50-300b0145c228",
+   "answer": "현재 확인한 원고만으로는 작품 전체에 레나와 카엘이 손을 잡는 장면이 있는지 확정할 수 없습니다. 21화에서는 레나가 움직이지 않는 동안 카엘이 열쇠로 문을 엽니다. [[1]][[2]]\n\n23화와 24화에서는 레나가 빛으로 카엘을 막고, 서윤이 열쇠를 부숴 정원을 봉인하지만, 이 장면들에도 두 사람이 손을 잡는 묘사는 없습니다. [[3]][[4]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3829-7d57-88d7-b37bf8b96cdc",
+     "title": "21화 · 열린 문",
+     "doc_type": "manuscript",
+     "quote": "레나는 움직이지 않았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3829-7d57-88d7-b37bf8b96cdc",
+     "title": "21화 · 열린 문",
+     "doc_type": "manuscript",
+     "quote": "카엘은 열쇠를 자물쇠에 넣었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-384b-7726-a76c-ab992f73b96b",
+     "title": "23화 · 세 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "그와 레나 사이에 넓게 펼쳐져 길을 막았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3856-7b01-81da-624d7cc5b4de",
+     "title": "24화 · 봉인",
+     "doc_type": "manuscript",
+     "quote": "서윤은 유리 열쇠를 부수어 유리 정원을 다시 봉인했다."
+    }
+   ],
+   "grounding": {
+    "level": "NOT_ENOUGH",
+    "missing": [
+     "레나와 카엘이 손을 잡는 장면이 있는지 확인할 관련 원고"
+    ],
+    "documents_read": 11
+   },
+   "error": null,
+   "seconds": 22.9,
+   "metrics": {
+    "steps": 5,
+    "judge_calls": 3,
+    "rejections": 2,
+    "chars_read": 21376,
+    "input_tokens": 150070,
+    "cached_tokens": 72301,
+    "output_tokens": 1731,
+    "reviews": [
+     {
+      "n": 1,
+      "missing": [
+       "레나와 카엘이 손을 잡는 장면이 있는지 확인할 관련 원고"
+      ],
+      "problems": [],
+      "answer_ok": true,
+      "sufficient": false
+     },
+     {
+      "n": 2,
+      "missing": [
+       "레나와 카엘이 손을 잡는 장면이 있는지 확인할 관련 원고"
+      ],
+      "problems": [],
+      "answer_ok": true,
+      "sufficient": false
+     }
+    ]
+   },
+   "recall": null
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "답변은 확인한 원고만으로 작품 전체에서 그런 장면이 있는지 확정할 수 없다고 밝혔고, 인용한 장면들에는 손을 잡는 묘사가 없다고 설명했습니다. 장면을 지어내거나 원고에 없다고 단정하지 않았습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G10",
+   "type": "alias",
+   "question": "빛잡이가 마지막으로 빛을 끌어낸 건 몇 화고 무엇을 위해서였어?",
+   "points": [
+    "23화",
+    "카엘을 막기 위해"
+   ],
+   "sources": [
+    23
+   ]
+  },
+  "result": {
+   "session": "01a16cb1-f65e-71e4-90ca-f9367711176e",
+   "answer": "빛잡이 레나가 마지막으로 새로 빛을 끌어낸 건 **23화 「세 번째 빛」**이에요. 카엘이 정원 안쪽으로 나아가는 것을 막고, 유리 열쇠를 내려놓게 하려는 목적이었습니다. [[1]][[2]]\n\n24화에서도 그 빛은 한동안 카엘을 막고 있지만, 레나는 새로 끌어내지 않습니다. 그 화에서 정원을 다시 봉인하는 행동은 서윤이 열쇠를 부수는 것으로 이어져요. [[3]][[4]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-384b-7726-a76c-ab992f73b96b",
+     "title": "23화 · 세 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "레나는 유리 정원 한가운데서 세 번째로 빛을 끌어내 카엘을 막아섰다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-384b-7726-a76c-ab992f73b96b",
+     "title": "23화 · 세 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "“열쇠를 내려놔요.”"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3856-7b01-81da-624d7cc5b4de",
+     "title": "24화 · 봉인",
+     "doc_type": "manuscript",
+     "quote": "그녀는 더는 빛을 끌어내지 않았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3856-7b01-81da-624d7cc5b4de",
+     "title": "24화 · 봉인",
+     "doc_type": "manuscript",
+     "quote": "서윤은 유리 열쇠를 부수어 유리 정원을 다시 봉인했다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 2
+   },
+   "error": null,
+   "seconds": 9.7,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 3920,
+    "input_tokens": 35861,
+    "cached_tokens": 14535,
+    "output_tokens": 734,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "23화에 레나가 세 번째로 빛을 끌어내 카엘을 막아섰다고 답했고, 24화에서는 새로 빛을 끌어내지 않았다고 덧붙였습니다. 카엘의 접근을 막고 열쇠를 내려놓게 하려는 목적도 원문에 부합합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G11",
+   "type": "intent",
+   "intent": "explain",
+   "quote": {
+    "chapter": 15,
+    "text": "오렌은 카엘에게 유리 열쇠가 숨겨진 곳을 몰래 알려 주었다."
+   },
+   "question": "이 부분을 설명해 줘",
+   "points": [
+    "오렌이 카엘에게 열쇠 위치를 알려 주고 거래라 부름",
+    "대가로 은화 서른 닢을 받음 또는 이후 카엘이 열쇠를 훔침"
+   ],
+   "sources": [
+    15
+   ]
+  },
+  "result": {
+   "session": "01a16cb2-1c35-7867-aea9-49a9f276bfe4",
+   "answer": "이 장면은 오렌이 서재에서 카엘을 따로 만나, 유리 열쇠가 저택 서랍에 있다는 사실을 몰래 알려 주는 대화입니다. 두 사람은 열쇠의 행방을 두고 서로 원하는 것을 확인하려 하지만, 카엘은 열쇠가 왜 필요한지 밝히지 않고 오렌도 자신이 바라는 바를 분명히 말하지 않습니다. [[1]][[2]]\n\n앞서 13화에서 서윤과 레나는 열쇠를 오렌에게 맡기기로 했고, 세 사람이 발견한 일을 함께 기억하자고 다짐했습니다. 그래서 오렌의 행동은 단순히 보관 장소를 알려 준 것이 아니라, 서윤과 레나가 맡긴 신뢰를 어기는 선택입니다. [[3]][[4]]\n\n그 선택의 위험은 14화에서 이미 드러납니다. 카엘은 유리 정원에 관한 자료를 찾으러 저택에 왔다고 했고, 서윤은 열쇠를 발견한 일을 그에게 알리지 않기로 했습니다. 15화에서 카엘은 열쇠가 필요하다고만 말하고 용도는 숨기므로, 그의 목적은 여전히 불분명합니다. [[5]][[6]][[2]]\n\n16화는 이 만남이 실제 대가를 치른 거래였음을 보여 줍니다. 카엘은 오렌에게 은화 서른 닢을 건넸고, 서윤은 오렌의 달라진 태도를 알아차리지만 그 까닭은 알지 못합니다. 이어 17화에서 서윤은 오렌의 주머니 속 은화를 보고 처음 의심하게 됩니다. [[7]][[8]][[9]]\n\n다만 15화의 대화만으로는 오렌이 왜 거래를 받아들였는지, 카엘이 열쇠로 무엇을 하려는지, 오렌이 카엘에게서 무엇을 얻으려 했는지는 밝혀지지 않습니다. [[10]][[11]][[12]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37b1-7cea-a860-0c831c2b9178",
+     "title": "15화 · 거래",
+     "doc_type": "manuscript",
+     "quote": "유리 열쇠가 어디 있는지 알고 싶으신 겁니까?"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37b1-7cea-a860-0c831c2b9178",
+     "title": "15화 · 거래",
+     "doc_type": "manuscript",
+     "quote": "그건 말씀드릴 수 없습니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3776-7420-b5ae-753425d3e3ba",
+     "title": "13화 · 열쇠의 무게",
+     "doc_type": "manuscript",
+     "quote": "서윤은 유리 열쇠를 오렌에게 맡기며 저택 서랍에 숨겨 달라고 부탁했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3776-7420-b5ae-753425d3e3ba",
+     "title": "13화 · 열쇠의 무게",
+     "doc_type": "manuscript",
+     "quote": "우리가 무엇을 발견했는지, 그리고 왜 조심해야 하는지는 기억할 거예요."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3794-7fff-8121-966dd7fabaf2",
+     "title": "14화 · 카엘",
+     "doc_type": "manuscript",
+     "quote": "특히 유리 정원에 관한 이야기를 찾고 있습니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3794-7fff-8121-966dd7fabaf2",
+     "title": "14화 · 카엘",
+     "doc_type": "manuscript",
+     "quote": "카엘에게 그 사실을 말할 이유는 없었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37c4-7fe7-a5c7-4f8a5fac6b2a",
+     "title": "16화 · 은화 서른 닢",
+     "doc_type": "manuscript",
+     "quote": "카엘은 그 대가로 오렌에게 은화 서른 닢을 건넸다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37c4-7fe7-a5c7-4f8a5fac6b2a",
+     "title": "16화 · 은화 서른 닢",
+     "doc_type": "manuscript",
+     "quote": "무엇을 의미하는지 알 수는 없었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37d3-70e5-b660-5ac3f289619f",
+     "title": "17화 · 의심",
+     "doc_type": "manuscript",
+     "quote": "서윤은 오렌의 주머니에서 낯선 은화를 보고 처음으로 그를 의심했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37b1-7cea-a860-0c831c2b9178",
+     "title": "15화 · 거래",
+     "doc_type": "manuscript",
+     "quote": "오렌은 카엘을 바라보았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37c4-7fe7-a5c7-4f8a5fac6b2a",
+     "title": "16화 · 은화 서른 닢",
+     "doc_type": "manuscript",
+     "quote": "그날의 거래는 이미 끝나 있었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37c4-7fe7-a5c7-4f8a5fac6b2a",
+     "title": "16화 · 은화 서른 닢",
+     "doc_type": "manuscript",
+     "quote": "나는 알지 못했다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 5
+   },
+   "error": null,
+   "seconds": 16.9,
+   "metrics": {
+    "steps": 3,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 9691,
+    "input_tokens": 57834,
+    "cached_tokens": 24616,
+    "output_tokens": 1451,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "오렌이 카엘에게 열쇠가 저택 서랍에 있다고 알려 주고 이를 거래로 다룬 점, 카엘이 대가로 은화 서른 닢을 건넨 점을 모두 설명했습니다. 덧붙인 내용도 인용된 원문과 일치합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "G12",
+   "type": "intent",
+   "intent": "flow",
+   "quote": {
+    "chapter": 18,
+    "text": "레나가 두 번째로 각성하던 순간 무너진 성당의 첨탑이 완전히 무너져 내렸다."
+   },
+   "question": "이 장면의 앞뒤 흐름을 알려 줘",
+   "points": [
+    "앞서 7화에서 첫 각성",
+    "뒤이어 마을 사람들이 성당 근처에 가지 않음"
+   ],
+   "sources": [
+    18
+   ]
+  },
+  "result": {
+   "session": "01a16cb2-5e4a-7b83-895f-f1641048e4c2",
+   "answer": "5화 「성당 앞의 두통」에서 레나는 폐허가 된 성당 앞을 지나다 이유 모를 두통을 느끼지만, 그때는 별일 없이 돌아옵니다. 7화 「첫 번째 빛」에서는 다시 성당 제단을 찾은 레나가 빛을 처음 끌어내고, 서윤은 그 빛에 두려움을 느끼면서도 곁에 남습니다. [[1]][[2]]\n\n그 뒤 10화 「같은 꿈」에서 레나는 빛을 처음 끌어낸 이후 밤마다 유리 같은 문과 그 너머의 빛이 나오는 같은 꿈을 꾼다고 말합니다. 18화 「두 번째 빛」에서 폭풍 속 성당을 다시 찾은 레나는 그곳이 꿈에서 보던 장소라고 알아보고, 제단 앞에서 손끝에 다시 빛을 맺히게 합니다. [[3]][[4]]\n\n빛이 제단을 비춘 직후 성당이 크게 흔들리고, 첨탑이 무너져 내립니다. 다만 본문은 각성과 붕괴가 같은 순간에 벌어졌다고 보여 줄 뿐, 레나의 빛이 첨탑을 무너뜨렸다고 확정하지는 않습니다. [[5]][[6]]\n\n바로 앞인 17화 「의심」에서는 서윤이 오렌의 주머니에서 은화를 보고 그를 의심하지만, 출처를 몰라 묻지 않고 아무것도 기록하지 않습니다. 이 의심은 18화의 성당 장면과 직접 연결되기보다는, 그 장면 전후로 서윤이 품고 있는 불안의 한 축으로 이어집니다. [[7]][[8]]\n\n19화 「무너진 것들」에서는 마을 사람들이 성당을 피하고 그날 일을 입에 올리지 않으며, 서윤도 레나의 빛과 첨탑의 붕괴를 기록하지 못합니다. 레나는 “모르겠어”라고 답하고, 오렌은 그녀를 돌보지만 서윤의 은화에 대한 의심은 사라지지 않습니다. [[9]][[10]]\n\n이어지는 20화 「빈 서랍」에서는 서윤이 카엘이 오렌의 방에서 유리 열쇠를 꺼내 가는 장면을 목격합니다. 성당 붕괴의 원인이나 그 일과 열쇠의 관계는 본문에서 밝혀지지 않고, 이야기는 오렌과 카엘, 열쇠를 둘러싼 의심으로 옮겨 갑니다. [[11]][[12]]\n\n",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-36e8-735d-bc5c-38323d0384c7",
+     "title": "5화 · 성당 앞의 두통",
+     "doc_type": "manuscript",
+     "quote": "레나는 무너진 성당 앞을 지나며 이유 모를 두통을 느꼈지만 아무 일도 일어나지 않았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3709-72c9-82c4-52e88cdf7104",
+     "title": "7화 · 첫 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "그녀의 손가락 사이로 빛이 태어났다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3746-7d2b-9b7c-4bf62eec241c",
+     "title": "10화 · 같은 꿈",
+     "doc_type": "manuscript",
+     "quote": "성당에서의 각성 이후 레나는 밤마다 같은 꿈을 꾸었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37e5-728b-a6a0-a1bfe4955384",
+     "title": "18화 · 두 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "다만…… 꿈에서 보던 곳이랑 같아."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37e5-728b-a6a0-a1bfe4955384",
+     "title": "18화 · 두 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "그때 성당이 크게 흔들렸다. 위쪽에서 갈라지는 소리가 났다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37e5-728b-a6a0-a1bfe4955384",
+     "title": "18화 · 두 번째 빛",
+     "doc_type": "manuscript",
+     "quote": "레나가 두 번째로 각성하던 순간 무너진 성당의 첨탑이 완전히 무너져 내렸다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37d3-70e5-b660-5ac3f289619f",
+     "title": "17화 · 의심",
+     "doc_type": "manuscript",
+     "quote": "그 은화가 어디서 왔는지 나는 몰랐다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-37d3-70e5-b660-5ac3f289619f",
+     "title": "17화 · 의심",
+     "doc_type": "manuscript",
+     "quote": "결국 나는 아무것도 쓰지 않았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-380c-7610-8825-36497e0f8a5e",
+     "title": "19화 · 무너진 것들",
+     "doc_type": "manuscript",
+     "quote": "성당에서 일어난 일은 누구나 알고 있었지만, 아는 것과 입에 올리는 것은 다른 일이었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-380c-7610-8825-36497e0f8a5e",
+     "title": "19화 · 무너진 것들",
+     "doc_type": "manuscript",
+     "quote": "의심은 사라지지 않았고, 그렇다고 입 밖으로 꺼낼 근거도 없었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-381b-7f5e-906c-58cdbc26a6d7",
+     "title": "20화 · 빈 서랍",
+     "doc_type": "manuscript",
+     "quote": "유리 열쇠였다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-381b-7f5e-906c-58cdbc26a6d7",
+     "title": "20화 · 빈 서랍",
+     "doc_type": "manuscript",
+     "quote": "오렌의 은화와 카엘의 손, 유리 열쇠의 빛이 머릿속에서 뒤엉켰다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 8
+   },
+   "error": null,
+   "seconds": 21.2,
+   "metrics": {
+    "steps": 3,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 14513,
+    "input_tokens": 70091,
+    "cached_tokens": 26882,
+    "output_tokens": 2078,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "glass-garden",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "7화에서 레나가 처음 빛을 끌어낸 일을 설명했고, 19화에서 첨탑 붕괴 뒤 마을 사람들이 성당 근처를 피했다고 설명했습니다. 앞뒤 흐름에 덧붙인 내용도 원문과 모순되지 않습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T01",
+   "type": "simple",
+   "session": "t-a",
+   "question": "최할머니는 무슨 요일에 무엇을 주문했어?",
+   "points": [
+    "목요일",
+    "국밥"
+   ],
+   "sources": [
+    5
+   ]
+  },
+  "result": {
+   "session": "01a16cb2-b167-70b8-a759-1bebd0f4de23",
+   "answer": "최할머니는 매주 목요일 점심에 국밥을 주문했어. 5화에서 수민이 “오늘도 국밥이지요?”라고 묻자 할머니가 고개를 끄덕이고, 13화에서도 마지막으로 국밥을 주문해 먹어. [[1]][[2]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3df9-7a3d-9b05-75b9774b829e",
+     "title": "5화 · 목요일의 국밥",
+     "doc_type": "manuscript",
+     "quote": "최할머니는 매주 목요일 점심마다 국밥을 주문했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e9a-70f5-b1c9-a841e5aeb069",
+     "title": "13화 · 작별",
+     "doc_type": "manuscript",
+     "quote": "오늘도 그걸로 줘요. 마지막으로 먹는다고 생각하니 더 먹고 싶네."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 3
+   },
+   "error": null,
+   "seconds": 6.2,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 5810,
+    "input_tokens": 34873,
+    "cached_tokens": 6081,
+    "output_tokens": 210,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "답변은 최할머니가 목요일 점심에 국밥을 주문했다고 정확히 말합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T02",
+   "type": "followup",
+   "session": "t-a",
+   "after": "T01",
+   "question": "그분은 왜 더 이상 안 오셨어?",
+   "points": [
+    "손자 집으로 이사"
+   ],
+   "sources": [
+    13
+   ]
+  },
+  "result": {
+   "session": "01a16cb2-b167-70b8-a759-1bebd0f4de23",
+   "answer": "최할머니는 혼자 지내는 것보다 낫겠다고 생각해 손자 집으로 이사했어. 13화에서 그 소식을 전하며 봄날에서 마지막 국밥을 먹고 작별 인사를 해. [[1]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e9a-70f5-b1c9-a841e5aeb069",
+     "title": "13화 · 작별",
+     "doc_type": "manuscript",
+     "quote": "혼자 지내는 것보다 그게 낫겠다 싶어서."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 0
+   },
+   "error": null,
+   "seconds": 4.7,
+   "metrics": {
+    "steps": 1,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 0,
+    "input_tokens": 28909,
+    "cached_tokens": 6047,
+    "output_tokens": 256,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "13화에서 최할머니가 혼자 지내는 것보다 낫겠다며 손자 집으로 가기로 했다고 직접 말합니다. 답변이 그 이유를 정확히 설명했습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T03",
+   "type": "alias",
+   "question": "꼬마가 숨긴 소식은 뭐였어?",
+   "points": [
+    "대학원 합격"
+   ],
+   "sources": [
+    4
+   ]
+  },
+  "result": {
+   "session": "01a16cb2-dc3d-71cf-a771-101a6c63058d",
+   "answer": "꼬마, 즉 수민이가 숨긴 소식은 **대학원에 합격했다는 것**이야. 4화에서 합격 통지서를 카운터 아래 서랍에 숨겼고, 엄마에게 어떻게 말할지 망설여. [[1]]\n\n11화에서 수민은 그 소식을 오빠 준호에게 먼저 털어놓고, 16화에서 수술 후 병실에 있는 엄마 정희에게도 전해. [[2]][[3]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ddd-73dd-ad98-f7fa06235f3c",
+     "title": "4화 · 숨긴 편지",
+     "doc_type": "manuscript",
+     "quote": "수민은 대학원 합격 통지서를 서랍 깊숙이 숨겼다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e40-723e-a033-d2b2946142e9",
+     "title": "11화 · 오빠에게",
+     "doc_type": "manuscript",
+     "quote": "수민은 대학원 합격 사실을 준호에게 가장 먼저 털어놓았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ee9-71cd-82d4-951ae5494776",
+     "title": "16화 · 엄마에게",
+     "doc_type": "manuscript",
+     "quote": "대학원에 합격했어."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 3
+   },
+   "error": null,
+   "seconds": 5.5,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 6129,
+    "input_tokens": 35271,
+    "cached_tokens": 12129,
+    "output_tokens": 295,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "수민이 숨긴 소식이 대학원 합격이라는 점을 밝혔고, 준호와 어머니에게 나중에 전했다는 설명도 원문과 일치합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T04",
+   "type": "multihop",
+   "question": "수민의 대학원 합격 소식을 가족이 알게 된 순서를 알려 줘.",
+   "points": [
+    "처음엔 통지서를 숨김",
+    "준호에게 가장 먼저 말함",
+    "병실의 엄마에게 말하자 엄마가 울음"
+   ],
+   "sources": [
+    4,
+    11,
+    16
+   ]
+  },
+  "result": {
+   "session": "01a16cb2-f1ec-7cab-b72b-aa3f205fcfc5",
+   "answer": "가족 중에서는 **준호가 먼저**, 그다음 **엄마 정희가** 수민의 대학원 합격 소식을 알게 됩니다. 4화에서 수민은 합격 통지서를 서랍에 숨기고 정희에게 말하지 못합니다. [[1]]\n\n11화에서 수민은 준호에게 합격 사실을 털어놓고, 준호는 수민이 자신에게 가장 먼저 말했다는 것을 알게 됩니다. [[2]]\n\n그 뒤 16화, 정희가 수술 후 병실에 있을 때 수민이 엄마에게 직접 합격 소식을 전합니다. 수민은 준호에게 먼저 말했다고도 덧붙입니다. [[3]]\n\n따라서 순서는 **준호 → 정희**입니다. 다른 가족이 이 소식을 알게 되는 장면은 읽은 내용에 나오지 않습니다. [[4]][[5]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ddd-73dd-ad98-f7fa06235f3c",
+     "title": "4화 · 숨긴 편지",
+     "doc_type": "manuscript",
+     "quote": "수민은 대학원 합격 통지서를 서랍 깊숙이 숨겼다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e40-723e-a033-d2b2946142e9",
+     "title": "11화 · 오빠에게",
+     "doc_type": "manuscript",
+     "quote": "수민은 대학원 합격 사실을 준호에게 가장 먼저 털어놓았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ee9-71cd-82d4-951ae5494776",
+     "title": "16화 · 엄마에게",
+     "doc_type": "manuscript",
+     "quote": "오빠한테는 먼저 말했어."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e40-723e-a033-d2b2946142e9",
+     "title": "11화 · 오빠에게",
+     "doc_type": "manuscript",
+     "quote": "네가 엄마한테 직접 말하고 싶으면 기다려 줄게. 같이 말하고 싶으면 같이 가고."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ee9-71cd-82d4-951ae5494776",
+     "title": "16화 · 엄마에게",
+     "doc_type": "manuscript",
+     "quote": "대학원에 합격했어."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 4
+   },
+   "error": null,
+   "seconds": 9.0,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 8031,
+    "input_tokens": 39335,
+    "cached_tokens": 12136,
+    "output_tokens": 815,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "수민이 처음에는 합격 통지서를 숨겼고, 준호에게 가장 먼저 알린 뒤 병실의 엄마에게 전했으며 정희가 울었다는 순서를 모두 정확히 설명했습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T05",
+   "type": "multihop",
+   "question": "냉이 된장 파스타가 정식 메뉴가 되기까지의 과정을 알려 줘.",
+   "points": [
+    "태오 제안과 정희 반대",
+    "준호와 태오의 다툼",
+    "시범 판매 첫날 마흔 그릇",
+    "8월 정식 메뉴"
+   ],
+   "sources": [
+    3,
+    6,
+    9,
+    19
+   ]
+  },
+  "result": {
+   "session": "01a16cb3-153a-7c69-92a9-4882d0042f66",
+   "answer": "3화 「냉이 된장 파스타」에서 태오가 새 메뉴를 제안했지만, 정희는 손님에게 낯설고 식당에 어울릴지 모르겠다며 반대합니다. 준호와 수민이 먼저 만들어 맛을 보자고 권하자 정희는 조리에는 동의하되, “냉이 향이 살아야 해”라고 조건을 달고 메뉴 확정은 미룹니다. [[1]][[2]]\n\n4월의 6화에서는 메뉴를 다시 논의하는 과정에서 준호와 태오가 충돌합니다. 준호는 정희의 반대를 존중해야 한다고 주장하고, 태오는 먹어 보기도 전에 논의를 끝내선 안 된다고 맞서며 갈등이 남습니다. [[3]]\n\n9화에서 냉이 된장 파스타는 시범 판매를 시작해 첫날 마흔 그릇이 팔립니다. 정희는 손님들의 반응과 판매량을 살피고, 태오에게 부족한 점을 고치며 단골들의 의견도 들어 보라고 합니다. 이어 “내일도 해 보자”고 허락하지만, 이는 정식 메뉴 확정이 아니라 시범 판매를 이어 가자는 결정입니다. [[4]][[5]]\n\n15화에서는 태오가 레시피 노트를 준호에게 보여 주고, 두 사람은 식당 사정도 고려해 함께 만들어 보기로 합니다. 다만 이 장면은 협력하기로 화해하는 과정이며, 실제로 어떤 조리법을 어떻게 고쳤는지는 본문에 나오지 않습니다. [[6]]\n\n8월의 19화에서 정희가 주방에 복귀했을 때, 냉이 된장 파스타는 정식 메뉴가 되어 손님들의 주문을 받습니다. 따라서 작품에 드러난 과정은 **제안과 조리 동의 → 메뉴를 둘러싼 갈등 → 시범 판매와 손님 반응 확인 → 판매를 더 이어 본 뒤 정식 메뉴화**입니다. [[7]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3dc7-7334-ba6b-2a06320866f2",
+     "title": "3화 · 냉이 된장 파스타",
+     "doc_type": "manuscript",
+     "quote": "새 메뉴가 정해진 것은 아니었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3dc7-7334-ba6b-2a06320866f2",
+     "title": "3화 · 냉이 된장 파스타",
+     "doc_type": "manuscript",
+     "quote": "냉이 향이 살아야 해. 그건 꼭 기억해."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e09-7252-b170-f6206d3add21",
+     "title": "6화 · 4월의 다툼",
+     "doc_type": "manuscript",
+     "quote": "아직 먹어보지도 않고 안 된다고 하면, 나는 뭘 더 해볼 수 있겠어?"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e2c-7a5e-8d8e-741e9c66189d",
+     "title": "9화 · 시범 판매",
+     "doc_type": "manuscript",
+     "quote": "냉이 된장 파스타는 시범 판매 첫날 마흔 그릇이 팔렸다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e2c-7a5e-8d8e-741e9c66189d",
+     "title": "9화 · 시범 판매",
+     "doc_type": "manuscript",
+     "quote": "내일도 해 보자."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3edf-757d-ae6d-dc2e87638421",
+     "title": "15화 · 레시피 노트",
+     "doc_type": "manuscript",
+     "quote": "그럼 같이 해보자. 내가 잘 모르는 부분은 물어볼게."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3f0f-780b-8377-e819394c64ad",
+     "title": "19화 · 복귀",
+     "doc_type": "manuscript",
+     "quote": "8월, 정희가 주방에 복귀했고 냉이 된장 파스타는 정식 메뉴가 되었다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 5
+   },
+   "error": null,
+   "seconds": 10.9,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 10439,
+    "input_tokens": 43862,
+    "cached_tokens": 12138,
+    "output_tokens": 969,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "답변은 태오의 제안과 정희의 반대, 준호와 태오의 다툼, 시범 판매 첫날 마흔 그릇 판매, 8월 정식 메뉴화를 모두 다룹니다. 시범 판매를 이어 가기로 한 결정과 정식 메뉴가 된 시점을 구분해 설명했습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T06",
+   "type": "complex",
+   "question": "정희가 식당을 비운 건 언제부터 언제까지였고 그동안 누가 식당을 맡았어?",
+   "points": [
+    "6월 3일 수술부터",
+    "8월 복귀까지",
+    "준호가 운영"
+   ],
+   "sources": [
+    14,
+    19
+   ]
+  },
+  "result": {
+   "session": "01a16cb3-4001-78ae-a5f1-b83956e13ee5",
+   "answer": "정희의 수술은 6월 3일이고, 8월에 주방으로 복귀합니다. 다만 원고 안에 수술 당일 운영에 관한 모순이 있어요. 10화에서는 정희가 “가게 문을 닫아야지”라고 하지만, 14화에서는 준호가 아침에 문을 열고 혼자 식당을 맡아 운영합니다. [[1]][[2]][[3]]\n\n그 뒤 정희가 주방에 복귀하기 전까지는 준호와 태오가 함께 식당을 꾸려 가고, 수민도 홀에서 돕습니다. 7월에는 현우가 주말 아르바이트로 합류합니다. 단, 정희가 그 기간 내내 식당에 없었던 것은 아닙니다. 7월 장면에서는 정희가 식당에 나와 앉아서 상황을 살핍니다. [[4]][[5]][[6]][[7]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e36-7ffc-9534-c673a220d7a8",
+     "title": "10화 · 날짜",
+     "doc_type": "manuscript",
+     "quote": "가게 문을 닫아야지. 내가 없는데 뭘 하겠니."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3eb5-7d6c-ab4c-94a0d6d3d45f",
+     "title": "14화 · 수술",
+     "doc_type": "manuscript",
+     "quote": "6월 3일 정희가 수술을 받는 동안 준호가 식당 운영을 맡았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3f0f-780b-8377-e819394c64ad",
+     "title": "19화 · 복귀",
+     "doc_type": "manuscript",
+     "quote": "8월, 정희가 주방에 복귀했고"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3edf-757d-ae6d-dc2e87638421",
+     "title": "15화 · 레시피 노트",
+     "doc_type": "manuscript",
+     "quote": "그 빈자리를 지키는 일이 혼자만의 몫은 아니라는 생각이 들었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3edf-757d-ae6d-dc2e87638421",
+     "title": "15화 · 레시피 노트",
+     "doc_type": "manuscript",
+     "quote": "홀 쪽에서 빈 그릇을 정리하던 수민"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ef3-746e-87b6-e685073743a8",
+     "title": "17화 · 아르바이트",
+     "doc_type": "manuscript",
+     "quote": "7월, 현우는 봄날에서 주말 아르바이트를 시작했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ef3-746e-87b6-e685073743a8",
+     "title": "17화 · 아르바이트",
+     "doc_type": "manuscript",
+     "quote": "정희는 계산대 옆에서 그 모습을 지켜봤다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 8
+   },
+   "error": null,
+   "seconds": 25.1,
+   "metrics": {
+    "steps": 4,
+    "judge_calls": 3,
+    "rejections": 1,
+    "chars_read": 16526,
+    "input_tokens": 103698,
+    "cached_tokens": 41494,
+    "output_tokens": 2413,
+    "reviews": [
+     {
+      "n": 1,
+      "missing": [],
+      "problems": [
+       "10화에서는 수술 당일 가게 문을 닫기로 했다고 하지만, 답은 6월 3일에 준호가 식당 운영을 맡았다고 단정해 문서 간 차이를 짚지 않았습니다."
+      ],
+      "answer_ok": false,
+      "sufficient": true
+     }
+    ]
+   },
+   "recall": 1.0
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "답변은 수술일인 6월 3일부터 8월 복귀까지의 시기를 말하고, 수술 당일 준호가 식당을 맡았다고 답합니다. 이후 태오와 수민도 함께 도왔다는 설명은 원문에 부합하며, 7월에 정희가 식당에 나온 장면도 정확히 짚었습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T07",
+   "type": "contradiction",
+   "question": "태오는 봄날에서 몇 년 일했어?",
+   "points": [
+    "원고에서는 5년이라고 말한다",
+    "설정 문서의 10년과 어긋난다"
+   ],
+   "sources": [
+    18,
+    "teo"
+   ]
+  },
+  "result": {
+   "session": "01a16cb3-a24d-7c48-bb98-9a14314db07b",
+   "answer": "설정 문서에는 태오가 봄날에서 **10년째** 일한다고 되어 있지만, 18화에서는 **5년** 함께했다고 나와 서로 맞지 않습니다. [[1]][[2]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3f42-7f53-9850-7753a83f710b",
+     "title": "박태오",
+     "doc_type": "character",
+     "quote": "봄날에서 10년째 일했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3eff-78ac-8926-b3c6da001c35",
+     "title": "18화 · 스카우트",
+     "doc_type": "manuscript",
+     "quote": "봄날에서 5년을 함께했다며 거절했다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 3
+   },
+   "error": null,
+   "seconds": 17.8,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 4599,
+    "input_tokens": 32251,
+    "cached_tokens": 12128,
+    "output_tokens": 325,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "원고 18화에서 태오가 봄날에서 5년을 함께했다고 하고, 설정 문서에는 10년째 일한다고 되어 있어 서로 어긋난다고 답했습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T08",
+   "type": "negative",
+   "question": "현우가 정희의 수술 날 병원에 갔어?",
+   "points": [
+    "원고에서 그런 내용을 찾지 못했다"
+   ],
+   "sources": [],
+   "absent": true
+  },
+  "result": {
+   "session": "01a16cb3-e7fb-7cd0-a39f-cdd68070e74b",
+   "answer": "원고는 수술 날 현우가 병원에 갔는지 밝히지 않습니다. [[1]][[2]]14화는 수술 중 준호가 식당을 맡는 모습을, 16화는 병실에서 정희 곁에 앉은 수민을 보여 줍니다. [[3]][[2]]이 장면들로는 현우가 병원에 갔는지 확인할 수 없습니다. [[1]][[2]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3eb5-7d6c-ab4c-94a0d6d3d45f",
+     "title": "14화 · 수술",
+     "doc_type": "manuscript",
+     "quote": "6월 3일 정희가 수술을 받는 동안 준호가 식당 운영을 맡았다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ee9-71cd-82d4-951ae5494776",
+     "title": "16화 · 엄마에게",
+     "doc_type": "manuscript",
+     "quote": "수민은 엄마 옆 의자에 앉아 있었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3eb5-7d6c-ab4c-94a0d6d3d45f",
+     "title": "14화 · 수술",
+     "doc_type": "manuscript",
+     "quote": "손님을 맞이하고, 주문을 확인하고, 그릇을 치우는 흐름이 반복되었다."
+    }
+   ],
+   "grounding": {
+    "level": "NOT_ENOUGH",
+    "missing": [
+     "수술 날 현우가 병원에 갔는지 보여 주는 원고 내용"
+    ],
+    "documents_read": 6
+   },
+   "error": null,
+   "seconds": 25.3,
+   "metrics": {
+    "steps": 5,
+    "judge_calls": 4,
+    "rejections": 2,
+    "chars_read": 12327,
+    "input_tokens": 103864,
+    "cached_tokens": 47948,
+    "output_tokens": 1568,
+    "reviews": [
+     {
+      "n": 1,
+      "missing": [
+       "정희의 수술 날 현우가 병원에 갔는지 확인할 원고"
+      ],
+      "problems": [],
+      "answer_ok": true,
+      "sufficient": false
+     },
+     {
+      "n": 2,
+      "missing": [
+       "수술 날 현우가 병원에 갔는지 보여 주는 원고 내용"
+      ],
+      "problems": [],
+      "answer_ok": true,
+      "sufficient": false
+     }
+    ]
+   },
+   "recall": null
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true
+   ],
+   "false_claims": [],
+   "reason": "답변은 원고에서 현우가 수술 날 병원에 갔는지 확인할 수 없다고 명확히 밝혔습니다. 인용된 장면의 요약도 원문과 일치합니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T09",
+   "type": "memo",
+   "question": "수민은 결국 유학을 떠나?",
+   "points": [
+    "원고에는 유학을 떠나는 내용이 없다",
+    "메모의 구상일 뿐"
+   ],
+   "sources": [],
+   "absent": true,
+   "forbid": [
+    "수민이 유학을 떠났다"
+   ]
+  },
+  "result": {
+   "session": "01a16cb4-4b38-7413-aefe-634d2e9dea3c",
+   "answer": "원고는 수민이 실제로 유학을 떠나는지는 정하지 않았어요. 4화에서 수민은 대학원 합격 통지서를 숨기고, 11화에서는 오빠에게 합격 소식을 털어놓은 뒤 “조금만 더 생각해 볼래”라고 말합니다. [[1]][[2]]\n16화에서 엄마에게도 합격 소식을 전하지만, “나 잘할 수 있을까?”라고 묻는 데 그치며 진학이나 출국을 결정하지는 않습니다. [[3]]\n20화에는 수민이 봄날에서 가족들과 사진을 찍는 모습이 나오지만, 그 뒤 유학을 떠나는지는 보여 주지 않습니다. [[4]]\n작가 메모도 수민이 유학을 떠나는 결말로 할지 “고민” 중이라고 적고 있어, 떠나는 것은 아직 정해진 결말이 아닙니다. [[5]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ddd-73dd-ad98-f7fa06235f3c",
+     "title": "4화 · 숨긴 편지",
+     "doc_type": "manuscript",
+     "quote": "수민은 대학원 합격 통지서를 서랍 깊숙이 숨겼다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e40-723e-a033-d2b2946142e9",
+     "title": "11화 · 오빠에게",
+     "doc_type": "manuscript",
+     "quote": "조금만 더 생각해 볼래."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ee9-71cd-82d4-951ae5494776",
+     "title": "16화 · 엄마에게",
+     "doc_type": "manuscript",
+     "quote": "엄마, 나 잘할 수 있을까?"
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3f17-7a27-9515-cf32536d6968",
+     "title": "20화 · 가족사진",
+     "doc_type": "manuscript",
+     "quote": "정희와 준호, 수민, 태오, 현우가 식당 앞에서 가족사진을 찍었다."
+    },
+    {
+     "kind": "memo",
+     "memo_id": "01a16ca9-4223-7818-b068-a0e73985e5c7",
+     "title": "결말 구상",
+     "quote": "수민이 결국 유학을 떠나는 결말로 갈지 고민."
+    }
+   ],
+   "grounding": {
+    "level": "NOT_ENOUGH",
+    "missing": [
+     "수민이 실제로 유학을 떠나는지 보여 주는 원고"
+    ],
+    "documents_read": 9
+   },
+   "error": null,
+   "seconds": 25.7,
+   "metrics": {
+    "steps": 5,
+    "judge_calls": 4,
+    "rejections": 2,
+    "chars_read": 14994,
+    "input_tokens": 117739,
+    "cached_tokens": 52827,
+    "output_tokens": 2042,
+    "reviews": [
+     {
+      "n": 1,
+      "missing": [
+       "수민이 유학을 떠나는지 보여 주는 원고의 내용"
+      ],
+      "problems": [],
+      "answer_ok": true,
+      "sufficient": false
+     },
+     {
+      "n": 2,
+      "missing": [
+       "수민이 실제로 유학을 떠나는지 보여 주는 원고"
+      ],
+      "problems": [],
+      "answer_ok": true,
+      "sufficient": false
+     }
+    ]
+   },
+   "recall": null
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "원고에는 수민이 유학을 떠나는 내용이 없고, 답변은 원고에서 진학이나 출국이 결정되지 않았다고 명확히 설명합니다. 유학을 떠나는 결말은 메모의 구상일 뿐이라고도 밝혔습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T10",
+   "type": "complex",
+   "question": "가족사진에는 누가 있었고, 처음 20주년 때와 비교하면 식당에 새로 합류한 사람은 누구야?",
+   "points": [
+    "정희, 준호, 수민, 태오, 현우",
+    "현우(아르바이트)",
+    "준호(회사를 그만두고 합류)"
+   ],
+   "sources": [
+    20,
+    2,
+    17
+   ]
+  },
+  "result": {
+   "session": "01a16cb4-affc-7408-bf49-bd7c0ff6ccf1",
+   "answer": "가족사진에는 정희, 준호, 수민, 태오, 현우가 함께 있었어요. 처음 20주년 때는 이 다섯 명에 최할머니까지 봄날에 모였지만, 새로 식당 일에 합류한 사람은 현우예요. [[1]][[2]][[3]] 20주년 무렵의 현우는 축하하러 온 수민의 남자친구였고, 이후 7월부터 주말 아르바이트를 시작해 식당의 일손이 됐어요. [[4]][[5]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3f17-7a27-9515-cf32536d6968",
+     "title": "20화 · 가족사진",
+     "doc_type": "manuscript",
+     "quote": "21주년을 앞두고 정희와 준호, 수민, 태오, 현우가 식당 앞에서 가족사진을 찍었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3d8d-79e6-af4d-b2124aa6d9f9",
+     "title": "1화 · 스무 번째 봄",
+     "doc_type": "manuscript",
+     "quote": "뒤이어 정현우가 문을 열고 들어왔다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ef3-746e-87b6-e685073743a8",
+     "title": "17화 · 아르바이트",
+     "doc_type": "manuscript",
+     "quote": "7월, 현우는 봄날에서 주말 아르바이트를 시작했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3d8d-79e6-af4d-b2124aa6d9f9",
+     "title": "1화 · 스무 번째 봄",
+     "doc_type": "manuscript",
+     "quote": "축하드리러 왔습니다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ef3-746e-87b6-e685073743a8",
+     "title": "17화 · 아르바이트",
+     "doc_type": "manuscript",
+     "quote": "이제 현우는 봄날의 앞치마를 두르고 있었다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 3
+   },
+   "error": null,
+   "seconds": 10.1,
+   "metrics": {
+    "steps": 3,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 5975,
+    "input_tokens": 44026,
+    "cached_tokens": 20853,
+    "output_tokens": 690,
+    "reviews": []
+   },
+   "recall": 0.6666666666666666
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "wrong",
+   "covered": [
+    true,
+    true,
+    false
+   ],
+   "false_claims": [
+    "현우만 새로 식당 일에 합류했다고 답했지만, 준호도 회사를 그만두고 식당에 합류했다."
+   ],
+   "reason": "가족사진의 다섯 사람과 현우의 아르바이트 시작은 맞게 답했지만, 비교 질문의 또 다른 핵심인 준호의 합류를 빠뜨리고 현우만 새로 합류했다고 했습니다.",
+   "votes": [
+    "partial",
+    "wrong",
+    "wrong"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T11",
+   "type": "intent",
+   "intent": "flow",
+   "quote": {
+    "chapter": 14,
+    "text": "6월 3일 정희가 수술을 받는 동안 준호가 식당 운영을 맡았다."
+   },
+   "question": "이 장면의 앞뒤 흐름을 알려 줘",
+   "points": [
+    "앞서 5월에 수술 날짜가 잡힘",
+    "뒤이어 태오가 레시피 노트를 넘김 또는 수민이 병실에서 합격 소식을 전함"
+   ],
+   "sources": [
+    14
+   ]
+  },
+  "result": {
+   "session": "01a16cb4-d78a-7bda-92c5-dbe008e603ff",
+   "answer": "7화 「검진」에서 정희는 무릎 수술 권유를 받고, 자리를 비우면 아이들이 밥을 잘 챙겨 먹을지 걱정합니다. 준호는 “내가 챙길게”라고 답해 가게를 맡을 가능성을 먼저 보여 줍니다. [[1]] [[2]]\n\n10화 「날짜」에서는 수술일이 6월 3일로 정해지고, 정희가 “내가 없는데 뭘 하겠니”라며 그날 가게 문을 닫겠다고 말합니다. 다만 14화 「수술」은 같은 수술 당일에 준호가 문을 열고 손님을 받으며 실제 영업을 했다고 그립니다. 따라서 두 화의 계획과 실행은 서로 맞지 않으며, 원고만으로는 그 사이에 계획이 바뀌었는지 알 수 없습니다. [[3]] [[4]]\n\n읽는 순서상 14화 직전인 13화 「작별」은 최할머니가 마지막 국밥을 먹고 떠나는 이야기입니다. 준호가 가게 일을 맡아 거든다는 대사는 나오지만, 이 장면이 수술 당일과 날짜상 이어진다고 서술되지는 않습니다. [[5]] [[6]]\n\n14화에서 준호는 혼자 주문을 받고 홀과 주방을 오가며 하루 영업을 꾸려 나가고, 그제야 정희가 평소 얼마나 많은 일을 살펴 왔는지 실감합니다. 뒤따르는 15화에서는 태오가 레시피 노트를 건네며 두 사람이 메뉴를 둘러싼 오해를 풀지만, 그 화해가 준호가 혼자 가게를 운영하는 바로 그날 일어났다고는 문서에 적혀 있지 않습니다. [[7]] [[8]]\n\n16화에서는 병실에서 회복 중인 정희에게 수민이 대학원 합격 소식을 전하고, 19화 「복귀」에서는 8월에 정희가 주방으로 돌아와 냉이 된장 파스타가 정식 메뉴가 됩니다. [[9]] [[10]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e15-732a-b251-24dba3f8a635",
+     "title": "7화 · 검진",
+     "doc_type": "manuscript",
+     "quote": "내가 잠깐 자리를 비우면 너희끼리 밥은 잘 챙겨 먹나 싶지."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e15-732a-b251-24dba3f8a635",
+     "title": "7화 · 검진",
+     "doc_type": "manuscript",
+     "quote": "그건 걱정할 필요 없어. 내가 챙길게."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e36-7ffc-9534-c673a220d7a8",
+     "title": "10화 · 날짜",
+     "doc_type": "manuscript",
+     "quote": "내가 없는데 뭘 하겠니."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3eb5-7d6c-ab4c-94a0d6d3d45f",
+     "title": "14화 · 수술",
+     "doc_type": "manuscript",
+     "quote": "문을 열자 익숙한 종소리가 났다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e9a-70f5-b1c9-a841e5aeb069",
+     "title": "13화 · 작별",
+     "doc_type": "manuscript",
+     "quote": "가게 일은 네가 맡아서 거드는 거라며."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e9a-70f5-b1c9-a841e5aeb069",
+     "title": "13화 · 작별",
+     "doc_type": "manuscript",
+     "quote": "최할머니는 손자 집으로 이사 간다며 마지막 국밥을 먹고 작별 인사를 했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3eb5-7d6c-ab4c-94a0d6d3d45f",
+     "title": "14화 · 수술",
+     "doc_type": "manuscript",
+     "quote": "오늘 하루 동안 정희가 얼마나 많은 것을 살펴 왔는지 생각했다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3edf-757d-ae6d-dc2e87638421",
+     "title": "15화 · 레시피 노트",
+     "doc_type": "manuscript",
+     "quote": "태오는 자신의 레시피 노트를 준호에게 넘겨주었다."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3ee9-71cd-82d4-951ae5494776",
+     "title": "16화 · 엄마에게",
+     "doc_type": "manuscript",
+     "quote": "대학원에 합격했어."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3f0f-780b-8377-e819394c64ad",
+     "title": "19화 · 복귀",
+     "doc_type": "manuscript",
+     "quote": "8월, 정희가 주방에 복귀했고 냉이 된장 파스타는 정식 메뉴가 되었다."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 8
+   },
+   "error": null,
+   "seconds": 31.7,
+   "metrics": {
+    "steps": 3,
+    "judge_calls": 3,
+    "rejections": 1,
+    "chars_read": 16508,
+    "input_tokens": 92657,
+    "cached_tokens": 29412,
+    "output_tokens": 3215,
+    "reviews": [
+     {
+      "n": 1,
+      "missing": [],
+      "problems": [
+       "13화는 14화의 바로 앞 장면이 아닙니다. 14화에서는 6월 3일 수술 당일 준호가 혼자 식당을 맡지만, 13화는 최할머니의 작별을 다루며 날짜상 연결을 확정하지 않습니다.",
+       "14화에서 준호가 맡은 것은 실제 영업 운영이며, 10화의 계획과 달리 수술 당일 가게 문을 닫았다고 쓰지 않습니다. 답변은 10화에서 ‘수술 당일 가게 문을 닫기로’ 했다고 하면서도 이를 바로 이어지는 상황처럼 연결해 모순을 해소하지 않습니다.",
+       "15화의 태오와 준호의 화해를 ‘준호가 가게를 맡는 동안’ 일어난 일로 단정하지만, 문서에는 그 시점이 특정되어 있지 않습니다."
+      ],
+      "answer_ok": false,
+      "sufficient": true
+     }
+    ]
+   },
+   "recall": 1.0
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "5월에 수술 날짜가 6월 3일로 정해졌다고 설명했고, 뒤이어 15화에서 태오가 레시피 노트를 준 일과 16화에서 수민이 병실에서 합격 소식을 전한 일을 모두 언급했습니다. 장면 사이의 흐름과 원고에 명시되지 않은 연결을 구분해 설명했습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ },
+ {
+  "question": {
+   "id": "T12",
+   "type": "complex",
+   "question": "4월에 크게 다퉜던 두 사람은 나중에 어떻게 화해했어?",
+   "points": [
+    "준호와 태오",
+    "태오가 레시피 노트를 준호에게 넘김"
+   ],
+   "sources": [
+    6,
+    15
+   ]
+  },
+  "result": {
+   "session": "01a16cb5-53af-71cf-8021-02e4cdd46b8a",
+   "answer": "둘은 냉이 된장 파스타를 두고 다툰 뒤 한동안 필요한 말만 주고받았지만, 정희가 수술로 자리를 비운 여름에 서로의 걱정을 직접 말하며 화해의 물꼬를 텄어. 4월에는 준호가 정희의 반대를 앞세워 메뉴 얘기를 닫으려 했고, 태오는 아직 맛보지도 않고 막는다고 느꼈어. [[1]]\n\n태오는 자신의 레시피 노트를 준호에게 건네며 메뉴를 만든 생각을 보여줬고, 준호는 “내가 당신 말을 제대로 들으려고 하진 않았던 것 같아”라고 사과했어. 태오도 준호의 걱정을 알면서 “내 음식만 인정받고 싶었던 것 같아요”라고 인정했지. [[2]][[3]]\n\n그 뒤 준호는 정희가 돌아오면 노트를 함께 보여주자고 했고, 태오는 준호에게 직접 만들어 보라고 제안했어. 둘은 “같이 해보자”고 뜻을 모았지만, 메뉴를 정희에게 보여주고 함께 조율하는 일은 아직 남아 있었어. [[4]][[5]]",
+   "citations": [
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3e09-7252-b170-f6206d3add21",
+     "title": "6화 · 4월의 다툼",
+     "doc_type": "manuscript",
+     "quote": "엄마가 반대했다는 건 그냥 넘길 일이 아니야."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3edf-757d-ae6d-dc2e87638421",
+     "title": "15화 · 레시피 노트",
+     "doc_type": "manuscript",
+     "quote": "내가 당신 말을 제대로 들으려고 하진 않았던 것 같아."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3edf-757d-ae6d-dc2e87638421",
+     "title": "15화 · 레시피 노트",
+     "doc_type": "manuscript",
+     "quote": "내 음식만 인정받고 싶었던 것 같아요."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3edf-757d-ae6d-dc2e87638421",
+     "title": "15화 · 레시피 노트",
+     "doc_type": "manuscript",
+     "quote": "어머니가 돌아오시면 이걸 같이 보여드리자."
+    },
+    {
+     "kind": "document",
+     "file_id": "01a16ca9-3edf-757d-ae6d-dc2e87638421",
+     "title": "15화 · 레시피 노트",
+     "doc_type": "manuscript",
+     "quote": "그럼 같이 해보자."
+    }
+   ],
+   "grounding": {
+    "level": "SUPPORTED",
+    "missing": [],
+    "documents_read": 2
+   },
+   "error": null,
+   "seconds": 9.3,
+   "metrics": {
+    "steps": 2,
+    "judge_calls": 2,
+    "rejections": 0,
+    "chars_read": 3758,
+    "input_tokens": 30501,
+    "cached_tokens": 12137,
+    "output_tokens": 539,
+    "reviews": []
+   },
+   "recall": 1.0
+  },
+  "dataset": "spring-table",
+  "grade": {
+   "verdict": "correct",
+   "covered": [
+    true,
+    true
+   ],
+   "false_claims": [],
+   "reason": "준호와 태오가 다툰 뒤 서로의 생각을 인정하고 함께 해보자고 합의한 과정을 설명했으며, 태오가 자신의 레시피 노트를 준호에게 건넸다는 사실도 포함했습니다.",
+   "votes": [
+    "correct",
+    "correct",
+    "correct"
+   ]
+  }
+ }
+]
