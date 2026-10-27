@@ -92,6 +92,28 @@ class SummaryModel(Protocol):
     ) -> tuple[str, Usage | None]: ...
 
 
+class CheckModel(Protocol):
+    name: str
+
+    async def find(
+        self,
+        instructions: str,
+        items: list[dict[str, Any]],
+        name: str,
+        schema: dict[str, Any],
+        cache_key: str,
+    ) -> tuple[dict[str, Any], Usage | None]: ...
+
+    async def judge(
+        self,
+        instructions: str,
+        items: list[dict[str, Any]],
+        name: str,
+        schema: dict[str, Any],
+        cache_key: str,
+    ) -> tuple[dict[str, Any], Usage | None]: ...
+
+
 def status_code(error: APIStatusError) -> str:
     body = error.body if isinstance(error.body, dict) else {}
     body = body.get("error", body)
@@ -168,6 +190,31 @@ def parse_json(text: str) -> dict[str, Any]:
     return value
 
 
+async def structured(
+    client: AsyncOpenAI,
+    instructions: str,
+    data: str | list[dict[str, Any]],
+    name: str,
+    schema: dict[str, Any],
+    **options: Any,
+) -> tuple[dict[str, Any], Usage | None]:
+    response = await create(
+        client,
+        instructions=instructions,
+        input=data,
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": name,
+                "strict": True,
+                "schema": schema,
+            }
+        },
+        **options,
+    )
+    return parse_json(response.output_text or ""), usage_of(response.usage)
+
+
 def tool_call(item: Any) -> ToolCall:
     if item.name != "request_documents":
         raise ModelFailure("MODEL_INVALID_TOOL_CALL")
@@ -233,24 +280,17 @@ class OpenAIModel:
     async def _judge(
         self, instructions: str, text: str, name: str, schema: dict[str, Any]
     ) -> tuple[dict[str, Any], Usage | None]:
-        response = await create(
+        return await structured(
             self.client,
+            instructions,
+            text,
+            name,
+            schema,
             model=self.judge_name,
-            instructions=instructions,
-            input=text,
-            text={
-                "format": {
-                    "type": "json_schema",
-                    "name": name,
-                    "strict": True,
-                    "schema": schema,
-                }
-            },
             max_output_tokens=self.judge_max_output_tokens,
             timeout=self.timeout_seconds,
             **effort(self.judge_reasoning_effort),
         )
-        return parse_json(response.output_text or ""), usage_of(response.usage)
 
     async def sufficiency(
         self, instructions: str, text: str
@@ -306,9 +346,79 @@ class OpenAISummaryModel:
         return summary, usage_of(response.usage)
 
 
+class OpenAICheckModel:
+    def __init__(
+        self,
+        client: AsyncOpenAI,
+        name: str,
+        reasoning_effort: str,
+        max_output_tokens: int,
+        judge_name: str,
+        judge_reasoning_effort: str,
+        judge_max_output_tokens: int,
+        timeout_seconds: float,
+    ):
+        self.client = client
+        self.name = name
+        self.reasoning_effort = reasoning_effort
+        self.max_output_tokens = max_output_tokens
+        self.judge_name = judge_name
+        self.judge_reasoning_effort = judge_reasoning_effort
+        self.judge_max_output_tokens = judge_max_output_tokens
+        self.timeout_seconds = timeout_seconds
+
+    async def find(
+        self,
+        instructions: str,
+        items: list[dict[str, Any]],
+        name: str,
+        schema: dict[str, Any],
+        cache_key: str,
+    ) -> tuple[dict[str, Any], Usage | None]:
+        return await structured(
+            self.client,
+            instructions,
+            items,
+            name,
+            schema,
+            model=self.name,
+            max_output_tokens=self.max_output_tokens,
+            prompt_cache_key=cache_key,
+            timeout=self.timeout_seconds,
+            **effort(self.reasoning_effort),
+        )
+
+    async def judge(
+        self,
+        instructions: str,
+        items: list[dict[str, Any]],
+        name: str,
+        schema: dict[str, Any],
+        cache_key: str,
+    ) -> tuple[dict[str, Any], Usage | None]:
+        return await structured(
+            self.client,
+            instructions,
+            items,
+            name,
+            schema,
+            model=self.judge_name,
+            max_output_tokens=self.judge_max_output_tokens,
+            prompt_cache_key=cache_key,
+            timeout=self.timeout_seconds,
+            **effort(self.judge_reasoning_effort),
+        )
+
+
 class UnconfiguredModel:
     def __init__(self, name: str):
         self.name = name
+
+    async def find(self, *_: Any) -> tuple[dict[str, Any], Usage | None]:
+        raise ModelFailure("MODEL_NOT_CONFIGURED")
+
+    async def judge(self, *_: Any) -> tuple[dict[str, Any], Usage | None]:
+        raise ModelFailure("MODEL_NOT_CONFIGURED")
 
     async def step(self, *_: Any, **__: Any) -> StepResult:
         raise ModelFailure("MODEL_NOT_CONFIGURED")

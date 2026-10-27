@@ -37,6 +37,7 @@ class Document:
     ordinal: int | None = None
     episode_name: str | None = None
     properties: tuple[Property, ...] = ()
+    core_facts: tuple[str, ...] = ()
 
     @property
     def doc_type(self) -> str:
@@ -135,6 +136,13 @@ def properties_of(item: dict[str, Any]) -> tuple[Property, ...]:
     return tuple(Property(prop["key"], prop["value"]) for prop in item["properties"])
 
 
+def core_facts_of(item: dict[str, Any]) -> tuple[str, ...]:
+    facts = item.get("core_facts")
+    if not isinstance(facts, list):
+        return ()
+    return tuple(fact for fact in facts if isinstance(fact, str) and fact.strip())
+
+
 def parse_map(payload: dict[str, Any]) -> ChatMap:
     project = payload["project"]
     return ChatMap(
@@ -212,6 +220,7 @@ def parse_documents(payload: dict[str, Any]) -> Fetched:
             body_text=item["body_text"],
             revision_no=item["revision_no"],
             properties=properties_of(item),
+            core_facts=core_facts_of(item),
         )
         for item in payload["settings"]
     ]

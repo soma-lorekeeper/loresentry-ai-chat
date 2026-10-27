@@ -267,3 +267,82 @@ def read_events(response) -> list[tuple[str, dict | None]]:
             events.append((name or "message", json.loads(line[len("data: ") :])))
             name = None
     return events
+
+
+def candidate(
+    source: str,
+    source_quote: str,
+    quote: str,
+    kind: str = "SETTING",
+    summary: str = "요약이에요",
+    direction: str = "방향이에요",
+) -> dict[str, Any]:
+    return {
+        "kind": kind,
+        "source_id": short(source),
+        "source_quote": source_quote,
+        "quote": quote,
+        "summary": summary,
+        "direction": direction,
+        "core": False,
+    }
+
+
+class FakeChecker:
+    name = "fake-checker"
+
+    def __init__(
+        self,
+        whole: list[dict[str, Any]] | None = None,
+        core: list[dict[str, Any]] | None = None,
+        verdicts: dict[str, dict[str, str]] | None = None,
+    ):
+        self.whole = list(whole or [])
+        self.core = list(core or [])
+        self.verdicts = dict(verdicts or {})
+        self.finds: dict[str, list[dict[str, Any]]] = {}
+        self.judged: list[str] = []
+        self.gate: threading.Event | None = None
+        self.fail_with: str | None = None
+        self.usage = Usage(1000, 400, 0, 50, 20)
+
+    async def wait(self) -> None:
+        if self.gate is not None:
+            while not self.gate.is_set():
+                await asyncio.sleep(0.01)
+
+    async def find(
+        self,
+        instructions: str,
+        items: list[dict[str, Any]],
+        name: str,
+        schema: dict[str, Any],
+        cache_key: str,
+    ) -> tuple[dict[str, Any], Usage | None]:
+        self.finds[name] = json.loads(json.dumps(items))
+        await self.wait()
+        if self.fail_with:
+            raise ModelFailure(self.fail_with)
+        core = name == "setting_check_core_candidates"
+        return {"candidates": self.core if core else self.whole}, self.usage
+
+    async def judge(
+        self,
+        instructions: str,
+        items: list[dict[str, Any]],
+        name: str,
+        schema: dict[str, Any],
+        cache_key: str,
+    ) -> tuple[dict[str, Any], Usage | None]:
+        blocks = [block["text"] for block in items[0]["content"]]
+        self.judged.append("\n".join(blocks))
+        verdict = {
+            "verdict": "CONFLICT",
+            "confidence": "HIGH",
+            "summary": "",
+            "direction": "",
+        }
+        for quote, scripted in self.verdicts.items():
+            if f"<quote>{quote}</quote>" in blocks[-1]:
+                verdict.update(scripted)
+        return verdict, self.usage
