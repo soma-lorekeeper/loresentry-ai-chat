@@ -30,6 +30,10 @@ async def wait_for_schema(settings: SummarizerSettings, stop: asyncio.Event) -> 
                 # columns this code writes exist, not just the tables.
                 await conn.execute("select event_seq from summary_queue limit 0")
                 await conn.execute("select event_seq from document_summaries limit 0")
+                await conn.execute("select project_id from setting_check_runs limit 0")
+                await conn.execute(
+                    "select project_id from setting_check_verdicts limit 0"
+                )
                 return
         except psycopg.Error as error:
             log.warning("waiting for schema", extra={"error": type(error).__name__})
