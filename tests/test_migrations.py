@@ -39,6 +39,9 @@ def test_migrations_create_chat_tables(conn):
         "document_summaries",
         "summary_queue",
         "chat_usage",
+        "setting_check_runs",
+        "setting_check_findings",
+        "setting_check_verdicts",
     } <= {row[0] for row in rows}
 
 
@@ -112,3 +115,48 @@ def test_summary_rows_written_without_event_seq_start_before_any_event(conn):
         assert conn.execute(
             f"select event_seq from {table} where document_id = %s", (document,)
         ).fetchone() == (0,)
+
+
+def insert_run(conn, project, status: str = "RUNNING"):
+    return conn.execute(
+        "insert into setting_check_runs (project_id, user_id, document_id, "
+        "document_title, revision_no, status) values (%s, uuidv7(), uuidv7(), 't', 1, %s) "
+        "returning id",
+        (project, status),
+    ).fetchone()[0]
+
+
+def test_a_project_runs_one_setting_check_at_a_time(conn):
+    project = conn.execute("select uuidv7()").fetchone()[0]
+    insert_run(conn, project)
+    insert_run(conn, project, "DONE")
+
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        insert_run(conn, project)
+    with pytest.raises(psycopg.errors.CheckViolation):
+        insert_run(conn, project, "QUEUED")
+
+
+def test_findings_go_with_their_run_and_verdicts_are_checked(conn):
+    run = insert_run(conn, conn.execute("select uuidv7()").fetchone()[0], "DONE")
+    conn.execute(
+        "insert into setting_check_findings (run_id, position, kind, confidence, "
+        "summary, direction, quote, source_document_id, source_title, "
+        "source_doc_type, source_quote, fingerprint) values "
+        "(%s, 0, 'SETTING', 'HIGH', 's', 'd', 'q', uuidv7(), 't', 'place', 'sq', 'f')",
+        (run,),
+    )
+    conn.execute("delete from setting_check_runs where id = %s", (run,))
+
+    assert conn.execute(
+        "select count(*) from setting_check_findings where run_id = %s", (run,)
+    ).fetchone() == (0,)
+    verdict = (
+        "insert into setting_check_verdicts (project_id, user_id, fingerprint, "
+        "verdict, reason, source_document_id, source_quote) "
+        "values (uuidv7(), uuidv7(), 'f', %s, %s, uuidv7(), 'q')"
+    )
+    for value, reason in (("MAYBE", None), ("INTENDED", "가" * 501)):
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute(verdict, (value, reason))
+    conn.execute(verdict, ("INTENDED", "가" * 500))
