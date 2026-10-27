@@ -70,8 +70,14 @@ question. Errors are `{code, message, next_action}`.
 | `GET` | `/chat/sessions/{id}/messages` | `{messages, generating}` |
 | `POST` | `/chat/sessions/{id}/messages` | Ask; answers as `text/event-stream` |
 | `POST` | `/chat/sessions/{id}/cancel` | Stop the answer being written |
-| `DELETE` | `/users/me/data` | Account deletion (called by the gateway) |
-| `DELETE` | `/projects/{id}/chat/data` | Project deletion (called by the gateway) |
+| `POST` | `/projects/{id}/setting-checks` | Start a setting error check of one chapter, `202` with the run |
+| `GET` | `/projects/{id}/setting-checks/summary` | `{running, chapters}`: the latest run of each checked chapter |
+| `GET` | `/projects/{id}/setting-checks?document_id=` | `{runs}` of a chapter, newest first |
+| `GET` | `/setting-checks/{id}` | One run with its findings |
+| `POST` | `/setting-checks/{id}/cancel` | Stop a running check (`204` also when it is not running) |
+| `PUT`, `DELETE` | `/setting-check-findings/{id}/verdict` | The author's verdict (`INTENDED`, `NOT_CONFLICT`) and reason |
+| `DELETE` | `/users/me/data` | Account deletion (called by the gateway); also setting checks |
+| `DELETE` | `/projects/{id}/chat/data` | Project deletion (called by the gateway); also setting checks |
 
 ### A turn
 
@@ -104,6 +110,38 @@ question. Errors are `{code, message, next_action}`.
    `chat_held_documents`. Tokens (summed over calls), steps, reviews, rejections
    and timings go to `chat_turns`; logs are JSON and never carry story text.
 
+### Setting error check
+
+Compares one manuscript chapter with the chapters before it and the setting
+documents, and reports where the chapter contradicts them. It runs as a
+background task in the API process (one replica), one running check per project.
+
+1. `READING`: the chapter must be a manuscript on the chat map. The chapter,
+   every earlier chapter and every setting document are read through
+   `chat-documents` in batches of 100, settings with their `core_facts` (the
+   paragraphs the author marked as core settings). Past `SETTING_CHECK_MAX_CHARS`
+   the oldest chapters are left out; if the chapter and the settings alone do
+   not fit, the run fails with `CHAT_CONTEXT_TOO_LARGE`.
+2. `FINDING`: two passes in parallel with JSON schema output: the whole pass
+   (chapter against earlier chapters and settings) and, when there are core
+   facts, the core pass (every core fact against the chapter). Both quotes of a
+   candidate must occur in their documents after whitespace and quote-mark
+   normalisation, or it is dropped. Candidates with the same source and an
+   overlapping quote are merged.
+3. `JUDGING`: one call per candidate, `SETTING_CHECK_JUDGE_CONCURRENCY` at a
+   time, with the chapter, the source document and the author's earlier
+   verdicts on that source. Only `CONFLICT` is kept (not `CHANGED_OVER_TIME`,
+   `CHARACTER_PERSPECTIVE` or `INSUFFICIENT`).
+4. Findings are saved in chapter order and the run becomes `DONE`, with tokens
+   summed into the run. Checks do not count toward the daily chat usage.
+
+A verdict is stored per project by fingerprint (`sha256` of kind, source,
+normalised source quote and normalised quote), so it applies to the same finding
+in later runs. A cancelled run keeps no findings. A failed run keeps
+`failure_code` (`CHAT_MODEL_UNAVAILABLE`, `CONTENT_UNAVAILABLE`,
+`INTERNAL_ERROR`, …); a run still `RUNNING` after `SETTING_CHECK_STALE_SECONDS`
+or stopped by a shutdown becomes `INTERRUPTED`.
+
 ### Summarizer
 
 Consumes `FileChanged`/`ProjectDeleted` (group `ai-chat-summarizer`) into
@@ -121,7 +159,8 @@ to `SUMMARY_MAX_PER_MINUTE` documents untouched for `SUMMARY_IDLE_MINUTES`,
 compares sentence fingerprints with the last summary and summarizes again only
 when at least `min(SUMMARY_MIN_CHANGE_CHARS, length × SUMMARY_MIN_CHANGE_RATIO)`
 characters changed. Bodies up to 500 characters are used as their own summary.
-Trash, delete and project deletion remove summaries. Liveness is the mtime of
+Trash, delete and project deletion remove summaries; project deletion also
+removes setting checks and verdicts. Liveness is the mtime of
 `SUMMARY_HEARTBEAT_PATH`.
 
 ## Configuration
@@ -142,6 +181,12 @@ Trash, delete and project deletion remove summaries. Liveness is the mtime of
 | `CHAT_HISTORY_MAX_CHARS` | `40000` | Earlier turns kept in the input |
 | `CHAT_ANSWER_RESERVE_SECONDS` | `75` | Stop reading when less time is left |
 | `CHAT_JUDGE_MODEL`, `CHAT_JUDGE_REASONING_EFFORT` | `OPENAI_MODEL`, `low` | Both reviews |
+| `SETTING_CHECK_MAX_CHARS` | `600000` | Characters read by one setting check |
+| `SETTING_CHECK_REASONING_EFFORT` | `medium` | Finding passes (`OPENAI_MODEL`) |
+| `SETTING_CHECK_JUDGE_REASONING_EFFORT`, `SETTING_CHECK_JUDGE_MAX_OUTPUT_TOKENS` | `low`, `4000` | Judging (`CHAT_JUDGE_MODEL`) |
+| `SETTING_CHECK_JUDGE_CONCURRENCY` | `4` | Judge calls at a time |
+| `SETTING_CHECK_TIMEOUT_SECONDS` | `300` | Per model call |
+| `SETTING_CHECK_DEADLINE_SECONDS`, `SETTING_CHECK_STALE_SECONDS` | `600`, `900` | Whole run; `RUNNING` older than this is `INTERRUPTED` |
 | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Summarizer |
 | `SUMMARY_OPENAI_API_KEY`, `SUMMARY_MODEL` | `OPENAI_API_KEY`, `OPENAI_MODEL` | Summarizer |
 | `SUMMARY_IDLE_MINUTES`, `SUMMARY_MIN_CHANGE_CHARS`, `SUMMARY_MIN_CHANGE_RATIO` | `10`, `1000`, `0.3` | Summarizer |
@@ -161,6 +206,9 @@ keeps the pod from becoming ready.
 | `chat_held_documents` | Documents and memos a session has read, in reading order |
 | `document_summaries` | One summary per document with its revision, sentence fingerprint and the `event_seq` it stands for |
 | `summary_queue` | Latest change per document (by `event_seq`) waiting to be summarized |
+| `setting_check_runs` | One row per setting check: chapter and revision, status and stage, what was read, tokens. At most one `RUNNING` per project |
+| `setting_check_findings` | Findings of a finished run in chapter order, with both quotes and the fingerprint |
+| `setting_check_verdicts` | The author's verdict and reason per project and fingerprint, kept across runs |
 
 Project and user ids are plain values; there are no cross-database foreign keys.
 Running uvicorn directly, as below, skips the migration step.
