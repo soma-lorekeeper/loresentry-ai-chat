@@ -341,6 +341,8 @@ class FakeChecker:
             "confidence": "HIGH",
             "summary": "",
             "direction": "",
+            "quote_focus": "",
+            "source_focus": "",
         }
         for quote, scripted in self.verdicts.items():
             if f"<quote>{quote}</quote>" in blocks[-1]:

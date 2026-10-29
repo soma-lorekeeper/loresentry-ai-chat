@@ -146,6 +146,10 @@ def test_findings_go_with_their_run_and_verdicts_are_checked(conn):
         "(%s, 0, 'SETTING', 'HIGH', 's', 'd', 'q', uuidv7(), 't', 'place', 'sq', 'f')",
         (run,),
     )
+    assert conn.execute(
+        "select quote_focus, source_focus from setting_check_findings where run_id = %s",
+        (run,),
+    ).fetchone() == (None, None)
     conn.execute("delete from setting_check_runs where id = %s", (run,))
 
     assert conn.execute(

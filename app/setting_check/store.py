@@ -27,8 +27,9 @@ RUN_SELECT = (
 
 FINDING_SELECT = (
     "select f.id, f.kind, f.core, f.confidence, f.summary, f.direction, f.quote, "
-    "f.source_document_id, f.source_title, f.source_doc_type, f.source_ordinal, "
-    "f.source_quote, v.verdict, v.reason from setting_check_findings f "
+    "f.quote_focus, f.source_document_id, f.source_title, f.source_doc_type, "
+    "f.source_ordinal, f.source_quote, f.source_focus, v.verdict, v.reason "
+    "from setting_check_findings f "
     "join setting_check_runs r on r.id = f.run_id "
     "left join setting_check_verdicts v "
     "on v.project_id = r.project_id and v.fingerprint = f.fingerprint "
@@ -82,12 +83,14 @@ def finding_json(row: dict[str, Any]) -> dict[str, Any]:
         "summary": row["summary"],
         "direction": row["direction"],
         "quote": row["quote"],
+        "quote_focus": row["quote_focus"],
         "source": {
             "document_id": str(row["source_document_id"]),
             "title": row["source_title"],
             "doc_type": row["source_doc_type"],
             "ordinal": row["source_ordinal"],
             "quote": row["source_quote"],
+            "quote_focus": row["source_focus"],
         },
         "verdict": row["verdict"],
         "reason": row["reason"],
@@ -111,11 +114,13 @@ class Finding:
     summary: str
     direction: str
     quote: str
+    quote_focus: str | None
     source_document_id: str
     source_title: str
     source_doc_type: str
     source_ordinal: int | None
     source_quote: str
+    source_focus: str | None
     fingerprint: str
 
 
@@ -222,10 +227,11 @@ class CheckStore:
                 async with conn.cursor() as cursor:
                     await cursor.executemany(
                         "insert into setting_check_findings (run_id, position, kind, "
-                        "core, confidence, summary, direction, quote, "
+                        "core, confidence, summary, direction, quote, quote_focus, "
                         "source_document_id, source_title, source_doc_type, "
-                        "source_ordinal, source_quote, fingerprint) values "
-                        "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        "source_ordinal, source_quote, source_focus, fingerprint) "
+                        "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+                        "%s, %s, %s)",
                         [
                             (
                                 run_id,
@@ -236,11 +242,13 @@ class CheckStore:
                                 finding.summary,
                                 finding.direction,
                                 finding.quote,
+                                finding.quote_focus,
                                 finding.source_document_id,
                                 finding.source_title,
                                 finding.source_doc_type,
                                 finding.source_ordinal,
                                 finding.source_quote,
+                                finding.source_focus,
                                 finding.fingerprint,
                             )
                             for position, finding in enumerate(findings)

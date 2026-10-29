@@ -82,6 +82,8 @@ JUDGE_INSTRUCTIONS = f"""You review one candidate contradiction in a chapter of 
 confidence: HIGH when both sides are stated plainly; LOW when the contradiction rests on an interpretation.
 summary: one sentence that names both sides, true to the texts.
 direction: one short sentence saying what the story is missing or which passage is involved. Never write a corrected sentence for the author.
+quote_focus: the shortest phrase in <quote> that carries the contradiction, copied character for character from <quote>; an empty string when no single phrase does. For example, 세 번째 순찰 in "서윤은 세 번째 순찰에서야 알아차렸다."
+source_focus: the same for <source_quote>: the shortest phrase that carries the contradiction, copied character for character from <source_quote>; an empty string when no single phrase does. For example, 다섯 번째 순찰 in "다섯 번째 순찰을 마친 새벽이었다."
 For any verdict other than CONFLICT, summary and direction may be short.
 
 {LANGUAGE}"""
@@ -128,7 +130,14 @@ CORE_SCHEMA = candidates_schema(FIELDS)
 JUDGE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["verdict", "confidence", "summary", "direction"],
+    "required": [
+        "verdict",
+        "confidence",
+        "summary",
+        "direction",
+        "quote_focus",
+        "source_focus",
+    ],
     "properties": {
         "verdict": {
             "type": "string",
@@ -142,6 +151,8 @@ JUDGE_SCHEMA: dict[str, Any] = {
         "confidence": {"type": "string", "enum": ["HIGH", "LOW"]},
         "summary": {"type": "string"},
         "direction": {"type": "string"},
+        "quote_focus": {"type": "string"},
+        "source_focus": {"type": "string"},
     },
 }
 

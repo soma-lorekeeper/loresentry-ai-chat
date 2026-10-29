@@ -10,6 +10,7 @@ from app.text import collapse
 
 QUOTE_MARKS = "\"'`“”‘’«»「」『』 "
 MIN_QUOTE = 4
+MAX_FOCUS = 120
 VERDICTS = {"CONFLICT", "CHANGED_OVER_TIME", "CHARACTER_PERSPECTIVE", "INSUFFICIENT"}
 CONFIDENCES = {"HIGH", "LOW"}
 
@@ -44,6 +45,13 @@ def locate(quote: str, haystacks: tuple[str, ...]) -> str | None:
     return None
 
 
+def focus(phrase: str, quote: str) -> str | None:
+    for needle in dict.fromkeys((clean(phrase), norm(phrase))):
+        if needle and len(needle) <= MAX_FOCUS and needle in quote:
+            return needle
+    return None
+
+
 def overlaps(a: str, b: str) -> bool:
     left, right = norm(a), norm(b)
     return bool(left and right) and (left in right or right in left)
@@ -59,6 +67,8 @@ class Candidate:
     direction: str
     core: bool = False
     confidence: str = "HIGH"
+    quote_focus: str | None = None
+    source_focus: str | None = None
 
 
 def text_of(item: dict[str, Any], key: str) -> str:
@@ -105,6 +115,8 @@ def judged(candidate: Candidate, value: dict[str, Any]) -> Candidate | None:
         confidence=confidence if confidence in CONFIDENCES else "LOW",
         summary=collapse(text_of(value, "summary")) or candidate.summary,
         direction=collapse(text_of(value, "direction")) or candidate.direction,
+        quote_focus=focus(text_of(value, "quote_focus"), candidate.quote),
+        source_focus=focus(text_of(value, "source_focus"), candidate.source_quote),
     )
 
 

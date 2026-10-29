@@ -92,11 +92,13 @@ def finding_of(reading: Reading, candidate: Candidate) -> Finding:
         summary=candidate.summary,
         direction=candidate.direction,
         quote=candidate.quote,
+        quote_focus=candidate.quote_focus,
         source_document_id=source.id,
         source_title=source.title,
         source_doc_type=source.doc_type,
         source_ordinal=source.ordinal if source.is_manuscript else None,
         source_quote=candidate.source_quote,
+        source_focus=candidate.source_focus,
         fingerprint=fingerprint(
             candidate.kind, source.id, candidate.source_quote, candidate.quote
         ),

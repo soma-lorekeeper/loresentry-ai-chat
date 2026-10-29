@@ -14,7 +14,14 @@ from testcontainers.community.postgres import PostgresContainer
 from app.content import Document, parse_documents
 from app.errors import ChatFailure
 from app.main import create_app
-from app.setting_check.findings import Candidate, Reading, dedupe, fingerprint
+from app.setting_check.findings import (
+    Candidate,
+    Reading,
+    dedupe,
+    fingerprint,
+    judged,
+)
+from app.setting_check.prompts import JUDGE_SCHEMA
 from app.settings import Settings
 from tests.support import (
     CH1,
@@ -82,6 +89,12 @@ VERDICTS = {
         "confidence": "LOW",
         "summary": "레나의 눈은 검은색인데, 은빛 눈으로 정원을 봐요",
         "direction": "레나의 눈 색이 바뀌는 장면이 없어요.",
+        "quote_focus": "은빛 눈",
+        "source_focus": " “검은색” ",
+    },
+    "서윤은 이 정원에 처음 왔다.": {
+        "quote_focus": "처음 왔다",
+        "source_focus": "정원을 두 번 보았다",
     },
     "하린은 북쪽 문이 늘 열려 있다고 말했다.": {"verdict": "CHARACTER_PERSPECTIVE"},
 }
@@ -285,6 +298,39 @@ def test_duplicates_share_a_source_and_an_overlapping_quote():
     ]
 
 
+def test_a_focus_is_kept_only_when_it_occurs_in_its_quote():
+    found = Candidate(
+        "MANUSCRIPT",
+        CH1,
+        "다섯 번째 순찰을 마친 새벽이었다.",
+        "서윤은 세 번째 순찰에서야 알아차렸다.",
+        "s",
+        "d",
+    )
+
+    def judge(candidate=found, **focus):
+        value = {"verdict": "CONFLICT", "confidence": "HIGH", "summary": ""}
+        kept = judged(candidate, {**value, "direction": "", **focus})
+        return kept.quote_focus, kept.source_focus
+
+    assert judge(quote_focus="세 번째 순찰", source_focus="“다섯 번째\n순찰”") == (
+        "세 번째 순찰",
+        "다섯 번째 순찰",
+    )
+    assert judge(quote_focus=" 알아차렸다. ", source_focus=found.source_quote) == (
+        "알아차렸다.",
+        found.source_quote,
+    )
+    assert judge(quote_focus="네 번째 순찰", source_focus="") == (None, None)
+    assert judge(quote_focus=3, source_focus="세 번째 순찰") == (None, None)
+    assert judge() == (None, None)
+    long = replace(found, quote=f"{'가' * 130} 순찰.")
+    assert judge(long, quote_focus="가" * 120)[0] == "가" * 120
+    assert judge(long, quote_focus="가" * 121)[0] is None
+    assert JUDGE_SCHEMA["required"] == list(JUDGE_SCHEMA["properties"])
+    assert {"quote_focus", "source_focus"} <= set(JUDGE_SCHEMA["required"])
+
+
 def test_core_facts_are_read_and_default_to_none():
     def setting(**extra):
         return {
@@ -355,12 +401,14 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
             "summary": "레나의 눈은 검은색인데, 은빛 눈으로 정원을 봐요",
             "direction": "레나의 눈 색이 바뀌는 장면이 없어요.",
             "quote": "레나는 은빛 눈으로 정원을 보았다.",
+            "quote_focus": "은빛 눈",
             "source": {
                 "document_id": LENA,
                 "title": "레나 아르벨",
                 "doc_type": "character",
                 "ordinal": None,
                 "quote": "레나의 눈은 검은색이다.",
+                "quote_focus": "검은색",
             },
             "verdict": None,
             "reason": None,
@@ -372,12 +420,14 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
             "summary": "1화에서 서윤이 정원을 이미 봤는데, 처음 왔다고 해요",
             "direction": "1화의 첫 방문 장면이 관련돼요.",
             "quote": "서윤은 이 정원에 처음 왔다.",
+            "quote_focus": "처음 왔다",
             "source": {
                 "document_id": CH1,
                 "title": "1화 · 유리의 계절",
                 "doc_type": "manuscript",
                 "ordinal": 1,
                 "quote": "서윤은 정원을 처음 보았다.",
+                "quote_focus": None,
             },
             "verdict": None,
             "reason": None,
@@ -389,12 +439,14 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
             "summary": "북쪽 문은 낡은 열쇠로만 열리는데, 서윤이 열쇠 없이 문을 밀어요",
             "direction": "3화까지 서윤이 낡은 열쇠를 손에 넣는 장면이 없어요.",
             "quote": "서윤은 등불을 내려놓고 문을 밀었다.",
+            "quote_focus": None,
             "source": {
                 "document_id": GREENHOUSE,
                 "title": "북쪽 온실",
                 "doc_type": "place",
                 "ordinal": None,
                 "quote": FACT,
+                "quote_focus": None,
             },
             "verdict": None,
             "reason": None,
@@ -421,6 +473,18 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
         "from setting_check_runs"
     ) == [("DONE", "fake-checker", 6000, 2400, 300)]
     assert env.query("select count(*) from chat_usage") == [(0,)]
+    stored = env.query(
+        "select quote_focus, source_focus, fingerprint from setting_check_findings "
+        "order by position"
+    )
+    assert [row[:2] for row in stored] == [
+        ("은빛 눈", "검은색"),
+        ("처음 왔다", None),
+        (None, None),
+    ]
+    assert stored[0][2] == fingerprint(
+        "SETTING", LENA, "레나의 눈은 검은색이다.", "레나는 은빛 눈으로 정원을 보았다."
+    )
 
 
 def test_summary_and_history_list_runs_without_findings(env):

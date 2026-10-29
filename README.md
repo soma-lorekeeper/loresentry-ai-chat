@@ -131,7 +131,10 @@ background task in the API process (one replica), one running check per project.
 3. `JUDGING`: one call per candidate, `SETTING_CHECK_JUDGE_CONCURRENCY` at a
    time, with the chapter, the source document and the author's earlier
    verdicts on that source. Only `CONFLICT` is kept (not `CHANGED_OVER_TIME`,
-   `CHARACTER_PERSPECTIVE` or `INSUFFICIENT`).
+   `CHARACTER_PERSPECTIVE` or `INSUFFICIENT`). The judge also names the shortest
+   phrase in each quote that carries the contradiction (`quote_focus` and
+   `source.quote_focus`); a phrase that is not in its quote after the same
+   normalisation, or is longer than 120 characters, is stored as null.
 4. Findings are saved in chapter order and the run becomes `DONE`, with tokens
    summed into the run. Checks do not count toward the daily chat usage.
 
@@ -207,7 +210,7 @@ keeps the pod from becoming ready.
 | `document_summaries` | One summary per document with its revision, sentence fingerprint and the `event_seq` it stands for |
 | `summary_queue` | Latest change per document (by `event_seq`) waiting to be summarized |
 | `setting_check_runs` | One row per setting check: chapter and revision, status and stage, what was read, tokens. At most one `RUNNING` per project |
-| `setting_check_findings` | Findings of a finished run in chapter order, with both quotes and the fingerprint |
+| `setting_check_findings` | Findings of a finished run in chapter order, with both quotes, their focus phrases and the fingerprint |
 | `setting_check_verdicts` | The author's verdict and reason per project and fingerprint, kept across runs |
 
 Project and user ids are plain values; there are no cross-database foreign keys.
