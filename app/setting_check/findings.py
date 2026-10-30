@@ -69,6 +69,11 @@ class Candidate:
     confidence: str = "HIGH"
     quote_focus: str | None = None
     source_focus: str | None = None
+    explanation: str = ""
+
+
+def sentences(*parts: str) -> str:
+    return " ".join(part if edge(part[-1]) else f"{part}." for part in parts if part)
 
 
 def text_of(item: dict[str, Any], key: str) -> str:
@@ -113,8 +118,8 @@ def judged(candidate: Candidate, value: dict[str, Any]) -> Candidate | None:
     return replace(
         candidate,
         confidence=confidence if confidence in CONFIDENCES else "LOW",
-        summary=collapse(text_of(value, "summary")) or candidate.summary,
-        direction=collapse(text_of(value, "direction")) or candidate.direction,
+        explanation=collapse(text_of(value, "explanation"))
+        or sentences(candidate.summary, candidate.direction),
         quote_focus=focus(text_of(value, "quote_focus"), candidate.quote),
         source_focus=focus(text_of(value, "source_focus"), candidate.source_quote),
     )

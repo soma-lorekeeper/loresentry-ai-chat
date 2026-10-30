@@ -25,11 +25,14 @@ RUN_SELECT = (
     "where f.run_id = r.id) c "
 )
 
-FINDING_SELECT = (
-    "select f.id, f.kind, f.core, f.confidence, f.summary, f.direction, f.quote, "
+FINDING_COLUMNS = (
+    "f.id, f.kind, f.core, f.confidence, f.explanation, f.quote, "
     "f.quote_focus, f.source_document_id, f.source_title, f.source_doc_type, "
     "f.source_ordinal, f.source_quote, f.source_focus, v.verdict, v.reason "
-    "from setting_check_findings f "
+)
+
+FINDING_SELECT = (
+    f"select {FINDING_COLUMNS}from setting_check_findings f "
     "join setting_check_runs r on r.id = f.run_id "
     "left join setting_check_verdicts v "
     "on v.project_id = r.project_id and v.fingerprint = f.fingerprint "
@@ -80,8 +83,7 @@ def finding_json(row: dict[str, Any]) -> dict[str, Any]:
         "kind": row["kind"],
         "core": row["core"],
         "confidence": row["confidence"],
-        "summary": row["summary"],
-        "direction": row["direction"],
+        "explanation": row["explanation"],
         "quote": row["quote"],
         "quote_focus": row["quote_focus"],
         "source": {
@@ -111,8 +113,7 @@ class Finding:
     kind: str
     core: bool
     confidence: str
-    summary: str
-    direction: str
+    explanation: str
     quote: str
     quote_focus: str | None
     source_document_id: str
@@ -227,11 +228,11 @@ class CheckStore:
                 async with conn.cursor() as cursor:
                     await cursor.executemany(
                         "insert into setting_check_findings (run_id, position, kind, "
-                        "core, confidence, summary, direction, quote, quote_focus, "
+                        "core, confidence, explanation, quote, quote_focus, "
                         "source_document_id, source_title, source_doc_type, "
                         "source_ordinal, source_quote, source_focus, fingerprint) "
                         "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
-                        "%s, %s, %s)",
+                        "%s, %s)",
                         [
                             (
                                 run_id,
@@ -239,8 +240,7 @@ class CheckStore:
                                 finding.kind,
                                 finding.core,
                                 finding.confidence,
-                                finding.summary,
-                                finding.direction,
+                                finding.explanation,
                                 finding.quote,
                                 finding.quote_focus,
                                 finding.source_document_id,
@@ -371,6 +371,32 @@ class CheckStore:
                 )
             ).fetchall()
         return run_json(row, [finding_json(finding) for finding in findings])
+
+    async def decisions(self, user_id: UUID, project_id: UUID) -> list[dict[str, Any]]:
+        async with self.pool.connection() as conn:
+            rows = await (
+                await conn.execute(
+                    "select * from (select distinct on (v.fingerprint) "
+                    f"{FINDING_COLUMNS}, r.document_id, r.document_title, "
+                    "v.updated_at as decided_at from setting_check_verdicts v "
+                    "join setting_check_findings f on f.fingerprint = v.fingerprint "
+                    "join setting_check_runs r on r.id = f.run_id "
+                    "and r.project_id = v.project_id "
+                    "where v.project_id = %s and r.user_id = %s "
+                    "order by v.fingerprint, r.created_at desc, f.id desc) d "
+                    "order by decided_at desc, id desc",
+                    (project_id, user_id),
+                )
+            ).fetchall()
+        return [
+            {
+                "document_id": str(row["document_id"]),
+                "document_title": row["document_title"],
+                "decided_at": iso(row["decided_at"]),
+                "finding": finding_json(row),
+            }
+            for row in rows
+        ]
 
     async def notes(
         self, project_id: UUID, source_ids: list[str]

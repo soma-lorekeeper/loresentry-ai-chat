@@ -141,15 +141,16 @@ def test_findings_go_with_their_run_and_verdicts_are_checked(conn):
     run = insert_run(conn, conn.execute("select uuidv7()").fetchone()[0], "DONE")
     conn.execute(
         "insert into setting_check_findings (run_id, position, kind, confidence, "
-        "summary, direction, quote, source_document_id, source_title, "
+        "explanation, quote, source_document_id, source_title, "
         "source_doc_type, source_quote, fingerprint) values "
-        "(%s, 0, 'SETTING', 'HIGH', 's', 'd', 'q', uuidv7(), 't', 'place', 'sq', 'f')",
+        "(%s, 0, 'SETTING', 'HIGH', 'e', 'q', uuidv7(), 't', 'place', 'sq', 'f')",
         (run,),
     )
     assert conn.execute(
-        "select quote_focus, source_focus from setting_check_findings where run_id = %s",
+        "select explanation, quote_focus, source_focus from setting_check_findings "
+        "where run_id = %s",
         (run,),
-    ).fetchone() == (None, None)
+    ).fetchone() == ("e", None, None)
     conn.execute("delete from setting_check_runs where id = %s", (run,))
 
     assert conn.execute(

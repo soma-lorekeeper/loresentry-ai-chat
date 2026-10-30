@@ -47,6 +47,7 @@ CHAPTER = (
 )
 FACT = "북쪽 문은 낡은 열쇠 없이는 열리지 않는다."
 REASON = "12화에서 열쇠를 미리 줬어요"
+LENA_EXPLANATION = "‘레나 아르벨’ 설정은 레나의 눈을 검은색으로 정해 두었어요. 그런데 3화에서 레나는 은빛 눈으로 정원을 봐요. 눈 색이 바뀌는 장면이 앞 회차에 없어서 두 내용이 함께 성립하지 않아요."
 
 CORE = [
     candidate(
@@ -87,8 +88,7 @@ WHOLE = [
 VERDICTS = {
     "레나는 은빛 눈으로 정원을 보았다.": {
         "confidence": "LOW",
-        "summary": "레나의 눈은 검은색인데, 은빛 눈으로 정원을 봐요",
-        "direction": "레나의 눈 색이 바뀌는 장면이 없어요.",
+        "explanation": "  ‘레나 아르벨’ 설정은 레나의 눈을 검은색으로 정해 두었어요. 그런데 3화에서 레나는 은빛 눈으로 정원을 봐요. 눈 색이 바뀌는 장면이 앞 회차에 없어서 두 내용이 함께 성립하지 않아요.\n",
         "quote_focus": "은빛 눈",
         "source_focus": " “검은색” ",
     },
@@ -309,8 +309,8 @@ def test_a_focus_is_kept_only_when_it_occurs_in_its_quote():
     )
 
     def judge(candidate=found, **focus):
-        value = {"verdict": "CONFLICT", "confidence": "HIGH", "summary": ""}
-        kept = judged(candidate, {**value, "direction": "", **focus})
+        value = {"verdict": "CONFLICT", "confidence": "HIGH", "explanation": ""}
+        kept = judged(candidate, {**value, **focus})
         return kept.quote_focus, kept.source_focus
 
     assert judge(quote_focus="세 번째 순찰", source_focus="“다섯 번째\n순찰”") == (
@@ -328,7 +328,26 @@ def test_a_focus_is_kept_only_when_it_occurs_in_its_quote():
     assert judge(long, quote_focus="가" * 120)[0] == "가" * 120
     assert judge(long, quote_focus="가" * 121)[0] is None
     assert JUDGE_SCHEMA["required"] == list(JUDGE_SCHEMA["properties"])
-    assert {"quote_focus", "source_focus"} <= set(JUDGE_SCHEMA["required"])
+    assert {"explanation", "quote_focus", "source_focus"} <= set(
+        JUDGE_SCHEMA["required"]
+    )
+
+
+def test_the_explanation_falls_back_to_the_first_reviewer():
+    found = Candidate(
+        "SETTING", LENA, "가나다라", "마바사아", "검은 눈인데 은빛이에요", ""
+    )
+
+    def explain(value):
+        return judged(found, {"verdict": "CONFLICT", **value}).explanation
+
+    assert explain({"explanation": " 첫째예요.\n 둘째예요. "}) == "첫째예요. 둘째예요."
+    assert explain({"explanation": ""}) == "검은 눈인데 은빛이에요."
+    assert explain({}) == "검은 눈인데 은빛이에요."
+    both = replace(found, direction="장면이 없어요.")
+    assert judged(both, {"verdict": "CONFLICT"}).explanation == (
+        "검은 눈인데 은빛이에요. 장면이 없어요."
+    )
 
 
 def test_core_facts_are_read_and_default_to_none():
@@ -398,8 +417,7 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
             "kind": "SETTING",
             "core": False,
             "confidence": "LOW",
-            "summary": "레나의 눈은 검은색인데, 은빛 눈으로 정원을 봐요",
-            "direction": "레나의 눈 색이 바뀌는 장면이 없어요.",
+            "explanation": LENA_EXPLANATION,
             "quote": "레나는 은빛 눈으로 정원을 보았다.",
             "quote_focus": "은빛 눈",
             "source": {
@@ -417,8 +435,8 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
             "kind": "MANUSCRIPT",
             "core": False,
             "confidence": "HIGH",
-            "summary": "1화에서 서윤이 정원을 이미 봤는데, 처음 왔다고 해요",
-            "direction": "1화의 첫 방문 장면이 관련돼요.",
+            "explanation": "1화에서 서윤이 정원을 이미 봤는데, 처음 왔다고 해요. "
+            "1화의 첫 방문 장면이 관련돼요.",
             "quote": "서윤은 이 정원에 처음 왔다.",
             "quote_focus": "처음 왔다",
             "source": {
@@ -436,8 +454,8 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
             "kind": "SETTING",
             "core": True,
             "confidence": "HIGH",
-            "summary": "북쪽 문은 낡은 열쇠로만 열리는데, 서윤이 열쇠 없이 문을 밀어요",
-            "direction": "3화까지 서윤이 낡은 열쇠를 손에 넣는 장면이 없어요.",
+            "explanation": "북쪽 문은 낡은 열쇠로만 열리는데, 서윤이 열쇠 없이 문을 밀어요. "
+            "3화까지 서윤이 낡은 열쇠를 손에 넣는 장면이 없어요.",
             "quote": "서윤은 등불을 내려놓고 문을 밀었다.",
             "quote_focus": None,
             "source": {
@@ -559,6 +577,35 @@ def test_verdicts_follow_the_fingerprint_into_later_runs(env):
         "not_conflict": 1,
     }
     assert env.query("select count(*) from setting_check_verdicts") == [(1,)]
+
+
+def test_the_verdict_ledger_lists_each_verdict_with_its_latest_finding(env):
+    lena, _, door = env.check()["findings"]
+    env.verdict(door["id"], "INTENDED", REASON)
+    env.verdict(lena["id"], "NOT_CONFLICT")
+    again = env.check()["findings"]
+    path = f"/projects/{env.project}/setting-checks/verdicts"
+
+    ledger = env.get(path)["verdicts"]
+
+    assert [entry["finding"] for entry in ledger] == [again[0], again[2]]
+    for entry in ledger:
+        assert set(entry) == {"document_id", "document_title", "decided_at", "finding"}
+        assert entry["document_id"] == CH3
+        assert entry["document_title"] == "3화 · 균열의 밤"
+    assert ledger[1]["finding"]["verdict"] == "INTENDED"
+    assert ledger[1]["finding"]["reason"] == REASON
+    assert ledger[0]["decided_at"] > ledger[1]["decided_at"]
+
+    env.client.delete(
+        f"/setting-check-findings/{lena['id']}/verdict", headers=env.headers
+    )
+    assert [entry["finding"]["id"] for entry in env.get(path)["verdicts"]] == [
+        again[2]["id"]
+    ]
+    stranger = env.client.get(path, headers={"X-User-Id": str(uuid4())})
+    assert (stranger.status_code, stranger.json()) == (200, {"verdicts": []})
+    assert env.get(f"/projects/{uuid4()}/setting-checks/verdicts") == {"verdicts": []}
 
 
 def test_verdict_requests_are_validated_and_private(env):

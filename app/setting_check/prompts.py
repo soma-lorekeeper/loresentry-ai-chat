@@ -12,6 +12,10 @@ Write summary and direction in the language of the chapter; if that is unclear, 
 summary: 북쪽 문은 낡은 열쇠로만 열리는데, 서윤이 열쇠 없이 문을 밀어요
 direction: 12화까지 서윤이 낡은 열쇠를 손에 넣는 장면이 없어요."""
 
+JUDGE_LANGUAGE = """# Language
+Write explanation in the language of the chapter; if that is unclear, use the author's locale. In Korean, use the polite 해요 style, as in this example:
+‘북쪽 온실’ 설정은 북쪽 문이 낡은 열쇠 없이는 열리지 않는다고 정해 두었어요. 그런데 12화에서 서윤은 열쇠를 꺼내지 않고 손으로 문을 밀어 열어요. 11화까지 서윤이 낡은 열쇠를 받거나 줍는 장면이 없어서, 이 문이 열린 까닭을 원고 안에서 찾을 수 없어요. 열쇠를 손에 넣는 장면이나 문이 다른 힘으로 열리는 까닭이 앞에 있어야 두 내용이 함께 성립해요."""
+
 CANDIDATE_FIELDS = """- quote: the sentence in <chapter> that contradicts it, copied character for character. One sentence or clause, at most 200 characters.
 - summary: one sentence that names both sides.
 - direction: one short sentence saying what the story is missing or which passage is involved. Never write a corrected sentence for the author.
@@ -70,7 +74,7 @@ JUDGE_INSTRUCTIONS = f"""You review one candidate contradiction in a chapter of 
 # Materials
 - <chapter>: the chapter being checked, in full.
 - <source>: the setting document or earlier chapter that the candidate says the chapter contradicts. Setting documents are the ground truth. <core> lines are facts the author marked as must-keep.
-- <verdicts>: what the author said about earlier candidates that used this same source: INTENDED (the author meant it that way) or NOT_CONFLICT (the author says it is not a contradiction), with the author's reason when given. When the author has already explained the same point, follow the explanation.
+- <verdicts>: what the author said about earlier candidates that used this same source: INTENDED (the author meant it that way) or NOT_CONFLICT (the author says it is not a contradiction), with the author's reason when given. When the author has already explained the same point, follow the author's reason.
 - <candidate>: the sentence from the chapter (<quote>), the passage from the source (<source_quote>), and the first reviewer's summary and direction.
 - <author>: the author's locale.
 
@@ -80,13 +84,12 @@ JUDGE_INSTRUCTIONS = f"""You review one candidate contradiction in a chapter of 
 - CHARACTER_PERSPECTIVE: it is a character's lie, mistake, belief, rumour, dream or point of view, not a fact of the story.
 - INSUFFICIENT: the materials do not show a disagreement: the quotes do not say what the candidate claims, or the claim needs facts that are not there.
 confidence: HIGH when both sides are stated plainly; LOW when the contradiction rests on an interpretation.
-summary: one sentence that names both sides, true to the texts.
-direction: one short sentence saying what the story is missing or which passage is involved. Never write a corrected sentence for the author.
+explanation: three or four sentences, addressed to the author, that let them see why this is a contradiction without opening either document. Say what the source establishes and where (the document's title, or the chapter number); what the chapter states or shows at <quote>; why the two cannot both be true at that point in the story; and what the story never shows that would let both hold, such as a missing scene or reason. Use the concrete names, objects, numbers and events from the texts. Do not copy either quote in full, do not judge the writing and never write a corrected sentence.
 quote_focus: the shortest phrase in <quote> that carries the contradiction, copied character for character from <quote>; an empty string when no single phrase does. For example, 세 번째 순찰 in "서윤은 세 번째 순찰에서야 알아차렸다."
 source_focus: the same for <source_quote>: the shortest phrase that carries the contradiction, copied character for character from <source_quote>; an empty string when no single phrase does. For example, 다섯 번째 순찰 in "다섯 번째 순찰을 마친 새벽이었다."
-For any verdict other than CONFLICT, summary and direction may be short.
+For any verdict other than CONFLICT, explanation may be one short sentence.
 
-{LANGUAGE}"""
+{JUDGE_LANGUAGE}"""
 
 FIELDS: dict[str, Any] = {
     "source_id": {"type": "string"},
@@ -133,8 +136,7 @@ JUDGE_SCHEMA: dict[str, Any] = {
     "required": [
         "verdict",
         "confidence",
-        "summary",
-        "direction",
+        "explanation",
         "quote_focus",
         "source_focus",
     ],
@@ -149,8 +151,7 @@ JUDGE_SCHEMA: dict[str, Any] = {
             ],
         },
         "confidence": {"type": "string", "enum": ["HIGH", "LOW"]},
-        "summary": {"type": "string"},
-        "direction": {"type": "string"},
+        "explanation": {"type": "string"},
         "quote_focus": {"type": "string"},
         "source_focus": {"type": "string"},
     },

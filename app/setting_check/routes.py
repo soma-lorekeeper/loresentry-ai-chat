@@ -59,6 +59,12 @@ async def check_summary(project_id: str, user: User, deps: Deps) -> JSONResponse
     return no_store(await deps.checks.store.summary(user, project))
 
 
+@router.get("/projects/{project_id}/setting-checks/verdicts")
+async def list_verdicts(project_id: str, user: User, deps: Deps) -> JSONResponse:
+    project = uuid_or(project_id, "PROJECT_NOT_FOUND")
+    return no_store({"verdicts": await deps.checks.store.decisions(user, project)})
+
+
 @router.get("/projects/{project_id}/setting-checks")
 async def list_checks(
     project_id: str,

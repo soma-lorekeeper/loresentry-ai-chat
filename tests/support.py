@@ -339,8 +339,7 @@ class FakeChecker:
         verdict = {
             "verdict": "CONFLICT",
             "confidence": "HIGH",
-            "summary": "",
-            "direction": "",
+            "explanation": "",
             "quote_focus": "",
             "source_focus": "",
         }
