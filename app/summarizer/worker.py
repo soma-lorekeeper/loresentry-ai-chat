@@ -4,6 +4,7 @@ import pathlib
 import time
 
 from app.content import doc_type
+from app.manuscript import KeyUnavailable, ProjectKeys, Unreadable, seal, unseal
 from app.model import ModelFailure, SummaryModel
 from app.prompt import attr
 from app.summarizer.fingerprint import changed, fingerprint, threshold
@@ -12,14 +13,16 @@ from app.summarizer.store import Job, SummaryStore
 
 log = logging.getLogger("ai_chat.summarizer")
 
+KEY_RETRY_SECONDS = 60
+
 SUMMARY_INSTRUCTIONS = """Summarize this document from a web novel project so that someone can decide, without reading it, whether it answers a question about the story.
 Write in the language of the document. First 2 to 4 sentences on what it says or what happens, in order. Then one line naming the people, places, objects and terms that appear, with the other names used for them. Use names exactly as written. No evaluation, no guesses, nothing from outside the document. At most 500 characters."""
 
 
-def document_input(job: Job) -> str:
+def document_input(job: Job, text: str) -> str:
     return (
         f'<document kind="{doc_type(job.folder_code)}" title="{attr(job.title)}">\n'
-        f"{job.body}\n</document>"
+        f"{text}\n</document>"
     )
 
 
@@ -29,15 +32,32 @@ class Worker:
         store: SummaryStore,
         model: SummaryModel,
         settings: SummarizerSettings,
+        keys: ProjectKeys,
     ):
         self.store = store
         self.model = model
         self.settings = settings
+        self.keys = keys
         self.gate = asyncio.Semaphore(settings.workers)
 
+    def opened(self, job: Job) -> tuple[str, bytes | None]:
+        if job.body_enc is None:
+            return job.body, None
+        key = self.keys.unwrap(job.project_id, job.wrapped_key)
+        text = unseal(key, job.body_enc, job.project_id, job.document_id, "body_text")
+        return text, key
+
+    def stored(
+        self, job: Job, key: bytes | None, summary: str
+    ) -> tuple[str | None, bytes | None]:
+        if key is None:
+            return summary, None
+        return None, seal(key, job.project_id, job.document_id, "summary", summary)
+
     async def process(self, job: Job) -> str:
-        body = job.body.strip()
-        current = fingerprint(job.body)
+        text, key = await asyncio.to_thread(self.opened, job)
+        body = text.strip()
+        current = fingerprint(text)
         previous = await self.store.previous(job.document_id)
         if (
             previous is not None
@@ -49,6 +69,12 @@ class Worker:
                 self.settings.min_change_ratio,
             )
         ):
+            if key is not None and previous.summary is not None:
+                sealed = seal(
+                    key, job.project_id, job.document_id, "summary", previous.summary
+                )
+                await self.store.reseal(job, previous.summary, sealed)
+                return "resealed"
             await self.store.skip(job)
             return "unchanged"
         if not body:
@@ -56,14 +82,22 @@ class Worker:
             return "empty"
         if len(body) <= self.settings.short_chars:
             await self.store.save(
-                job, body, current, "body", self.settings.prompt_version
+                job,
+                *self.stored(job, key, body),
+                current,
+                "body",
+                self.settings.prompt_version,
             )
             return "copied"
         summary, usage = await self.model.summarize(
-            SUMMARY_INSTRUCTIONS, document_input(job)
+            SUMMARY_INSTRUCTIONS, document_input(job, text)
         )
         await self.store.save(
-            job, summary, current, self.model.name, self.settings.prompt_version
+            job,
+            *self.stored(job, key, summary),
+            current,
+            self.model.name,
+            self.settings.prompt_version,
         )
         log.info(
             "summary written",
@@ -93,6 +127,30 @@ class Worker:
                     },
                 )
                 return "failed"
+            except KeyUnavailable as failure:
+                await self.store.postpone(job, KEY_RETRY_SECONDS)
+                log.warning(
+                    "project key unavailable",
+                    extra={
+                        "document_id": job.document_id,
+                        "project_id": job.project_id,
+                        "sequence": job.sequence,
+                        "code": failure.code,
+                    },
+                )
+                return "deferred"
+            except Unreadable as failure:
+                await self.store.discard(job)
+                log.error(
+                    "body unreadable",
+                    extra={
+                        "document_id": job.document_id,
+                        "project_id": job.project_id,
+                        "sequence": job.sequence,
+                        "reason": str(failure),
+                    },
+                )
+                return "unreadable"
 
     async def tick(self) -> list[str]:
         jobs = await self.store.claim(

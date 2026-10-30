@@ -49,6 +49,8 @@ class Settings:
     setting_check_timeout_seconds: float = 300.0
     setting_check_deadline_seconds: float = 600.0
     setting_check_stale_seconds: int = 900
+    manuscript_key_id: str = ""
+    manuscript_key_region: str = "ap-northeast-2"
 
     @property
     def judge(self) -> str:
@@ -136,5 +138,9 @@ class Settings:
             ),
             setting_check_stale_seconds=_int(
                 "SETTING_CHECK_STALE_SECONDS", cls.setting_check_stale_seconds
+            ),
+            manuscript_key_id=os.getenv("MANUSCRIPT_KEY_ID", cls.manuscript_key_id),
+            manuscript_key_region=os.getenv(
+                "MANUSCRIPT_KEY_REGION", cls.manuscript_key_region
             ),
         )

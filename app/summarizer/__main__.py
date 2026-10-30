@@ -9,6 +9,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
 from app import logs
+from app.manuscript import ProjectKeys, kms_client
 from app.model import OpenAISummaryModel
 from app.summarizer.consumer import consume
 from app.summarizer.settings import SummarizerSettings
@@ -28,8 +29,13 @@ async def wait_for_schema(settings: SummarizerSettings, stop: asyncio.Event) -> 
             ) as conn:
                 # This pod does not run flyway; the API pod does. Wait until the
                 # columns this code writes exist, not just the tables.
-                await conn.execute("select event_seq from summary_queue limit 0")
-                await conn.execute("select event_seq from document_summaries limit 0")
+                await conn.execute(
+                    "select event_seq, body_enc, wrapped_key from summary_queue limit 0"
+                )
+                await conn.execute(
+                    "select event_seq, summary_enc, wrapped_key "
+                    "from document_summaries limit 0"
+                )
                 await conn.execute("select project_id from setting_check_runs limit 0")
                 await conn.execute(
                     "select project_id from setting_check_verdicts limit 0"
@@ -55,6 +61,8 @@ async def main() -> None:
     if not settings.openai_api_key:
         log.error("SUMMARY_OPENAI_API_KEY or OPENAI_API_KEY is not set")
         raise SystemExit(1)
+    if not settings.base.manuscript_key_id:
+        log.warning("MANUSCRIPT_KEY_ID is not set; encrypted bodies wait for it")
     client = AsyncOpenAI(api_key=settings.openai_api_key, max_retries=2)
     await wait_for_schema(settings, stop)
     if stop.is_set():
@@ -75,10 +83,14 @@ async def main() -> None:
         settings.max_output_tokens,
         settings.base.openai_timeout_seconds,
     )
-    worker = Worker(SummaryStore(pool), model, settings)
+    keys = ProjectKeys(
+        kms_client(settings.base.manuscript_key_region),
+        settings.base.manuscript_key_id,
+    )
+    worker = Worker(SummaryStore(pool), model, settings, keys)
     log.info(
         "summarizer started",
-        extra={"topic": settings.topic, "group": settings.group_id},
+        extra={"topics": list(settings.topics), "group": settings.group_id},
     )
     consumer = asyncio.create_task(asyncio.to_thread(consume, settings, halt))
     ticking = asyncio.create_task(worker.run(stop))

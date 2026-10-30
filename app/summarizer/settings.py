@@ -3,12 +3,21 @@ from dataclasses import dataclass
 
 from app.settings import Settings, _float, _int
 
+TOPICS = ("content.project.changed.v1", "content.project.changed.v2")
+
+
+def _topics() -> tuple[str, ...]:
+    raw = os.getenv("SUMMARY_TOPICS") or os.getenv("SUMMARY_TOPIC")
+    if not raw:
+        return TOPICS
+    return tuple(topic.strip() for topic in raw.split(",") if topic.strip())
+
 
 @dataclass(frozen=True)
 class SummarizerSettings:
     base: Settings
     kafka_bootstrap_servers: str = "localhost:9092"
-    topic: str = "content.project.changed.v1"
+    topics: tuple[str, ...] = TOPICS
     group_id: str = "ai-chat-summarizer"
     openai_api_key: str = ""
     model: str = "gpt-6-luna"
@@ -34,7 +43,7 @@ class SummarizerSettings:
             kafka_bootstrap_servers=os.getenv(
                 "KAFKA_BOOTSTRAP_SERVERS", cls.kafka_bootstrap_servers
             ),
-            topic=os.getenv("SUMMARY_TOPIC", cls.topic),
+            topics=_topics(),
             group_id=os.getenv("SUMMARY_GROUP_ID", cls.group_id),
             openai_api_key=os.getenv("SUMMARY_OPENAI_API_KEY") or base.openai_api_key,
             model=os.getenv("SUMMARY_MODEL") or base.openai_model,
