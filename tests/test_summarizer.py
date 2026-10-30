@@ -38,6 +38,8 @@ MIGRATIONS = sorted(
 CHAPTER = " ".join(
     f"레나는 {n}번째 유리 문을 지나 성당으로 걸어갔다." for n in range(60)
 )
+BODY_ENC = seal(os.urandom(32), str(uuid4()), str(uuid4()), "body_text", "본문")
+WRAPPED_KEY = os.urandom(180)
 
 
 def test_identical_text_has_no_change():
@@ -74,22 +76,27 @@ def file_changed(
         "file_id": file,
         "change_type": change_type,
         "changed_fields": ["BODY"],
+        "wrapped_key": base64.b64encode(WRAPPED_KEY).decode(),
         "file": {
             "title": "1화",
             "folder_code": "MANUSCRIPT",
             "episode_id": None,
             "state": state,
             "revision_no": 3,
-            "body_text": "본문",
+            "body_text_enc": base64.b64encode(BODY_ENC).decode(),
             "properties": [],
         },
         "relations": [],
     }
 
 
+def upsert_of(project: str, file: str) -> Upsert:
+    return Upsert(file, project, 7, 3, "MANUSCRIPT", "1화", BODY_ENC, WRAPPED_KEY)
+
+
 def test_file_changes_become_upserts_and_removals():
     project, file = str(uuid4()), str(uuid4())
-    upsert = Upsert(file, project, 7, 3, "MANUSCRIPT", "1화", "본문")
+    upsert = upsert_of(project, file)
 
     for change_type in ("CREATED", "UPDATED", "RESTORED"):
         assert (
@@ -116,58 +123,28 @@ def test_file_changes_become_upserts_and_removals():
     assert parse(*event("GraphRefreshRequested", {"project_id": project})) is None
 
 
-def encrypted(payload: dict, body_enc: bytes, wrapped_key: bytes | None) -> dict:
-    file = {key: value for key, value in payload["file"].items() if key != "body_text"}
-    file["body_text_enc"] = base64.b64encode(body_enc).decode()
-    return {
-        **payload,
-        "wrapped_key": (
-            None if wrapped_key is None else base64.b64encode(wrapped_key).decode()
-        ),
-        "file": file,
-    }
-
-
-def test_encrypted_bodies_are_kept_sealed_with_their_wrapped_key():
+def test_bodies_without_an_envelope_and_its_key_are_malformed():
     project, file = str(uuid4()), str(uuid4())
-    body_enc = seal(os.urandom(32), project, file, "body_text", "본문")
-    wrapped = os.urandom(180)
-    payload = encrypted(file_changed(project, file, "UPDATED"), body_enc, wrapped)
-
-    assert parse(*event("FileChanged", payload)) == Upsert(
-        file, project, 7, 3, "MANUSCRIPT", "1화", "", body_enc, wrapped
-    )
-    trashed = encrypted(
-        file_changed(project, file, "UPDATED", "TRASHED"), body_enc, wrapped
-    )
-    assert parse(*event("FileChanged", trashed)) == Remove(file, 7)
-    both = file_changed(project, file, "UPDATED")
-    both["file"]["body_text_enc"] = payload["file"]["body_text_enc"]
-    both["wrapped_key"] = payload["wrapped_key"]
-    assert parse(*event("FileChanged", both)).body_enc == body_enc
-    legacy = {**file_changed(project, file, "UPDATED"), "wrapped_key": None}
-    legacy["file"]["body_text_enc"] = None
-    assert parse(*event("FileChanged", legacy)) == Upsert(
-        file, project, 7, 3, "MANUSCRIPT", "1화", "본문"
-    )
-
-
-def test_encrypted_bodies_off_the_contract_are_malformed():
-    project, file = str(uuid4()), str(uuid4())
-    body_enc = seal(os.urandom(32), project, file, "body_text", "본문")
     current = file_changed(project, file, "UPDATED")
+    plain = {**current, "wrapped_key": None}
+    plain["file"] = {
+        **{k: v for k, v in current["file"].items() if k != "body_text_enc"},
+        "body_text": "본문",
+    }
+    no_key = {**current, "wrapped_key": None}
+    empty_key = {**current, "wrapped_key": ""}
+    not_sealed = {**current, "file": {**current["file"]}}
+    not_sealed["file"]["body_text_enc"] = base64.b64encode(b'{"x": 1}').decode()
 
-    for payload in (
-        encrypted(current, body_enc, None),
-        encrypted(current, body_enc, b""),
-        encrypted(current, b'{"body_text": "x"}', os.urandom(180)),
-    ):
+    for payload in (plain, no_key, empty_key, not_sealed):
         with pytest.raises(Malformed):
             parse(*event("FileChanged", payload))
-    not_base64 = encrypted(current, body_enc, os.urandom(180))
+    not_base64 = {**current, "file": {**current["file"]}}
     not_base64["file"]["body_text_enc"] = "not base64!"
     with pytest.raises(ValueError):
         parse(*event("FileChanged", not_base64))
+    both = {**current, "file": {**current["file"], "body_text": "본문"}}
+    assert parse(*event("FileChanged", both)) == upsert_of(project, file)
 
 
 def test_events_off_the_contract_are_malformed():
@@ -207,7 +184,7 @@ class Message:
         return self._value
 
     def topic(self):
-        return "content.project.changed.v1"
+        return "content.project.changed.v2"
 
     def partition(self):
         return 0
@@ -231,7 +208,7 @@ def test_events_off_the_contract_are_skipped_and_the_rest_applied():
         ]
     )
 
-    assert changes == [Upsert(file, project, 7, 3, "MANUSCRIPT", "1화", "본문")]
+    assert changes == [upsert_of(project, file)]
     assert skipped == 2
 
 
@@ -242,15 +219,14 @@ def test_a_topic_that_does_not_exist_yet_is_passed_over():
 
     changes, skipped = changes_of([Message(0, {}, b"", missing), Message(1, *current)])
 
-    assert changes == [Upsert(file, project, 7, 3, "MANUSCRIPT", "1화", "본문")]
+    assert changes == [upsert_of(project, file)]
     assert skipped == 0
 
 
-def test_both_topic_versions_are_consumed_by_default(monkeypatch):
+def test_only_the_v2_topic_is_consumed_by_default(monkeypatch):
     for name in ("SUMMARY_TOPICS", "SUMMARY_TOPIC"):
         monkeypatch.delenv(name, raising=False)
     assert SummarizerSettings.from_environment().topics == (
-        "content.project.changed.v1",
         "content.project.changed.v2",
     )
     monkeypatch.setenv("SUMMARY_TOPIC", "content.project.changed.v1")
@@ -335,43 +311,21 @@ class Rig:
             sequence if revision is None else revision,
             "MANUSCRIPT",
             title,
-            body,
-        )
-
-    def sealed(
-        self, document: str, sequence: int, body: str = CHAPTER, title: str = "1화"
-    ) -> Upsert:
-        return Upsert(
-            document,
-            self.project,
-            sequence,
-            sequence,
-            "MANUSCRIPT",
-            title,
-            "",
             seal(self.key, self.project, document, "body_text", body),
             self.wrapped_key,
         )
 
-    def summaries(self) -> dict[str, str | None]:
-        found: dict[str, str | None] = {}
-        for document, project, summary, summary_enc, wrapped_key in self.query(
-            "select document_id::text, project_id::text, summary, summary_enc, "
-            "wrapped_key from document_summaries"
+    def summaries(self) -> dict[str, str]:
+        found: dict[str, str] = {}
+        for document, project, summary_enc, wrapped_key in self.query(
+            "select document_id::text, project_id::text, summary_enc, wrapped_key "
+            "from document_summaries"
         ):
-            if summary_enc is None:
-                found[document] = summary
-            else:
-                assert summary is None and wrapped_key == self.wrapped_key
-                found[document] = unseal(
-                    self.key, summary_enc, project, document, "summary"
-                )
+            assert wrapped_key == self.wrapped_key
+            found[document] = unseal(
+                self.key, summary_enc, project, document, "summary"
+            )
         return found
-
-    def plaintext(self) -> int:
-        return self.query(
-            "select count(*) from document_summaries where summary is not null"
-        )[0][0]
 
     def tick(self) -> list[str]:
         async def once() -> list[str]:
@@ -411,8 +365,10 @@ def test_a_new_document_is_summarized_and_leaves_the_queue(rig):
 
     assert rig.tick() == ["summarized"]
     assert rig.query(
-        "select document_id::text, revision_no, summary, model from document_summaries"
-    ) == [(document, 1, "요약 1", "fake-summary")]
+        "select document_id::text, revision_no, model from document_summaries"
+    ) == [(document, 1, "fake-summary")]
+    assert rig.summaries() == {document: "요약 1"}
+    assert CHAPTER in rig.model.inputs[0]
     assert rig.query("select count(*) from summary_queue") == [(0,)]
     assert '<document kind="manuscript" title="1화">' in rig.model.inputs[0]
 
@@ -435,9 +391,8 @@ def test_a_small_edit_keeps_the_summary_and_its_fingerprint(rig):
     long_edit = CHAPTER.replace("성당으로", "온실로")
     rig.change(rig.upsert(document, 4, long_edit))
     assert rig.tick() == ["summarized"]
-    assert rig.query("select revision_no, summary from document_summaries") == [
-        (4, "요약 2")
-    ]
+    assert rig.query("select revision_no from document_summaries") == [(4,)]
+    assert rig.summaries() == {document: "요약 2"}
 
 
 def test_short_and_empty_documents_skip_the_model(rig):
@@ -447,9 +402,7 @@ def test_short_and_empty_documents_skip_the_model(rig):
     )
 
     assert sorted(rig.tick()) == ["copied", "empty"]
-    assert rig.query("select document_id::text, summary from document_summaries") == [
-        (short_doc, "레나는 정원사다.")
-    ]
+    assert rig.summaries() == {short_doc: "레나는 정원사다."}
     assert rig.model.inputs == []
 
 
@@ -581,111 +534,37 @@ def test_a_retry_leaves_a_change_that_came_during_the_call(rig):
     assert rig.query("select event_seq, attempts from summary_queue") == [(11, 0)]
 
 
-def test_queued_bodies_follow_the_newest_event_in_either_form(rig):
+def test_queued_bodies_follow_the_newest_event(rig):
     document = str(uuid4())
-    sealed = rig.sealed(document, 2)
-    columns = "select body, body_enc, wrapped_key from summary_queue"
+    newer = rig.upsert(document, 2)
+    columns = "select body_enc, wrapped_key from summary_queue"
 
-    rig.change(rig.upsert(document, 1, "평문 본문"), sealed)
-    assert rig.query(columns) == [("", sealed.body_enc, rig.wrapped_key)]
+    rig.change(rig.upsert(document, 1, "옛 본문"), newer)
+    assert rig.query(columns) == [(newer.body_enc, rig.wrapped_key)]
 
-    rig.change(rig.upsert(document, 1, "늦게 온 평문"))
-    assert rig.query(columns) == [("", sealed.body_enc, rig.wrapped_key)]
+    rig.change(rig.upsert(document, 1, "늦게 온 본문"))
+    assert rig.query(columns) == [(newer.body_enc, rig.wrapped_key)]
 
-    rig.change(rig.upsert(document, 3, "새 평문"))
-    assert rig.query(columns) == [("새 평문", None, None)]
-
-    newer = rig.sealed(document, 4)
-    rig.change(newer)
-    assert rig.query(columns) == [("", newer.body_enc, rig.wrapped_key)]
+    newest = rig.upsert(document, 3, "새 본문")
+    rig.change(newest)
+    assert rig.query(columns) == [(newest.body_enc, rig.wrapped_key)]
 
 
 def test_sealed_bodies_are_opened_only_to_summarize(rig):
     first, second = str(uuid4()), str(uuid4())
-    rig.change(rig.sealed(first, 1), rig.sealed(second, 1, "레나는 정원사다."))
+    rig.change(rig.upsert(first, 1), rig.upsert(second, 1, "레나는 정원사다."))
 
     assert sorted(rig.tick()) == ["copied", "summarized"]
     assert CHAPTER in rig.model.inputs[0]
     assert rig.summaries() == {first: "요약 1", second: "레나는 정원사다."}
-    assert rig.plaintext() == 0
     assert rig.query("select count(*) from summary_queue") == [(0,)]
     assert len(rig.kms.calls) == 1
-
-
-def test_a_replay_seals_every_summary_and_calls_the_model_only_for_changes(rig):
-    unchanged, short, edited, emptied = (str(uuid4()) for _ in range(4))
-    rig.change(
-        rig.upsert(unchanged, 1),
-        rig.upsert(short, 1, "레나는 정원사다."),
-        rig.upsert(edited, 1),
-        rig.upsert(emptied, 1, "곧 지워질 문장."),
-    )
-    assert sorted(rig.tick()) == ["copied", "copied", "summarized", "summarized"]
-    assert rig.plaintext() == 4
-    before = rig.summaries()
-    fingerprints = dict(
-        rig.query("select document_id::text, fingerprint from document_summaries")
-    )
-
-    rig.change(
-        rig.sealed(unchanged, 5),
-        rig.sealed(short, 5, "레나는 정원사다."),
-        rig.sealed(edited, 5, CHAPTER.replace("성당으로", "온실로")),
-        rig.sealed(emptied, 5, ""),
-    )
-
-    assert sorted(rig.tick()) == ["empty", "resealed", "resealed", "summarized"]
-    assert len(rig.model.inputs) == 3
-    assert rig.plaintext() == 0
-    assert rig.summaries() == {
-        unchanged: before[unchanged],
-        short: "레나는 정원사다.",
-        edited: "요약 3",
-    }
-    assert sorted(
-        rig.query("select document_id::text, event_seq from document_summaries")
-    ) == sorted([(unchanged, 5), (short, 5), (edited, 5)])
-    assert (
-        dict(
-            rig.query("select document_id::text, fingerprint from document_summaries")
-        )[unchanged]
-        == fingerprints[unchanged]
-    )
-    assert rig.query("select count(*) from summary_queue") == [(0,)]
-
-
-def test_a_changed_short_body_replaces_a_plaintext_summary_sealed(rig):
-    document = str(uuid4())
-    rig.change(rig.upsert(document, 1, "레나는 정원사다."))
-    rig.tick()
-
-    rig.change(rig.sealed(document, 2, "레나는 요리사다."))
-
-    assert rig.tick() == ["copied"]
-    assert rig.summaries() == {document: "레나는 요리사다."}
-    assert rig.plaintext() == 0
-
-
-def test_plaintext_events_keep_writing_plaintext_summaries(rig):
-    document = str(uuid4())
-    rig.change(rig.sealed(document, 1))
-    rig.tick()
-
-    rig.change(rig.upsert(document, 2, CHAPTER + " 짧은 문장."))
-    assert rig.tick() == ["unchanged"]
-    assert rig.plaintext() == 0
-
-    rig.change(rig.upsert(document, 3, CHAPTER.replace("성당으로", "온실로")))
-    assert rig.tick() == ["summarized"]
-    assert rig.query(
-        "select summary, summary_enc, wrapped_key from document_summaries"
-    ) == [("요약 2", None, None)]
 
 
 def test_a_kms_outage_keeps_the_row_without_using_an_attempt(rig):
     document = str(uuid4())
     rig.kms.fail_with = "KMSInternalException"
-    rig.change(rig.sealed(document, 1))
+    rig.change(rig.upsert(document, 1))
 
     assert rig.tick() == ["deferred"]
     assert rig.query("select attempts, next_attempt_at > now() from summary_queue") == [
@@ -708,7 +587,6 @@ def test_a_body_that_does_not_open_is_dropped(rig):
         1,
         "MANUSCRIPT",
         "1화",
-        "",
         seal(rig.key, rig.project, str(uuid4()), "body_text", CHAPTER),
         rig.wrapped_key,
     )

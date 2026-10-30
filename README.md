@@ -15,8 +15,8 @@ messages, held documents and per-turn metrics live in the `ai_chat` database.
 There is no vector store and no agent framework; the loop is `app/agent.py`.
 
 A second process from the same image, the summarizer (`python -m app.summarizer`),
-consumes `content.project.changed.v1` and `content.project.changed.v2` and keeps
-a summary of every document for the map.
+consumes `content.project.changed.v2` and keeps a summary of every document for
+the map.
 
 Product requirements and the API contract:
 [`docs/AI_CHAT_REQUIREMENTS.md`](https://github.com/soma-lorekeeper/docs/blob/main/AI_CHAT_REQUIREMENTS.md).
@@ -174,27 +174,24 @@ Trash, delete and project deletion remove summaries; project deletion also
 removes setting checks and verdicts. Liveness is the mtime of
 `SUMMARY_HEARTBEAT_PATH`.
 
-A FileChanged either carries `file.body_text` or, from content's encrypted
-manuscripts, `file.body_text_enc` (a manuscript envelope, purpose `body_text`,
-subject the document id) with the project's `wrapped_key`; both forms are accepted
-on both topics. The envelope and the wrapped key are queued as received
-(`body_enc`, `wrapped_key`, with `body` empty) and opened only when the document is
-summarized: KMS `Decrypt` of the wrapped key (`MANUSCRIPT_KEY_ID`, encryption
-context `{"project_id": …}`, credentials from Pod Identity), cached in memory per
-project for 10 minutes (at most 1000 keys), then AES-256-GCM and zlib
-(`app/manuscript.py`). A KMS failure leaves the row queued for another minute
-without using an attempt; an envelope that does not open is logged without its
-text and dropped.
+A FileChanged carries the body only as `file.body_text_enc` (a manuscript
+envelope, purpose `body_text`, subject the document id) with the project's
+`wrapped_key`; one without both is off the contract and skipped. The envelope and
+the wrapped key are queued as received (`body_enc`, `wrapped_key`) and opened only
+when the document is summarized: KMS `Decrypt` of the wrapped key
+(`MANUSCRIPT_KEY_ID`, encryption context `{"project_id": …}`, credentials from Pod
+Identity), cached in memory per project for 10 minutes (at most 1000 keys), then
+AES-256-GCM and zlib (`app/manuscript.py`). A KMS failure leaves the row queued
+for another minute without using an attempt; an envelope that does not open is
+logged without its text and dropped.
 
-When the queued row has a wrapped key, every summary written for it, a copied
-short body or a model summary, is stored only as an envelope (purpose `summary`,
-subject the document id) in `summary_enc` with the same `wrapped_key`, and
-`summary` is null. When such a row leaves the summary unchanged and the stored
-summary is still plain text, it is sealed in place without calling the model, so
-replaying FileChanged v2 for every document leaves no plain summary behind. Rows
-from plain events keep plain summaries. The API opens sealed summaries for the map
-with the same key cache, off the event loop; a summary whose key or envelope does
-not open is left out of the map and logged without its text.
+Every summary, a copied short body or a model summary, is stored only as an
+envelope (purpose `summary`, subject the document id) in `summary_enc` with the
+same `wrapped_key`. The API opens summaries for the map with the same key cache,
+off the event loop; a summary whose key or envelope does not open is left out of
+the map and logged without its text. V11 drops the plaintext `summary_queue.body`
+and `document_summaries.summary` and stops with an error while either still holds
+text, so it runs only after a replay of FileChanged v2 has sealed every summary.
 
 ## Configuration
 
@@ -221,7 +218,7 @@ not open is left out of the map and logged without its text.
 | `SETTING_CHECK_TIMEOUT_SECONDS` | `300` | Per model call |
 | `SETTING_CHECK_DEADLINE_SECONDS`, `SETTING_CHECK_STALE_SECONDS` | `600`, `900` | Whole run; `RUNNING` older than this is `INTERRUPTED` |
 | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Summarizer |
-| `SUMMARY_TOPICS` | `content.project.changed.v1,content.project.changed.v2` | Summarizer, comma-separated; `SUMMARY_TOPIC` still names a single topic |
+| `SUMMARY_TOPICS` | `content.project.changed.v2` | Summarizer, comma-separated; `SUMMARY_TOPIC` still names a single topic |
 | `MANUSCRIPT_KEY_ID` | — | API and summarizer. KMS key of the manuscript project keys, prod `alias/lore-sentry-manuscript`, dev `alias/lore-sentry-manuscript-dev`; unset, encrypted bodies stay queued and sealed summaries are left out of the map |
 | `MANUSCRIPT_KEY_REGION` | `ap-northeast-2` | API and summarizer |
 | `SUMMARY_OPENAI_API_KEY`, `SUMMARY_MODEL` | `OPENAI_API_KEY`, `OPENAI_MODEL` | Summarizer |
@@ -240,8 +237,8 @@ keeps the pod from becoming ready.
 | `chat_messages` | Finished questions (intent, quote, `client_message_id`) and answers (citations); streaming chunks are not stored |
 | `chat_turns` | One row per attempt: status, failure code, model, tokens, timings, steps, reviews and grounding. At most one `GENERATING` per session |
 | `chat_held_documents` | Documents and memos a session has read, in reading order |
-| `document_summaries` | One summary per document with its revision, sentence fingerprint and the `event_seq` it stands for; the summary is either in `summary` or sealed in `summary_enc` with `wrapped_key` |
-| `summary_queue` | Latest change per document (by `event_seq`) waiting to be summarized, with its body either in `body` or sealed in `body_enc` with `wrapped_key` |
+| `document_summaries` | One summary per document with its revision, sentence fingerprint and the `event_seq` it stands for; the summary is sealed in `summary_enc` with `wrapped_key` |
+| `summary_queue` | Latest change per document (by `event_seq`) waiting to be summarized, with its body sealed in `body_enc` with `wrapped_key` |
 | `setting_check_runs` | One row per setting check: chapter and revision, status and stage, what was read, tokens. At most one `RUNNING` per project |
 | `setting_check_findings` | Findings of a finished run in chapter order, with the explanation, both quotes, their focus phrases and the fingerprint |
 | `setting_check_verdicts` | The author's verdict and reason per project and fingerprint, kept across runs |

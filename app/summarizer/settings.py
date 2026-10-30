@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from app.settings import Settings, _float, _int
 
-TOPICS = ("content.project.changed.v1", "content.project.changed.v2")
+TOPICS = ("content.project.changed.v2",)
 
 
 def _topics() -> tuple[str, ...]:

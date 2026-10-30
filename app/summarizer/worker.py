@@ -40,19 +40,13 @@ class Worker:
         self.keys = keys
         self.gate = asyncio.Semaphore(settings.workers)
 
-    def opened(self, job: Job) -> tuple[str, bytes | None]:
-        if job.body_enc is None:
-            return job.body, None
+    def opened(self, job: Job) -> tuple[str, bytes]:
         key = self.keys.unwrap(job.project_id, job.wrapped_key)
         text = unseal(key, job.body_enc, job.project_id, job.document_id, "body_text")
         return text, key
 
-    def stored(
-        self, job: Job, key: bytes | None, summary: str
-    ) -> tuple[str | None, bytes | None]:
-        if key is None:
-            return summary, None
-        return None, seal(key, job.project_id, job.document_id, "summary", summary)
+    def sealed(self, job: Job, key: bytes, summary: str) -> bytes:
+        return seal(key, job.project_id, job.document_id, "summary", summary)
 
     async def process(self, job: Job) -> str:
         text, key = await asyncio.to_thread(self.opened, job)
@@ -69,12 +63,6 @@ class Worker:
                 self.settings.min_change_ratio,
             )
         ):
-            if key is not None and previous.summary is not None:
-                sealed = seal(
-                    key, job.project_id, job.document_id, "summary", previous.summary
-                )
-                await self.store.reseal(job, previous.summary, sealed)
-                return "resealed"
             await self.store.skip(job)
             return "unchanged"
         if not body:
@@ -83,7 +71,7 @@ class Worker:
         if len(body) <= self.settings.short_chars:
             await self.store.save(
                 job,
-                *self.stored(job, key, body),
+                self.sealed(job, key, body),
                 current,
                 "body",
                 self.settings.prompt_version,
@@ -94,7 +82,7 @@ class Worker:
         )
         await self.store.save(
             job,
-            *self.stored(job, key, summary),
+            self.sealed(job, key, summary),
             current,
             self.model.name,
             self.settings.prompt_version,
