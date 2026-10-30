@@ -1,9 +1,12 @@
 import asyncio
 import json
+import os
 import threading
 from dataclasses import replace
 from typing import Any
 from uuid import UUID, uuid4
+
+from botocore.exceptions import ClientError
 
 from app.content import ChatMap, Document, Fetched, Memo, Node, Property, Relation
 from app.errors import ChatFailure
@@ -347,3 +350,31 @@ class FakeChecker:
             if f"<quote>{quote}</quote>" in blocks[-1]:
                 verdict.update(scripted)
         return verdict, self.usage
+
+
+class FakeKms:
+    def __init__(self, key_id: str = "alias/lore-sentry-manuscript-test"):
+        self.key_id = key_id
+        self.wrapped: dict[bytes, tuple[str, bytes]] = {}
+        self.calls: list[dict[str, Any]] = []
+        self.fail_with: str | None = None
+
+    def wrap(self, project_id: str, key: bytes) -> bytes:
+        blob = os.urandom(180)
+        self.wrapped[blob] = (project_id, key)
+        return blob
+
+    def decrypt(self, **request: Any) -> dict[str, Any]:
+        self.calls.append(request)
+        if self.fail_with:
+            raise ClientError(
+                {"Error": {"Code": self.fail_with, "Message": "failed"}}, "Decrypt"
+            )
+        project_id, key = self.wrapped.get(request["CiphertextBlob"], ("", b""))
+        context = {"project_id": project_id}
+        if request["KeyId"] != self.key_id or request["EncryptionContext"] != context:
+            raise ClientError(
+                {"Error": {"Code": "InvalidCiphertextException", "Message": ""}},
+                "Decrypt",
+            )
+        return {"Plaintext": key, "KeyId": self.key_id}
