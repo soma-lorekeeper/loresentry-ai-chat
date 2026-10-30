@@ -6,6 +6,7 @@ from app.prompt import attr, text_block
 from app.setting_check.findings import Candidate, Reading
 
 MAX_CANDIDATES = 20
+JUDGE_EARLIER_CHARS = 30_000
 
 LANGUAGE = """# Language
 Write summary and direction in the language of the chapter; if that is unclear, use the author's locale. In Korean, use the polite 해요 style, as in these examples:
@@ -37,7 +38,7 @@ Do not report:
 - disagreements between setting documents, or between earlier chapters, that the checked chapter takes no part in;
 - spelling, naming style, tone or wording;
 - details the setting documents and earlier chapters never mention; silence is not a contradiction;
-- changes the story itself accounts for: time passing, an event in between, a character growing or deciding differently, a lie, a mistake, a rumour, a belief, a dream or a flashback.
+- changes the story itself shows or states: time passing, an event in between, a character growing or deciding differently, a lie, a mistake, a rumour, a belief, a dream or a flashback. A character who simply acts against a setting, with no reason shown, is a contradiction, not growth.
 Names, nicknames and titles given in document titles and properties refer to the same person, place or thing.
 When you are unsure whether a place is a contradiction, report it; a reviewer checks every candidate.
 
@@ -47,23 +48,24 @@ When you are unsure whether a place is a contradiction, report it; a reviewer ch
 - source_quote: the passage in that document that establishes the fact, copied character for character from its <body>, a <core> line or a <property> value. One sentence or clause, at most 200 characters.
 {CANDIDATE_FIELDS}
 - core: true when source_quote comes from a <core> line.
+- related_ids: the ids of up to three other earlier chapters the contradiction also depends on, for example the chapter that gives an age or a date the source does not; an empty list when the source alone shows it.
 Report each contradiction once, in the order it appears in the chapter, at most {MAX_CANDIDATES}. If there is none, return an empty list.
 
 {LANGUAGE}"""
 
-CORE_INSTRUCTIONS = f"""You check one chapter of a web novel against the core settings its author marked: facts the story must keep. You only report; you never rewrite the story.
+SETTINGS_INSTRUCTIONS = f"""You check one chapter of a web novel against its author's setting documents, one document at a time. You only report; you never rewrite the story.
 
 # Materials
-- <facts>: each <fact> is one core setting, with the id (`source`), kind and title of the setting document it belongs to.
+- <settings>: the author's setting documents, each with its id, kind, title, the author's <property> rows, <core> lines and <body>. Setting documents are the ground truth. <core> lines are facts the author marked as must-keep.
 - <chapter>: the chapter being checked.
 - <author>: the author's locale.
 
 # What counts
-Go through the facts one by one. Report a fact when something the chapter states or shows cannot be true together with it. Do not report facts the chapter does not touch, differences in wording or naming style, or changes the chapter itself accounts for: a lie, a mistake, a belief, a dream, a flashback, or an event that changes the fact. When you are unsure, report it; a reviewer checks every candidate.
+Go through the setting documents one by one, and within each document fact by fact: every <core> line, property and sentence of the body. Report a fact when something the chapter states or shows cannot be true together with it. Names, nicknames and titles given in document titles and properties refer to the same person, place or thing. Do not report facts the chapter does not touch, details the settings never mention, differences in wording or naming style, or changes the chapter itself shows or states: time passing, an event that changes the fact, a lie, a mistake, a rumour, a belief, a dream or a flashback. A character who simply acts against a fact, with no reason shown, contradicts it. When you are unsure, report it; a reviewer checks every candidate.
 
 # Each candidate
-- source_id: the `source` id of the fact.
-- source_quote: the part of the fact that the chapter contradicts, copied character for character; the whole fact if it is short. At most 200 characters.
+- source_id: the id of the setting document.
+- source_quote: the fact the chapter contradicts, copied character for character from its <body>, a <core> line or a <property> value. One sentence or clause, at most 200 characters.
 {CANDIDATE_FIELDS}
 Report each contradiction once, in the order it appears in the chapter, at most {MAX_CANDIDATES}. If there is none, return an empty list.
 
@@ -72,18 +74,22 @@ Report each contradiction once, in the order it appears in the chapter, at most 
 JUDGE_INSTRUCTIONS = f"""You review one candidate contradiction in a chapter of a web novel. Another reviewer found it after reading the setting documents and every earlier chapter; you decide whether it holds. You never rewrite the story.
 
 # Materials
+- <settings>: every setting document, with its properties (names, nicknames, roles) and <core> lines. Use them to tell who or what a sentence refers to, and for facts the candidate depends on.
+- <earlier>: the most recent chapters before the checked one, as many as fit.
 - <chapter>: the chapter being checked, in full.
 - <source>: the setting document or earlier chapter that the candidate says the chapter contradicts. Setting documents are the ground truth. <core> lines are facts the author marked as must-keep.
+- <related>: older chapters the first reviewer says the contradiction also depends on, when they are not in <earlier>.
 - <verdicts>: what the author said about earlier candidates that used this same source: INTENDED (the author meant it that way) or NOT_CONFLICT (the author says it is not a contradiction), with the author's reason when given. When the author has already explained the same point, follow the author's reason.
 - <candidate>: the sentence from the chapter (<quote>), the passage from the source (<source_quote>), and the first reviewer's summary and direction.
 - <author>: the author's locale.
 
 # Verdict
-- CONFLICT: the two cannot both be true at that point in the story, and nothing in the materials accounts for it.
-- CHANGED_OVER_TIME: the story changes it on purpose: time passes, something happens in between, a character grows or decides differently.
-- CHARACTER_PERSPECTIVE: it is a character's lie, mistake, belief, rumour, dream or point of view, not a fact of the story.
-- INSUFFICIENT: the materials do not show a disagreement: the quotes do not say what the candidate claims, or the claim needs facts that are not there.
-confidence: HIGH when both sides are stated plainly; LOW when the contradiction rests on an interpretation.
+Judge what the texts say, not what could be true. Read the chapter as its readers would: a person, place or thing called by a title, nickname, role or description in the materials is the same one. A contradiction stands unless the materials account for it; do not dismiss it with an explanation the story never gives, such as a second key, another notebook, a ghost or an event nobody mentions. Sentences happen in the story's present unless the text marks them otherwise; a marker such as a flashback ("ten years ago"), a memory or a dream covers only the passage it introduces.
+- CONFLICT: on the most natural reading, the two cannot both be true at that point in the story, and nothing in the materials accounts for it.
+- CHANGED_OVER_TIME: the materials show or state the change: time passes, something happens in between, a character grows or decides differently. A character simply acting against the setting is not a change.
+- CHARACTER_PERSPECTIVE: the sentence in <quote> itself is a character's words, lie, mistake, belief, rumour, dream or point of view, not a fact of the story. A rumour or belief elsewhere in the chapter does not turn narration into one.
+- INSUFFICIENT: read in context, the quotes do not say what the candidate claims, or the contradiction depends on a fact that appears nowhere in the materials.
+confidence: HIGH when both sides are stated plainly; LOW when the contradiction rests on an interpretation, such as which person or object a sentence means. A contradiction on a plausible reading is still CONFLICT, with LOW confidence.
 explanation: three or four sentences, addressed to the author, that let them see why this is a contradiction without opening either document. Say what the source establishes and where (the document's title, or the chapter number); what the chapter states or shows at <quote>; why the two cannot both be true at that point in the story; and what the story never shows that would let both hold, such as a missing scene or reason. Use the concrete names, objects, numbers and events from the texts. Do not copy either quote in full, do not judge the writing and never write a corrected sentence.
 quote_focus: the shortest phrase in <quote> that carries the contradiction, copied character for character from <quote>; an empty string when no single phrase does. For example, 세 번째 순찰 in "서윤은 세 번째 순찰에서야 알아차렸다."
 source_focus: the same for <source_quote>: the shortest phrase that carries the contradiction, copied character for character from <source_quote>; an empty string when no single phrase does. For example, 다섯 번째 순찰 in "다섯 번째 순찰을 마친 새벽이었다."
@@ -125,10 +131,11 @@ WHOLE_SCHEMA = candidates_schema(
         "kind": {"type": "string", "enum": ["SETTING", "MANUSCRIPT"]},
         **FIELDS,
         "core": {"type": "boolean"},
+        "related_ids": {"type": "array", "maxItems": 3, "items": {"type": "string"}},
     }
 )
 
-CORE_SCHEMA = candidates_schema(FIELDS)
+SETTINGS_SCHEMA = candidates_schema(FIELDS)
 
 JUDGE_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -218,16 +225,13 @@ def whole_input(reading: Reading, locale: str) -> list[dict[str, Any]]:
     )
 
 
-def core_input(reading: Reading, locale: str) -> list[dict[str, Any]]:
-    facts = [
-        f'<fact source="{reading.ids[doc.id]}" kind="{doc.doc_type}"'
-        f' title="{attr(doc.title)}">{fact}</fact>'
-        for doc in reading.settings
-        for fact in doc.core_facts
-    ]
-    facts_xml = "<facts>\n" + "\n".join(facts) + "\n</facts>"
+def settings_input(reading: Reading, locale: str) -> list[dict[str, Any]]:
+    settings = [document_xml(doc, reading.ids[doc.id]) for doc in reading.settings]
     return user(
-        [text_block(f"{facts_xml}\n{author_xml(locale)}\n{chapter_xml(reading)}")]
+        [
+            text_block(section("settings", settings), breakpoint=True),
+            text_block(f"{author_xml(locale)}\n{chapter_xml(reading)}"),
+        ]
     )
 
 
@@ -240,6 +244,30 @@ def verdicts_xml(notes: list[Note]) -> str:
         for note in notes
     ]
     return section("verdicts", parts)
+
+
+def recent(reading: Reading) -> list[Document]:
+    kept: list[Document] = []
+    room = JUDGE_EARLIER_CHARS
+    for doc in reversed(reading.earlier):
+        if len(doc.body_text) > room:
+            break
+        kept.append(doc)
+        room -= len(doc.body_text)
+    return kept[::-1]
+
+
+def related_xml(reading: Reading, candidate: Candidate) -> str:
+    shown = {doc.id for doc in recent(reading)}
+    related = [
+        document_xml(reading.documents[doc_id], reading.ids[doc_id])
+        for doc_id in candidate.related_ids
+        if doc_id != candidate.source_id
+        and doc_id not in shown
+        and doc_id in reading.documents
+        and reading.documents[doc_id].is_manuscript
+    ]
+    return f"{section('related', related)}\n" if related else ""
 
 
 def candidate_xml(candidate: Candidate) -> str:
@@ -257,12 +285,19 @@ def judge_input(
     reading: Reading, candidate: Candidate, notes: list[Note], locale: str
 ) -> list[dict[str, Any]]:
     source = reading.documents[candidate.source_id]
+    settings = [document_xml(doc, reading.ids[doc.id]) for doc in reading.settings]
+    earlier = [document_xml(doc, reading.ids[doc.id]) for doc in recent(reading)]
     return user(
         [
-            text_block(chapter_xml(reading), breakpoint=True),
+            text_block(
+                f"{section('settings', settings)}\n{section('earlier', earlier)}\n"
+                f"{chapter_xml(reading)}",
+                breakpoint=True,
+            ),
             text_block(
                 f"<source>\n{document_xml(source, reading.ids[source.id])}\n</source>\n"
-                f"{verdicts_xml(notes)}\n{author_xml(locale)}"
+                f"{related_xml(reading, candidate)}{verdicts_xml(notes)}\n"
+                f"{author_xml(locale)}"
             ),
             text_block(candidate_xml(candidate)),
         ]

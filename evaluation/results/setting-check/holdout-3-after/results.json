@@ -1,0 +1,604 @@
+{
+ "h3-first-ship": {
+  "runs": [
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 4.8,
+    "usage": {
+     "input_tokens": 1812,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1051,
+     "output_tokens": 369,
+     "reasoning_tokens": 336
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 4.8,
+    "usage": {
+     "input_tokens": 1812,
+     "cached_tokens": 1051,
+     "cache_write_tokens": 0,
+     "output_tokens": 373,
+     "reasoning_tokens": 340
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 4.5,
+    "usage": {
+     "input_tokens": 1812,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1051,
+     "output_tokens": 350,
+     "reasoning_tokens": 317
+    }
+   }
+  ],
+  "score": {
+   "expected": {},
+   "found_by_finder": {},
+   "traps": {},
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "h3-dead-sister": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "오늘 아침, 세린은 공방 문을 열고 들어와 오나의 작업대 옆에 앉았다.",
+      "source": "c1",
+      "source_quote": "오나의 언니 세린은 지난겨울 병으로 세상을 떠났다.",
+      "core": false,
+      "group": "expect",
+      "entry": "sister-back"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "오늘 아침, 세린은 공방 문을 열고 들어와 오나의 작업대 옆에 앉았다.",
+      "source": "c1",
+      "source_quote": "오나의 언니 세린은 지난겨울 병으로 세상을 떠났다.",
+      "core": false,
+      "group": "expect",
+      "entry": "sister-back",
+      "verdict": "CONFLICT",
+      "reason": "1화 「장례」에서는 세린이 지난겨울 병으로 세상을 떠났다고 정해요. 그런데 2화 「공방」에서는 오늘 아침 세린이 공방에 들어와 오나의 작업대 옆에 앉았다고 서술해요. 세상을 떠난 세린이 현재 공방에 와 있는 두 내용은 함께 성립하기 어려운데, 그 사이에 세린이 돌아온 경위나 이 장면이 환상이라는 설명은 나오지 않아요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "오늘 아침, 세린은 공방 문을 열고 들어와 오나의 작업대 옆에 앉았다.",
+      "source": "c1",
+      "source_quote": "오나의 언니 세린은 지난겨울 병으로 세상을 떠났다.",
+      "core": false,
+      "group": "expect",
+      "entry": "sister-back",
+      "confidence": "HIGH",
+      "explanation": "1화 「장례」에서는 세린이 지난겨울 병으로 세상을 떠났다고 정해요. 그런데 2화 「공방」에서는 오늘 아침 세린이 공방에 들어와 오나의 작업대 옆에 앉았다고 서술해요. 세상을 떠난 세린이 현재 공방에 와 있는 두 내용은 함께 성립하기 어려운데, 그 사이에 세린이 돌아온 경위나 이 장면이 환상이라는 설명은 나오지 않아요.",
+      "quote_focus": "공방 문을 열고 들어와",
+      "source_focus": "세상을 떠났다"
+     }
+    ],
+    "seconds": 13.0,
+    "usage": {
+     "input_tokens": 3362,
+     "cached_tokens": 1060,
+     "cache_write_tokens": 1529,
+     "output_tokens": 534,
+     "reasoning_tokens": 210
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "오늘 아침, 세린은 공방 문을 열고 들어와 오나의 작업대 옆에 앉았다.",
+      "source": "c1",
+      "source_quote": "오나의 언니 세린은 지난겨울 병으로 세상을 떠났다.",
+      "core": false,
+      "group": "expect",
+      "entry": "sister-back"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "오늘 아침, 세린은 공방 문을 열고 들어와 오나의 작업대 옆에 앉았다.",
+      "source": "c1",
+      "source_quote": "오나의 언니 세린은 지난겨울 병으로 세상을 떠났다.",
+      "core": false,
+      "group": "expect",
+      "entry": "sister-back",
+      "verdict": "CONFLICT",
+      "reason": "1화 「장례」에서는 오나의 언니 세린이 지난겨울 병으로 세상을 떠났다고 해요. 그런데 2화에서 오늘 아침 세린이 공방에 들어와 오나의 작업대 옆에 앉았다고 서술해요. 세상을 떠난 세린이 오늘 아침 직접 찾아온 일은 두 서술과 동시에 성립할 수 없어요. 세린이 살아 돌아온 이유나 이 장면이 환상·회상이라는 설명은 원고에 나오지 않아요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "오늘 아침, 세린은 공방 문을 열고 들어와 오나의 작업대 옆에 앉았다.",
+      "source": "c1",
+      "source_quote": "오나의 언니 세린은 지난겨울 병으로 세상을 떠났다.",
+      "core": false,
+      "group": "expect",
+      "entry": "sister-back",
+      "confidence": "HIGH",
+      "explanation": "1화 「장례」에서는 오나의 언니 세린이 지난겨울 병으로 세상을 떠났다고 해요. 그런데 2화에서 오늘 아침 세린이 공방에 들어와 오나의 작업대 옆에 앉았다고 서술해요. 세상을 떠난 세린이 오늘 아침 직접 찾아온 일은 두 서술과 동시에 성립할 수 없어요. 세린이 살아 돌아온 이유나 이 장면이 환상·회상이라는 설명은 원고에 나오지 않아요.",
+      "quote_focus": "공방 문을 열고 들어와",
+      "source_focus": "세상을 떠났다"
+     }
+    ],
+    "seconds": 13.3,
+    "usage": {
+     "input_tokens": 3354,
+     "cached_tokens": 2383,
+     "cache_write_tokens": 198,
+     "output_tokens": 530,
+     "reasoning_tokens": 207
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "오늘 아침, 세린은 공방 문을 열고 들어와 오나의 작업대 옆에 앉았다.",
+      "source": "c1",
+      "source_quote": "오나의 언니 세린은 지난겨울 병으로 세상을 떠났다.",
+      "core": false,
+      "group": "expect",
+      "entry": "sister-back"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "오늘 아침, 세린은 공방 문을 열고 들어와 오나의 작업대 옆에 앉았다.",
+      "source": "c1",
+      "source_quote": "오나의 언니 세린은 지난겨울 병으로 세상을 떠났다.",
+      "core": false,
+      "group": "expect",
+      "entry": "sister-back",
+      "verdict": "CONFLICT",
+      "reason": "1화는 오나의 언니 세린이 지난겨울 병으로 세상을 떠났다고 밝혀요. 그런데 2화에서는 오늘 아침 세린이 공방에 들어와 오나의 작업대 옆에 앉았다고 서술해요. 사망한 세린이 현재 공방에 와서 앉았다는 두 내용은 그대로는 함께 성립할 수 없어요. 세린이 돌아오거나 다시 나타날 수 있게 된 사건이나 이유는 원고에 나오지 않아요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "오늘 아침, 세린은 공방 문을 열고 들어와 오나의 작업대 옆에 앉았다.",
+      "source": "c1",
+      "source_quote": "오나의 언니 세린은 지난겨울 병으로 세상을 떠났다.",
+      "core": false,
+      "group": "expect",
+      "entry": "sister-back",
+      "confidence": "HIGH",
+      "explanation": "1화는 오나의 언니 세린이 지난겨울 병으로 세상을 떠났다고 밝혀요. 그런데 2화에서는 오늘 아침 세린이 공방에 들어와 오나의 작업대 옆에 앉았다고 서술해요. 사망한 세린이 현재 공방에 와서 앉았다는 두 내용은 그대로는 함께 성립할 수 없어요. 세린이 돌아오거나 다시 나타날 수 있게 된 사건이나 이유는 원고에 나오지 않아요.",
+      "quote_focus": "공방 문을 열고 들어와",
+      "source_focus": "세상을 떠났다"
+     }
+    ],
+    "seconds": 13.7,
+    "usage": {
+     "input_tokens": 3359,
+     "cached_tokens": 1323,
+     "cache_write_tokens": 1263,
+     "output_tokens": 601,
+     "reasoning_tokens": 278
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "sister-back": 3
+   },
+   "found_by_finder": {
+    "sister-back": 3
+   },
+   "traps": {
+    "childhood": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "h3-alias-age": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "바닷가 마을의 촌장. 일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor"
+     },
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "바닷가 마을의 촌장. 일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "바닷가 마을의 촌장. 일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor",
+      "verdict": "CONFLICT",
+      "reason": "하윤 설정은 바닷가 마을 촌장이 일흔 살이라고 정해 두었어요. 그런데 2화 축제 장면에서는 촌장이 갓 스무 살이 되었다고 나와요. 같은 촌장의 나이가 같은 시점에 함께 성립할 수 없고, 나이가 바뀌었거나 다른 촌장이라는 설명도 원고에 없어요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "바닷가 마을의 촌장. 일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor",
+      "confidence": "HIGH",
+      "explanation": "하윤 설정은 바닷가 마을 촌장이 일흔 살이라고 정해 두었어요. 그런데 2화 축제 장면에서는 촌장이 갓 스무 살이 되었다고 나와요. 같은 촌장의 나이가 같은 시점에 함께 성립할 수 없고, 나이가 바뀌었거나 다른 촌장이라는 설명도 원고에 없어요.",
+      "quote_focus": "갓 스무 살",
+      "source_focus": "일흔 살"
+     }
+    ],
+    "seconds": 19.9,
+    "usage": {
+     "input_tokens": 3291,
+     "cached_tokens": 0,
+     "cache_write_tokens": 2536,
+     "output_tokens": 577,
+     "reasoning_tokens": 178
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor"
+     },
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor",
+      "verdict": "CONFLICT",
+      "reason": "하윤 설정은 ‘촌장’이 바닷가 마을의 촌장이며 일흔 살 노인이라고 정해 두었어요. 그런데 2화 축제 장면에서는 촌장이 갓 스무 살이 되었다고 서술해요. 같은 시점의 촌장이 일흔 살이면서 갓 스무 살일 수는 없고, 나이가 달라진 사정도 원고에 나오지 않아요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor",
+      "confidence": "HIGH",
+      "explanation": "하윤 설정은 ‘촌장’이 바닷가 마을의 촌장이며 일흔 살 노인이라고 정해 두었어요. 그런데 2화 축제 장면에서는 촌장이 갓 스무 살이 되었다고 서술해요. 같은 시점의 촌장이 일흔 살이면서 갓 스무 살일 수는 없고, 나이가 달라진 사정도 원고에 나오지 않아요.",
+      "quote_focus": "갓 스무 살",
+      "source_focus": "일흔 살 노인"
+     }
+    ],
+    "seconds": 20.6,
+    "usage": {
+     "input_tokens": 3275,
+     "cached_tokens": 2339,
+     "cache_write_tokens": 181,
+     "output_tokens": 584,
+     "reasoning_tokens": 202
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor"
+     },
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor",
+      "verdict": "CONFLICT",
+      "reason": "하윤 설정은 촌장을 일흔 살 노인으로 정해 두었어요. 그런데 2화에서는 촌장이 갓 스무 살이 됐다고 서술해요. 시간 이동이나 나이가 달라진 사정이 나오지 않아, 같은 시점의 촌장이 두 나이일 수는 없어요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다.",
+      "source": "mayor",
+      "source_quote": "일흔 살 노인이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "young-mayor",
+      "confidence": "HIGH",
+      "explanation": "하윤 설정은 촌장을 일흔 살 노인으로 정해 두었어요. 그런데 2화에서는 촌장이 갓 스무 살이 됐다고 서술해요. 시간 이동이나 나이가 달라진 사정이 나오지 않아, 같은 시점의 촌장이 두 나이일 수는 없어요.",
+      "quote_focus": "갓 스무 살이 된",
+      "source_focus": "일흔 살"
+     }
+    ],
+    "seconds": 20.6,
+    "usage": {
+     "input_tokens": 3273,
+     "cached_tokens": 2339,
+     "cache_write_tokens": 179,
+     "output_tokens": 593,
+     "reasoning_tokens": 244
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "young-mayor": 3
+   },
+   "found_by_finder": {
+    "young-mayor": 3
+   },
+   "traps": {},
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "h3-clean-growth": {
+  "runs": [
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 23.6,
+    "usage": {
+     "input_tokens": 1804,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1045,
+     "output_tokens": 281,
+     "reasoning_tokens": 248
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 23.2,
+    "usage": {
+     "input_tokens": 1804,
+     "cached_tokens": 1045,
+     "cache_write_tokens": 0,
+     "output_tokens": 154,
+     "reasoning_tokens": 121
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 22.8,
+    "usage": {
+     "input_tokens": 1804,
+     "cached_tokens": 1045,
+     "cache_write_tokens": 0,
+     "output_tokens": 118,
+     "reasoning_tokens": 85
+    }
+   }
+  ],
+  "score": {
+   "expected": {},
+   "found_by_finder": {},
+   "traps": {
+    "top": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "h3-recent-chapter-rule": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "첫 수업이 끝나자 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어갔다.",
+      "source": "c1",
+      "source_quote": "학원 안에서는 누구도 날 수 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "flying"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "첫 수업이 끝나자 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어갔다.",
+      "source": "c1",
+      "source_quote": "학원 안에서는 누구도 날 수 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "flying",
+      "verdict": "CONFLICT",
+      "reason": "1화 「입학」에서 학장은 탑의 결계가 비행 마법을 막아 학원 안에서는 누구도 날 수 없다고 말해요. 그런데 2화에서 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어가요. 두 내용은 같은 시점의 학원 안 비행을 두고 서로 양립할 수 없고, 그 사이 결계가 사라지거나 바뀌었다는 내용도 없어요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "첫 수업이 끝나자 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어갔다.",
+      "source": "c1",
+      "source_quote": "학원 안에서는 누구도 날 수 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "flying",
+      "confidence": "HIGH",
+      "explanation": "1화 「입학」에서 학장은 탑의 결계가 비행 마법을 막아 학원 안에서는 누구도 날 수 없다고 말해요. 그런데 2화에서 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어가요. 두 내용은 같은 시점의 학원 안 비행을 두고 서로 양립할 수 없고, 그 사이 결계가 사라지거나 바뀌었다는 내용도 없어요.",
+      "quote_focus": "학원 안뜰 위를 날아",
+      "source_focus": "학원 안에서는 누구도 날 수 없다"
+     }
+    ],
+    "seconds": 28.9,
+    "usage": {
+     "input_tokens": 3315,
+     "cached_tokens": 0,
+     "cache_write_tokens": 2570,
+     "output_tokens": 424,
+     "reasoning_tokens": 111
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "첫 수업이 끝나자 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어갔다.",
+      "source": "c1",
+      "source_quote": "학원 안에서는 누구도 날 수 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "flying"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "첫 수업이 끝나자 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어갔다.",
+      "source": "c1",
+      "source_quote": "학원 안에서는 누구도 날 수 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "flying",
+      "verdict": "CONFLICT",
+      "reason": "1화 「입학」에서 학장은 탑의 결계가 비행 마법을 막기 때문에 학원 안에서는 누구도 날 수 없다고 말해요. 그런데 2화에서 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어가요. 학원 안에서 비행이 불가능하다는 말과 리오가 그 안에서 날았다는 장면은 함께 성립하지 않아요. 그 사이에 결계가 바뀌거나 비행을 가능하게 하는 일이 있었다는 설명은 없어요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "첫 수업이 끝나자 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어갔다.",
+      "source": "c1",
+      "source_quote": "학원 안에서는 누구도 날 수 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "flying",
+      "confidence": "HIGH",
+      "explanation": "1화 「입학」에서 학장은 탑의 결계가 비행 마법을 막기 때문에 학원 안에서는 누구도 날 수 없다고 말해요. 그런데 2화에서 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어가요. 학원 안에서 비행이 불가능하다는 말과 리오가 그 안에서 날았다는 장면은 함께 성립하지 않아요. 그 사이에 결계가 바뀌거나 비행을 가능하게 하는 일이 있었다는 설명은 없어요.",
+      "quote_focus": "학원 안뜰 위를 날아",
+      "source_focus": "학원 안에서는 누구도 날 수 없다"
+     }
+    ],
+    "seconds": 30.6,
+    "usage": {
+     "input_tokens": 3336,
+     "cached_tokens": 2359,
+     "cache_write_tokens": 232,
+     "output_tokens": 442,
+     "reasoning_tokens": 93
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "첫 수업이 끝나자 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어갔다.",
+      "source": "c1",
+      "source_quote": "입학식에서 학장은 말했다. 학원 안에서는 누구도 날 수 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "flying"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "첫 수업이 끝나자 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어갔다.",
+      "source": "c1",
+      "source_quote": "입학식에서 학장은 말했다. 학원 안에서는 누구도 날 수 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "flying",
+      "verdict": "CONFLICT",
+      "reason": "1화에서 학장은 탑의 결계가 비행 마법을 막기 때문에 학원 안에서는 누구도 날 수 없다고 말해요. 그런데 2화에서는 첫 수업이 끝난 뒤 리오가 학원 안뜰 위를 날아 기숙사 창문으로 들어가요. 학원 안에서 비행이 불가능하다는 말과 리오가 그 안에서 나는 일은 이 시점에 함께 성립할 수 없어요. 그 사이 결계가 풀리거나 리오에게 예외가 생겼다는 설명은 나오지 않아요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "첫 수업이 끝나자 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어갔다.",
+      "source": "c1",
+      "source_quote": "입학식에서 학장은 말했다. 학원 안에서는 누구도 날 수 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "flying",
+      "confidence": "HIGH",
+      "explanation": "1화에서 학장은 탑의 결계가 비행 마법을 막기 때문에 학원 안에서는 누구도 날 수 없다고 말해요. 그런데 2화에서는 첫 수업이 끝난 뒤 리오가 학원 안뜰 위를 날아 기숙사 창문으로 들어가요. 학원 안에서 비행이 불가능하다는 말과 리오가 그 안에서 나는 일은 이 시점에 함께 성립할 수 없어요. 그 사이 결계가 풀리거나 리오에게 예외가 생겼다는 설명은 나오지 않아요.",
+      "quote_focus": "안뜰 위를 날아",
+      "source_focus": "누구도 날 수 없다"
+     }
+    ],
+    "seconds": 29.8,
+    "usage": {
+     "input_tokens": 3313,
+     "cached_tokens": 2359,
+     "cache_write_tokens": 209,
+     "output_tokens": 418,
+     "reasoning_tokens": 91
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "flying": 3
+   },
+   "found_by_finder": {
+    "flying": 3
+   },
+   "traps": {},
+   "extras": {},
+   "agreement": 1.0
+  }
+ }
+}

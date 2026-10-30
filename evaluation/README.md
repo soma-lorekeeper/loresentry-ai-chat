@@ -58,3 +58,72 @@ unless `--keep` is given.
 - **Source recall**: the share of expected source documents the answer cited.
 - **False `NOT_ENOUGH`**: answerable questions that ended with "could not find a
   certain answer".
+
+# Setting check evaluation
+
+`setting_check.py` runs the setting error check on known cases without the
+services or a database: the same finding passes, quote verification, merging
+and judgement as `CheckRunner.check`, with the model settings from the
+environment (`OPENAI_MODEL`, `SETTING_CHECK_*`).
+
+`datasets/setting-check.json` has 14 cases: the sample project's chapter 7 with
+planted contradictions, ten short cases (a magic rule, numbers across chapters,
+a dead man in a flashback and a dream, a nickname, a place, appearance, a rule
+with its exception, a contradiction the chapter explains and one it does not,
+an English case) and three chapters of the chat datasets with their planted
+contradiction. Each case lists:
+
+- `expect`: contradictions the check must report, by a phrase of the chapter
+  sentence and the documents that may be cited as the source.
+- `avoid`: sentences it must not report: time passing, a story change, a lie, a
+  dream, a flashback, a rumour, a simile, a detail the settings never mention.
+- `may`: contradictions that are fine either way.
+
+```bash
+OPENAI_API_KEY=... .venv/bin/python -m evaluation.setting_check --runs 3 \
+  --out evaluation/results/setting-check/latest
+# one case
+OPENAI_API_KEY=... .venv/bin/python -m evaluation.setting_check --only dead-man
+```
+
+Three held-out sets check that a change is not tuned to these cases:
+`setting-check-holdout.json` (8 cases), `-holdout-2.json` (6) and
+`-holdout-3.json` (5), each written before the change it tested. The first two
+were read while changing the prompts, so only the newest one is a clean test.
+
+```bash
+OPENAI_API_KEY=... .venv/bin/python -m evaluation.setting_check \
+  --dataset evaluation/datasets/setting-check-holdout-3.json --out /tmp/holdout-3
+# score an earlier run again after editing the dataset
+.venv/bin/python -m evaluation.setting_check --rescore evaluation/results/setting-check/dev-before
+```
+
+`report.md` gives recall (expected contradictions reported, averaged over runs),
+stable recall (reported in every run), the trap rate (`avoid` sentences
+reported), precision (findings that are expected or acceptable), unlisted
+findings to review by hand, and run-to-run agreement. For each run it shows what
+the finder proposed, what the judge dropped and why, and every finding with its
+explanation, so a miss can be traced to the finder or the judge.
+
+## Results (2026-10-31, `gpt-6-luna`, 3 runs per case)
+
+| Set | Before (`dev-before`, …) | After | Traps hit | Precision |
+| --- | --- | --- | --- | --- |
+| Development, 14 cases | 0.77 recall, 0.56 in every run | 0.94, 0.81 | 0 / 0 | 1.0 / 1.0 |
+| Holdout 2, 6 cases | 0.75, 0.75 | 0.83, 0.75 | 0 / 0 | 1.0 / 1.0 |
+| Holdout 3, 5 cases (clean) | 0.89, 0.67 | 1.00, 1.00 | 0 / 0 | 1.0 / 1.0 |
+
+What moved recall: the judge read only the source document and dismissed
+contradictions with explanations the story never gives (a ghost, a second key)
+or with a flashback that had ended; it now reads every setting document, the
+most recent earlier chapters (up to 30,000 characters) and the older chapters
+the finder names, and keeps what the materials do not account for. Two places
+that broke the same setting sentence were merged into one finding; now only the
+same chapter place is merged. A settings pass, one document at a time, replaced
+the core-facts pass and keeps the finder from skimming long projects. A judge
+with medium reasoning did not do better than low. Input tokens per check rose
+from about 6.8k to 13k (77% cached) and output from about 0.7k to 1.1k.
+
+Misses that remain: a character acting against a setting is sometimes judged a
+change over time (Lena at sea, 1 in 3 runs), and a contradiction that needs an
+older chapter the finder does not name. The teacup case is fine either way.

@@ -1,0 +1,247 @@
+{
+ "cases": [
+  {
+   "id": "h3-first-ship",
+   "title": "첫 배(앞 회차의 사실을 건너는 모순)",
+   "settings": [
+    {
+     "key": "gull",
+     "title": "갈매기호",
+     "folder": "ITEM",
+     "body": [
+      "항구에서 처음으로 바다를 건넌 배."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 진수식",
+     "body": [
+      "갈매기호는 지난봄에 진수식을 치렀다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 선장의 회고",
+     "body": [
+      "늙은 선장은 쉰 해 전 자신이 몰던 배로 바다를 처음 건넜다고 말했다. 그 뒤로 항구의 배들은 모두 그 길을 따랐다."
+     ]
+    }
+   ],
+   "expect": [],
+   "may": [
+    {
+     "id": "older-crossing",
+     "quote": [
+      "쉰 해 전 자신이 몰던 배로 바다를 처음 건넜다고"
+     ],
+     "sources": [
+      "gull",
+      "c1"
+     ],
+     "note": "인물의 말이라 걸러도 된다"
+    }
+   ],
+   "avoid": []
+  },
+  {
+   "id": "h3-dead-sister",
+   "title": "죽은 언니와 회상 뒤의 현재",
+   "settings": [
+    {
+     "key": "ona",
+     "title": "오나",
+     "folder": "CHARACTER",
+     "body": [
+      "유리 공방의 장인."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 장례",
+     "body": [
+      "오나의 언니 세린은 지난겨울 병으로 세상을 떠났다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 공방",
+     "body": [
+      "어릴 적 세린은 오나에게 유리 부는 법을 가르쳤다. 오나는 그 숨소리를 아직 기억했다.",
+      "오늘 아침, 세린은 공방 문을 열고 들어와 오나의 작업대 옆에 앉았다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "sister-back",
+     "quote": [
+      "세린은 공방 문을 열고 들어와"
+     ],
+     "sources": [
+      "c1"
+     ],
+     "note": "지난겨울 세상을 떠났다"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "childhood",
+     "quote": [
+      "어릴 적 세린은"
+     ],
+     "note": "회상"
+    }
+   ]
+  },
+  {
+   "id": "h3-alias-age",
+   "title": "직함으로 부른 인물의 나이",
+   "settings": [
+    {
+     "key": "mayor",
+     "title": "하윤",
+     "folder": "CHARACTER",
+     "body": [
+      "바닷가 마을의 촌장. 일흔 살 노인이다."
+     ],
+     "core": [],
+     "properties": [
+      {
+       "key": "alias",
+       "value": "촌장"
+      }
+     ]
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 회의",
+     "body": [
+      "마을 회의는 촌장의 집 마당에서 열렸다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 축제",
+     "body": [
+      "갓 스무 살이 된 촌장이 축제의 첫 춤을 추었다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "young-mayor",
+     "quote": [
+      "갓 스무 살이 된 촌장이"
+     ],
+     "sources": [
+      "mayor"
+     ],
+     "note": "일흔 살 노인"
+    }
+   ],
+   "may": [],
+   "avoid": []
+  },
+  {
+   "id": "h3-clean-growth",
+   "title": "이유가 나온 성장",
+   "settings": [
+    {
+     "key": "bo",
+     "title": "보람",
+     "folder": "CHARACTER",
+     "body": [
+      "높은 곳을 무서워한다."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 탑",
+     "body": [
+      "보람은 탑 아래에서 한 발짝도 올라가지 못했다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 다시 탑",
+     "body": [
+      "한 달 동안 매일 계단을 하나씩 더 오른 끝에, 보람은 마침내 탑 꼭대기에 섰다.",
+      "다리가 떨렸지만 보람은 눈을 감지 않았다."
+     ]
+    }
+   ],
+   "expect": [],
+   "may": [],
+   "avoid": [
+    {
+     "id": "top",
+     "quote": [
+      "마침내 탑 꼭대기에 섰다"
+     ],
+     "note": "한 달 동안 연습한 성장이 나온다"
+    }
+   ]
+  },
+  {
+   "id": "h3-recent-chapter-rule",
+   "title": "앞 회차가 정한 규칙",
+   "settings": [
+    {
+     "key": "academy",
+     "title": "별의 학원",
+     "folder": "LOCATION",
+     "body": [
+      "산 위의 마법 학원."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 입학",
+     "body": [
+      "입학식에서 학장은 말했다. 학원 안에서는 누구도 날 수 없다. 탑의 결계가 비행 마법을 막기 때문이다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 첫 수업",
+     "body": [
+      "첫 수업이 끝나자 리오는 학원 안뜰 위를 날아 기숙사 창문으로 들어갔다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "flying",
+     "quote": [
+      "학원 안뜰 위를 날아"
+     ],
+     "sources": [
+      "c1"
+     ],
+     "note": "학원 안에서는 누구도 날 수 없다"
+    }
+   ],
+   "may": [],
+   "avoid": []
+  }
+ ]
+}

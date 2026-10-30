@@ -18,15 +18,15 @@ from app.setting_check.findings import (
     parse_candidates,
 )
 from app.setting_check.prompts import (
-    CORE_INSTRUCTIONS,
-    CORE_SCHEMA,
     JUDGE_INSTRUCTIONS,
     JUDGE_SCHEMA,
+    SETTINGS_INSTRUCTIONS,
+    SETTINGS_SCHEMA,
     WHOLE_INSTRUCTIONS,
     WHOLE_SCHEMA,
     Note,
-    core_input,
     judge_input,
+    settings_input,
     whole_input,
 )
 from app.setting_check.store import CheckStore, Finding, Read
@@ -339,20 +339,20 @@ class CheckRunner:
                 cache_key,
             )
             tally.add(usage)
-            return parse_candidates(value, reading.by_short, core=False)
+            return parse_candidates(value, reading.by_short, settings_only=False)
 
-        async def core() -> list[Candidate]:
+        async def settings() -> list[Candidate]:
             value, usage = await self.model.find(
-                CORE_INSTRUCTIONS,
-                core_input(reading, locale),
-                "setting_check_core_candidates",
-                CORE_SCHEMA,
+                SETTINGS_INSTRUCTIONS,
+                settings_input(reading, locale),
+                "setting_check_setting_candidates",
+                SETTINGS_SCHEMA,
                 cache_key,
             )
             tally.add(usage)
-            return parse_candidates(value, reading.by_short, core=True)
+            return parse_candidates(value, reading.by_short, settings_only=True)
 
-        passes = [core(), whole()] if reading.core_facts else [whole()]
+        passes = [settings(), whole()] if reading.settings else [whole()]
         return [candidate for result in await together(passes) for candidate in result]
 
     async def judge(

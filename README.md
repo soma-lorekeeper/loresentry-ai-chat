@@ -124,14 +124,22 @@ background task in the API process (one replica), one running check per project.
    the oldest chapters are left out; if the chapter and the settings alone do
    not fit, the run fails with `CHAT_CONTEXT_TOO_LARGE`.
 2. `FINDING`: two passes in parallel with JSON schema output: the whole pass
-   (chapter against earlier chapters and settings) and, when there are core
-   facts, the core pass (every core fact against the chapter). Both quotes of a
-   candidate must occur in their documents after whitespace and quote-mark
-   normalisation, or it is dropped. Candidates with the same source and an
-   overlapping quote are merged.
+   (chapter against earlier chapters and settings) and, when there are setting
+   documents, the settings pass (each setting document, fact by fact, against
+   the chapter; it keeps recall up on long projects where the whole pass skims).
+   Both quotes of a candidate must occur in their documents after whitespace and
+   quote-mark normalisation, or it is dropped. A finding is core when its source
+   quote overlaps a core line. Candidates with the same source and an
+   overlapping chapter quote are merged; two places in the chapter that break
+   the same fact stay separate.
 3. `JUDGING`: one call per candidate, `SETTING_CHECK_JUDGE_CONCURRENCY` at a
-   time, with the chapter, the source document and the author's earlier
-   verdicts on that source. Only `CONFLICT` is kept (not `CHANGED_OVER_TIME`,
+   time, with every setting document (for nicknames and facts the candidate
+   depends on), the most recent earlier chapters up to 30,000 characters, the
+   chapter, the source document, older chapters the finder named in
+   `related_ids`, and the author's earlier verdicts on that source. The judge
+   keeps a contradiction unless the materials account for it; an explanation
+   the story never gives does not count. `evaluation/setting_check.py` measures
+   it on known cases (see `evaluation/README.md`). Only `CONFLICT` is kept (not `CHANGED_OVER_TIME`,
    `CHARACTER_PERSPECTIVE` or `INSUFFICIENT`). The judge writes the
    `explanation` the author reads: three or four sentences on what the source
    establishes, what the chapter shows and why both cannot hold (an empty one

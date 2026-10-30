@@ -1,0 +1,310 @@
+{
+ "cases": [
+  {
+   "id": "h2-oldest-tree",
+   "title": "가장 오래된 나무(앞 회차의 나이를 건너는 모순)",
+   "settings": [
+    {
+     "key": "oak",
+     "title": "은잎 참나무",
+     "folder": "LOCATION",
+     "body": [
+      "숲에서 가장 오래된 나무."
+     ],
+     "core": [],
+     "properties": []
+    },
+    {
+     "key": "pine",
+     "title": "검은 소나무",
+     "folder": "LOCATION",
+     "body": [
+      "숲 북쪽 끝의 소나무."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 나이테",
+     "body": [
+      "숲지기는 은잎 참나무의 나이테를 세어 보고, 이 나무가 꼭 삼백 살이라고 적었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 북쪽 끝",
+     "body": [
+      "숲 북쪽 끝의 검은 소나무는 천 년 전 숲이 처음 생길 때부터 그 자리에 서 있었다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "older-pine",
+     "quote": [
+      "천 년 전 숲이 처음 생길 때부터"
+     ],
+     "sources": [
+      "oak",
+      "c1"
+     ],
+     "note": "은잎 참나무(삼백 살)가 가장 오래된 나무"
+    }
+   ],
+   "may": [],
+   "avoid": []
+  },
+  {
+   "id": "h2-only-bridge",
+   "title": "유일한 다리(앞 회차를 건너는 모순)",
+   "settings": [
+    {
+     "key": "river",
+     "title": "흰 강",
+     "folder": "LOCATION",
+     "body": [
+      "건널 수 있는 다리는 돌다리 하나뿐이다."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 홍수",
+     "body": [
+      "봄 홍수에 흰 강의 돌다리가 무너졌다. 마을 사람들은 여름까지 배로 강을 건넜다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 같은 봄",
+     "body": [
+      "같은 봄, 사냥꾼 둘은 흰 강의 돌다리를 걸어서 건너 마을로 돌아왔다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "broken-bridge",
+     "quote": [
+      "흰 강의 돌다리를 걸어서 건너"
+     ],
+     "sources": [
+      "c1"
+     ],
+     "note": "1화에서 그 봄에 돌다리가 무너졌다"
+    }
+   ],
+   "may": [],
+   "avoid": []
+  },
+  {
+   "id": "h2-rumor-then-fact",
+   "title": "소문 다음의 서술",
+   "settings": [
+    {
+     "key": "mute",
+     "title": "노을",
+     "folder": "CHARACTER",
+     "body": [
+      "태어날 때부터 말을 하지 못한다. 손짓으로 뜻을 전한다."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 찻집",
+     "body": [
+      "노을은 찻집에서 손짓으로 차를 주문했다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 광장",
+     "body": [
+      "사람들은 노을이 밤마다 노래를 부른다고 수군거렸다.",
+      "그날 정오, 노을은 광장 한가운데에서 또렷한 목소리로 연설을 했다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "speech",
+     "quote": [
+      "또렷한 목소리로 연설을 했다"
+     ],
+     "sources": [
+      "mute"
+     ],
+     "note": "말을 하지 못한다"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "rumor-sing",
+     "quote": [
+      "밤마다 노래를 부른다고 수군거렸다"
+     ],
+     "note": "소문"
+    }
+   ]
+  },
+  {
+   "id": "h2-lie-in-dialogue",
+   "title": "대사 속 거짓말",
+   "settings": [
+    {
+     "key": "dan",
+     "title": "단",
+     "folder": "CHARACTER",
+     "body": [
+      "외아들이다. 형제가 없다."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 여관",
+     "body": [
+      "단은 여관 주인에게 방 하나를 청했다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 검문",
+     "body": [
+      "“형이 저 성에서 기다려요.” 단은 검문소 병사에게 거짓말을 했다.",
+      "병사는 고개를 끄덕이고 길을 터 주었다."
+     ]
+    }
+   ],
+   "expect": [],
+   "may": [],
+   "avoid": [
+    {
+     "id": "lie",
+     "quote": [
+      "형이 저 성에서 기다려요"
+     ],
+     "note": "대사 속 거짓말"
+    }
+   ]
+  },
+  {
+   "id": "h2-season-pass",
+   "title": "계절이 지나 바뀐 것",
+   "settings": [
+    {
+     "key": "lake",
+     "title": "거울 호수",
+     "folder": "LOCATION",
+     "body": [
+      "겨울이면 꽁꽁 얼어 걸어서 건널 수 있다."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 얼음",
+     "body": [
+      "한겨울, 아이들은 얼어붙은 거울 호수 위를 뛰어다녔다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 여름",
+     "body": [
+      "여름이 되자 거울 호수에는 배가 떠다녔다.",
+      "얼음은 흔적도 없었다."
+     ]
+    }
+   ],
+   "expect": [],
+   "may": [],
+   "avoid": [
+    {
+     "id": "summer-boats",
+     "quote": [
+      "배가 떠다녔다"
+     ],
+     "note": "계절이 바뀜"
+    }
+   ]
+  },
+  {
+   "id": "h2-core-color",
+   "title": "중요 설정의 색",
+   "settings": [
+    {
+     "key": "banner",
+     "title": "왕가의 깃발",
+     "folder": "ITEM",
+     "body": [
+      "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "깃발은 왕궁 첨탑에만 건다."
+     ],
+     "core": [
+      0
+     ],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 왕궁",
+     "body": [
+      "왕궁 첨탑 위에서 깃발이 펄럭였다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 행진",
+     "body": [
+      "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "red-lion",
+     "quote": [
+      "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발"
+     ],
+     "sources": [
+      "banner"
+     ],
+     "note": "푸른 바탕에 흰 사슴(중요 설정)"
+    }
+   ],
+   "may": [
+    {
+     "id": "not-tower",
+     "quote": [
+      "깃발을 앞세우고 군대가"
+     ],
+     "sources": [
+      "banner"
+     ],
+     "note": "첨탑에만 건다: 행진에 든 것은 거는 것과 다를 수 있다"
+    }
+   ],
+   "avoid": []
+  }
+ ]
+}

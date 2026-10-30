@@ -1,0 +1,1098 @@
+{
+ "cases": [
+  {
+   "id": "glass-garden-7-planted",
+   "title": "예시 작품 7화에 심은 오류(prod 테스트 프로젝트와 같은 글)",
+   "settings": [
+    {
+     "key": "garden",
+     "title": "유리 정원",
+     "folder": "LOCATION",
+     "properties": [
+      {
+       "key": "description",
+       "value": "왕도 북쪽의 유리 정원"
+      }
+     ],
+     "body": [
+      "수십 채의 유리 온실이 모인 정원. 낮에는 빛을 모으고, 밤에는 모은 빛의 결을 유리벽에 남긴다."
+     ],
+     "core": []
+    },
+    {
+     "key": "harbor",
+     "title": "라벤더 항구",
+     "folder": "LOCATION",
+     "properties": [
+      {
+       "key": "description",
+       "value": "유리 등대가 밤마다 북쪽 항로를 밝히는 항구"
+      }
+     ],
+     "body": [
+      "정원에서 사흘 거리의 항구 도시. 유리 등대의 빛은 정원의 온실과 같은 유리로 만들어졌다고 전해진다."
+     ],
+     "core": []
+    },
+    {
+     "key": "harin",
+     "title": "하린",
+     "folder": "CHARACTER",
+     "properties": [
+      {
+       "key": "description",
+       "value": "북쪽 온실을 관리하는 정원사"
+      }
+     ],
+     "body": [
+      "하린은 정원에서 가장 오래 일한 정원사다. 북쪽 온실이 잠긴 뒤에도 그 앞의 화단만은 매일 돌본다.",
+      "서윤에게 기록장을 건넨 사람이며, 테오가 떠난 날의 일을 아직 누구에게도 말하지 않았다."
+     ],
+     "core": []
+    },
+    {
+     "key": "keepers",
+     "title": "정원 기록단",
+     "folder": "ORGANIZATION",
+     "properties": [
+      {
+       "key": "description",
+       "value": "정원의 빛과 균열을 기록하는 사람들"
+      }
+     ],
+     "body": [
+      "정원에 남은 빛의 방향을 매일 밤 기록하는 모임. 기록장은 정원이 생긴 날부터 한 권도 빠짐없이 이어져 있다."
+     ],
+     "core": []
+    },
+    {
+     "key": "key",
+     "title": "낡은 열쇠",
+     "folder": "ITEM",
+     "properties": [
+      {
+       "key": "description",
+       "value": "북쪽 문을 여는 열쇠"
+      }
+     ],
+     "body": [
+      "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다."
+     ],
+     "core": [
+      0
+     ]
+    },
+    {
+     "key": "law",
+     "title": "균열의 법칙",
+     "folder": "WORLDVIEW",
+     "properties": [
+      {
+       "key": "description",
+       "value": "균열은 문이 아니라 기억의 방향이다"
+      }
+     ],
+     "body": [
+      "유리에 생긴 균열은 부서진 자리가 아니라, 누군가의 기억이 향하는 방향을 따라 자란다.",
+      "그래서 균열을 따라가면 그 기억의 주인에게 닿는다."
+     ],
+     "core": []
+    },
+    {
+     "key": "lena",
+     "title": "레나 아르벨",
+     "folder": "CHARACTER",
+     "properties": [
+      {
+       "key": "description",
+       "value": "타인의 기억이 남긴 방향을 감각으로 읽는 항해사"
+      }
+     ],
+     "body": [
+      "레나는 타인의 기억이 남긴 방향을 감각으로 읽는다. 짙은 안개 속에서도 그는 한 번도 길을 잃지 않았다.",
+      "은빛 항해단은 그를 마지막 항해사라 불렀다. 스스로는 그 호칭을 쓰지 않는다. 기억을 읽는 일은 언제나 대가를 요구하고, 읽은 기억의 일부는 그의 것이 되어 남는다."
+     ],
+     "core": []
+    },
+    {
+     "key": "lens",
+     "title": "금 간 렌즈",
+     "folder": "ITEM",
+     "properties": [
+      {
+       "key": "description",
+       "value": "빛의 방향을 비틀어 보여 주는 렌즈"
+      }
+     ],
+     "body": [
+      "들여다보면 빛이 한쪽으로 휘어 보인다. 휘어진 빛은 언제나 같은 곳을 가리킨다."
+     ],
+     "core": []
+    },
+    {
+     "key": "night",
+     "title": "균열의 밤",
+     "folder": "EVENT",
+     "properties": [
+      {
+       "key": "description",
+       "value": "온실에 처음 균열이 드러난 밤"
+      }
+     ],
+     "body": [
+      "북쪽 온실을 향한 균열이 눈에 보이게 드러난 밤. 잠겨 있던 북쪽 문이 다시 열린다."
+     ],
+     "core": []
+    },
+    {
+     "key": "north",
+     "title": "북쪽 온실",
+     "folder": "LOCATION",
+     "properties": [
+      {
+       "key": "description",
+       "value": "오래 잠겨 있던 정원의 북쪽 끝"
+      }
+     ],
+     "body": [
+      "정원의 가장 북쪽에 있는 온실. 문이 잠긴 뒤로 안을 본 사람이 없다. 균열은 언제나 이곳을 향해 자란다."
+     ],
+     "core": []
+    },
+    {
+     "key": "patrol",
+     "title": "첫 순찰",
+     "folder": "EVENT",
+     "properties": [
+      {
+       "key": "description",
+       "value": "서윤의 첫 밤 순찰"
+      }
+     ],
+     "body": [
+      "서윤이 처음으로 혼자 밤 순찰을 돈 날. 이날의 기록에서 처음으로 빛의 방향이 한곳에 모인다."
+     ],
+     "core": []
+    },
+    {
+     "key": "seoyun",
+     "title": "서윤",
+     "folder": "CHARACTER",
+     "properties": [
+      {
+       "key": "description",
+       "value": "정원 기록단의 막내 기록관"
+      }
+     ],
+     "body": [
+      "서윤은 정원 기록단에 가장 늦게 들어온 기록관이다. 밤 순찰을 맡으면서 유리에 남은 빛의 방향을 읽기 시작했다.",
+      "말수가 적지만 한 번 적은 문장은 끝까지 지킨다."
+     ],
+     "core": []
+    },
+    {
+     "key": "teo",
+     "title": "테오",
+     "folder": "CHARACTER",
+     "properties": [
+      {
+       "key": "description",
+       "value": "정원을 떠났다가 돌아온 사람"
+      }
+     ],
+     "body": [
+      "한때 정원 기록단의 기록관이었다. 북쪽 문이 잠기던 날 정원을 떠났고, 그 뒤로 소식이 끊겼다."
+     ],
+     "core": []
+    },
+    {
+     "key": "voyagers",
+     "title": "은빛 항해단",
+     "folder": "ORGANIZATION",
+     "properties": [
+      {
+       "key": "description",
+       "value": "안전한 기억 항로를 확보하려는 항해 조직"
+      }
+     ],
+     "body": [
+      "기억이 남긴 방향을 따라 항로를 여는 항해 조직. 라벤더 항구를 거점으로 삼는다."
+     ],
+     "core": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 첫 번째 온실",
+     "body": [
+      "서윤이 유리 정원의 문을 처음 넘은 날, 온실마다 맺힌 김이 아침 햇빛을 느리게 흩뜨리고 있었다. 기록단의 막내 자리는 오래 비어 있었다고 했다.",
+      "하린은 인사 대신 두꺼운 기록장 한 권을 건넸다. 첫 장에는 한 줄만 적혀 있었다. ‘빛이 지나간 자리를 적을 것.’"
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 빛의 순찰",
+     "body": [
+      "밤이 되자 정원은 낮과 전혀 다른 곳이 되었다. 서윤은 등불을 낮게 들고 온실 사이의 좁은 길을 따라 걸었다.",
+      "유리벽마다 희미한 빛의 결이 남아 있었다. 하린은 그것을 ‘낮의 잔향’이라고 불렀고, 서윤은 그 방향을 하나하나 기록장에 옮겨 적었다."
+     ]
+    },
+    {
+     "key": "c3",
+     "title": "3화 · 금 간 렌즈",
+     "body": [
+      "순찰 사흘째 밤, 서윤은 북쪽 온실로 이어지는 길목에서 금이 간 렌즈 하나를 주웠다.",
+      "렌즈를 눈에 대자 빛이 제 길을 벗어나 한쪽으로 휘었다. 휘어진 빛은 모두 잠긴 북쪽 문을 가리키고 있었다."
+     ]
+    },
+    {
+     "key": "c4",
+     "title": "4화 · 잠긴 문",
+     "body": [
+      "하린은 북쪽 문 이야기가 나오자 한동안 말이 없었다. 그 문은 테오가 정원을 떠난 날부터 잠겨 있었다.",
+      "열쇠는 하린의 서랍 깊은 곳에 있었다. 녹이 슬었지만 버리지 못한 열쇠였다."
+     ]
+    },
+    {
+     "key": "c5",
+     "title": "5화 · 등대의 침묵",
+     "body": [
+      "같은 밤, 라벤더 항구의 유리 등대가 소리 없이 꺼졌다. 북쪽 항로를 밝히던 빛이 사라지자 항구 전체가 숨을 죽였다.",
+      "은빛 항해단의 레나 아르벨은 부두 끝에 서서 꺼진 등대를 올려다보았다. 그는 빛이 꺼진 방향이 아니라, 빛이 향하던 방향을 읽고 있었다."
+     ]
+    },
+    {
+     "key": "c6",
+     "title": "6화 · 유리 정원",
+     "body": [
+      "유리 정원에 아침이 들면 밤새 맺힌 이슬이 작은 렌즈처럼 빛을 모았다. 서윤은 가장 먼저 깨어난 빛을 따라 중앙 온실로 걸었다.",
+      "하린은 이미 그곳에 와 있었다. 둘은 말없이 금이 간 창을 올려다보았다. 균열은 어젯밤보다 한 뼘 더 자라 있었다.",
+      "항구에서 올라온 레나가 문간에 섰다. 세 사람은 그날 처음으로 같은 곳을 바라보기로 했다."
+     ]
+    },
+    {
+     "key": "c7",
+     "title": "7화 · 균열의 밤",
+     "body": [
+      "정원은 밤이 오면 유리보다 먼저 숨을 죽였다. 달빛이 온실의 지붕을 훑고 지나갈 때마다, 금이 간 창마다 은빛 선이 번졌다. 서윤은 그 선들이 모두 한곳을 가리키고 있다는 사실을 세 번째 순찰에서야 알아차렸다.",
+      "주머니 속 열쇠는 갓 벼린 듯 은빛으로 반짝였다. 서윤이 기록단에 들던 날부터 줄곧 목에 걸고 다닌 열쇠였다.",
+      "오래 잠겨 있던 북쪽 문 앞에는 발자국이 하나뿐이었다. 안으로 들어간 흔적은 있었지만 돌아 나온 흔적은 없었다. 손잡이에 손을 얹자 차가운 진동이 손목을 타고 올라왔다. 어젯밤 메모에 적어 둔 문장이 떠올랐다. ‘균열은 문이 아니라 기억의 방향이다.’",
+      "서윤은 처음 정원에 온 날 테오에게서 받은 기록장을 펼쳐, 문 앞의 발자국을 옮겨 적었다.",
+      "그 시각 항구에서 올라오던 레나는 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맸다.",
+      "서윤은 등불을 바닥에 내려놓고 천천히 문을 밀었다. 어둠 너머에서 익숙한 목소리가 이름을 불렀다. 아주 오래전, 이 정원을 떠난 사람이 마지막으로 불렀던 방식 그대로였다.",
+      "그날 밤 늦게, 하린은 처음으로 테오가 떠난 날의 일을 서윤에게 털어놓았다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "silver-key",
+     "quote": [
+      "은빛으로 반짝였다",
+      "목에 걸고 다닌"
+     ],
+     "sources": [
+      "key",
+      "c4"
+     ],
+     "note": "녹슨 놋쇠 열쇠(중요 설정), 하린의 서랍"
+    },
+    {
+     "id": "notebook-giver",
+     "quote": [
+      "테오에게서 받은 기록장"
+     ],
+     "sources": [
+      "harin",
+      "c1"
+     ],
+     "note": "기록장을 건넨 사람은 하린"
+    },
+    {
+     "id": "lena-lost",
+     "quote": [
+      "길을 잃고"
+     ],
+     "sources": [
+      "lena"
+     ],
+     "note": "안개 속에서도 길을 잃지 않는다"
+    }
+   ],
+   "may": [
+    {
+     "id": "door-opened",
+     "quote": [
+      "천천히 문을 밀었다"
+     ],
+     "sources": [
+      "north",
+      "c4",
+      "key"
+     ],
+     "note": "잠긴 문을 연다. 원문에 있던 문장"
+    }
+   ],
+   "avoid": [
+    {
+     "id": "harin-tells",
+     "quote": [
+      "처음으로 테오가 떠난 날의 일을"
+     ],
+     "note": "말하지 않았던 일을 처음 말한다: 이야기의 진행"
+    }
+   ]
+  },
+  {
+   "id": "starlight-rule",
+   "title": "마법 규칙과 인물 약점",
+   "settings": [
+    {
+     "key": "magic",
+     "title": "별빛 마법",
+     "folder": "WORLDVIEW",
+     "body": [
+      "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "주문은 소리 내어 외워야 한다."
+     ],
+     "core": [
+      0
+     ],
+     "properties": []
+    },
+    {
+     "key": "iris",
+     "title": "이리스",
+     "folder": "CHARACTER",
+     "body": [
+      "왕립 학원의 별빛 마법사. 불길을 다루는 데 능하다."
+     ],
+     "core": [],
+     "properties": []
+    },
+    {
+     "key": "kyle",
+     "title": "카일",
+     "folder": "CHARACTER",
+     "body": [
+      "이리스의 호위 검사. 어릴 적 강에 빠진 뒤로 물을 무서워해 헤엄을 치지 못한다."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 학원의 밤",
+     "body": [
+      "해가 지자 이리스는 짧은 주문을 외워 별빛으로 복도를 밝혔다. 카일은 그 뒤를 말없이 따랐다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 불타는 광장",
+     "body": [
+      "한낮의 광장에 불길이 번졌다. 이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "불길을 피해 아이 하나가 강으로 떨어졌다. 카일은 망설임 없이 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 건져 냈다.",
+      "그날 밤 카일은 물이 하나도 무섭지 않았다고 큰소리쳤지만, 다리를 건널 때는 내내 난간만 붙잡고 있었다.",
+      "해가 완전히 진 뒤에야 이리스는 다시 주문을 외워 무너진 골목에 별빛을 띄웠다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "noon-magic",
+     "quote": [
+      "별빛 마법으로 불길을 단숨에 잠재운"
+     ],
+     "sources": [
+      "magic"
+     ],
+     "note": "한낮에 쓰고도 쓰러지지 않는다(중요 설정)"
+    },
+    {
+     "id": "kyle-swims",
+     "quote": [
+      "맞은편 기슭까지 헤엄쳐"
+     ],
+     "sources": [
+      "kyle"
+     ],
+     "note": "헤엄을 치지 못한다"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "kyle-bluff",
+     "quote": [
+      "물이 하나도 무섭지 않았다고 큰소리쳤지만"
+     ],
+     "note": "인물의 허세. 행동은 설정과 맞는다"
+    },
+    {
+     "id": "night-magic",
+     "quote": [
+      "해가 완전히 진 뒤에야"
+     ],
+     "note": "규칙대로 밤에 쓴다"
+    }
+   ]
+  },
+  {
+   "id": "numbers-across-chapters",
+   "title": "앞 회차의 숫자와 시간",
+   "settings": [
+    {
+     "key": "ethan",
+     "title": "에단",
+     "folder": "CHARACTER",
+     "body": [
+      "회색 성의 견습 기사."
+     ],
+     "core": [],
+     "properties": []
+    },
+    {
+     "key": "castle",
+     "title": "회색 성",
+     "folder": "LOCATION",
+     "body": [
+      "국경의 요새. 성벽 위에 망루가 서 있다."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 견습 기사",
+     "body": [
+      "에단은 열여섯 살 봄에 견습 기사가 되었다. 회색 성의 성벽에는 망루가 모두 일곱 개 있었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 마른 우물",
+     "body": [
+      "성 아래 마을의 우물은 봄 내내 말라 있었다. 사람들은 강까지 물을 길으러 다녔다."
+     ]
+    },
+    {
+     "key": "c3",
+     "title": "3화 · 첫 경계",
+     "body": [
+      "견습 기사가 된 지 한 달 만에, 에단은 열여덟 번째 생일을 맞았다.",
+      "그날 밤 성벽 위 다섯 개의 망루마다 차례로 횃불이 올랐다. 망루는 그것이 전부였다.",
+      "여름 내내 쏟아진 비로, 말라 있던 마을 우물에 다시 물이 찰랑거렸다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "age-jump",
+     "quote": [
+      "열여덟 번째 생일"
+     ],
+     "sources": [
+      "c1"
+     ],
+     "note": "열여섯 살 봄에 견습이 됐고 한 달 뒤다"
+    },
+    {
+     "id": "tower-count",
+     "quote": [
+      "다섯 개의 망루",
+      "망루는 그것이 전부였다"
+     ],
+     "sources": [
+      "c1"
+     ],
+     "note": "망루는 일곱 개"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "well-refilled",
+     "quote": [
+      "다시 물이 찰랑거렸다"
+     ],
+     "note": "비가 와서 바뀌었다: 시간의 흐름"
+    }
+   ]
+  },
+  {
+   "id": "dead-man",
+   "title": "죽은 인물, 회상과 꿈",
+   "settings": [
+    {
+     "key": "bern",
+     "title": "베른",
+     "folder": "CHARACTER",
+     "body": [
+      "마을의 늙은 대장장이. 미라의 할아버지."
+     ],
+     "core": [],
+     "properties": []
+    },
+    {
+     "key": "mira",
+     "title": "미라",
+     "folder": "CHARACTER",
+     "body": [
+      "대장간을 물려받은 소녀."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 겨울 끝",
+     "body": [
+      "겨울 끝자락에 베른은 숨을 거두었다. 마을 사람들은 그를 언덕 위 참나무 아래에 묻었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 빈 대장간",
+     "body": [
+      "십 년 전, 젊은 베른은 이 대장간에서 처음 망치를 들었다. 그 소리를 미라는 아직도 기억했다.",
+      "그날 밤 미라는 꿈에서 할아버지를 만났다. 꿈속의 베른은 아무 일 없다는 듯 웃으며 풀무를 밟았다.",
+      "아침이 되자 베른은 여느 때처럼 대장간 앞 의자에 앉아 지나가는 아이들에게 손을 흔들었다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "alive-again",
+     "quote": [
+      "지나가는 아이들에게 손을 흔들었다"
+     ],
+     "sources": [
+      "c1"
+     ],
+     "note": "1화에서 죽어 묻혔다"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "flashback",
+     "quote": [
+      "십 년 전, 젊은 베른은"
+     ],
+     "note": "회상"
+    },
+    {
+     "id": "dream",
+     "quote": [
+      "꿈속의 베른은"
+     ],
+     "note": "꿈"
+    }
+   ]
+  },
+  {
+   "id": "alias-family",
+   "title": "별칭으로 부른 인물의 가족 관계",
+   "settings": [
+    {
+     "key": "sera",
+     "title": "세라 블랙우드",
+     "folder": "CHARACTER",
+     "body": [
+      "블랙우드 가의 외동딸. 형제자매가 없다."
+     ],
+     "core": [],
+     "properties": [
+      {
+       "key": "alias",
+       "value": "검은 백작"
+      }
+     ]
+    },
+    {
+     "key": "rowan",
+     "title": "로완",
+     "folder": "CHARACTER",
+     "body": [
+      "세라의 호위 기사."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 백작가",
+     "body": [
+      "로완은 세라가 백작위를 물려받던 날부터 그 곁을 지켰다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 묘지",
+     "body": [
+      "비 오는 아침, 검은 백작은 남동생의 무덤 앞에 흰 꽃을 놓고 오래 서 있었다.",
+      "로완은 세라를 여동생처럼 아꼈다.",
+      "시장 사람들은 세라에게 숨겨진 오빠가 있다고 수군거렸지만, 그를 본 사람은 아무도 없었다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "brother-grave",
+     "quote": [
+      "남동생의 무덤"
+     ],
+     "sources": [
+      "sera"
+     ],
+     "note": "외동딸, 형제자매가 없다(별칭으로 불림)"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "like-sister",
+     "quote": [
+      "여동생처럼 아꼈다"
+     ],
+     "note": "비유"
+    },
+    {
+     "id": "rumor",
+     "quote": [
+      "숨겨진 오빠가 있다고 수군거렸지만"
+     ],
+     "note": "소문"
+    }
+   ]
+  },
+  {
+   "id": "lighthouse-place",
+   "title": "장소의 위치와 규칙",
+   "settings": [
+    {
+     "key": "lighthouse",
+     "title": "흰 등대",
+     "folder": "LOCATION",
+     "body": [
+      "항구 동쪽 끝 절벽 위에 있다.",
+      "등대의 불은 매일 밤 자정에 꺼진다."
+     ],
+     "core": [
+      1
+     ],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 항구",
+     "body": [
+      "항구 서쪽에는 새벽마다 어시장이 섰다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 등대로",
+     "body": [
+      "노을이 지는 쪽, 항구 서쪽 끝 절벽 위의 흰 등대로 노아는 걸음을 옮겼다.",
+      "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "등대의 나선 계단은 모두 백스무 칸이었다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "west-cliff",
+     "quote": [
+      "항구 서쪽 끝 절벽 위의 흰 등대"
+     ],
+     "sources": [
+      "lighthouse"
+     ],
+     "note": "동쪽 끝 절벽"
+    },
+    {
+     "id": "light-at-two",
+     "quote": [
+      "새벽 두 시, 흰 등대의 불은"
+     ],
+     "sources": [
+      "lighthouse"
+     ],
+     "note": "자정에 꺼진다(중요 설정)"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "stairs",
+     "quote": [
+      "백스무 칸"
+     ],
+     "note": "설정에 없는 내용"
+    }
+   ]
+  },
+  {
+   "id": "appearance",
+   "title": "외모와 설정에 없는 내용",
+   "settings": [
+    {
+     "key": "yuna",
+     "title": "유나",
+     "folder": "CHARACTER",
+     "body": [
+      "열일곱 살 고등학생. 검은 단발머리."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 전학생",
+     "body": [
+      "유나는 전학 첫날 교실 맨 뒷자리에 앉았다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 옥상",
+     "body": [
+      "허리까지 내려오는 은발을 쓸어 넘기며 유나가 웃었다.",
+      "유나의 왼쪽 눈 밑에는 작은 점이 있었다.",
+      "유나의 열여덟 번째 생일은 다음 달이었다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "long-silver-hair",
+     "quote": [
+      "허리까지 내려오는 은발"
+     ],
+     "sources": [
+      "yuna"
+     ],
+     "note": "검은 단발"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "mole",
+     "quote": [
+      "작은 점이 있었다"
+     ],
+     "note": "설정에 없는 내용"
+    },
+    {
+     "id": "birthday",
+     "quote": [
+      "열여덟 번째 생일은 다음 달"
+     ],
+     "note": "열일곱 살과 맞는다"
+    }
+   ]
+  },
+  {
+   "id": "clean-exception",
+   "title": "규칙의 예외를 지킨 깨끗한 회차",
+   "settings": [
+    {
+     "key": "order",
+     "title": "은방패 기사단",
+     "folder": "ORGANIZATION",
+     "body": [
+      "기사단원은 밤에 성 밖으로 나갈 수 없다. 단장의 허락서가 있으면 예외다."
+     ],
+     "core": [
+      0
+     ],
+     "properties": []
+    },
+    {
+     "key": "leon",
+     "title": "레온",
+     "folder": "CHARACTER",
+     "body": [
+      "은방패 기사단의 막내 기사."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 입단",
+     "body": [
+      "레온은 은방패 기사단에 들어간 첫날 규칙서를 세 번 읽었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 허락서",
+     "body": [
+      "단장의 허락서를 품에 넣은 레온은 자정이 넘어 성문을 나섰다.",
+      "성 밖의 밤공기는 생각보다 차가웠다."
+     ]
+    }
+   ],
+   "expect": [],
+   "may": [],
+   "avoid": [
+    {
+     "id": "permitted-night",
+     "quote": [
+      "자정이 넘어 성문을 나섰다"
+     ],
+     "note": "허락서가 있어 예외"
+    }
+   ]
+  },
+  {
+   "id": "seal-explained",
+   "title": "회차 안에서 풀린 모순(왕족의 피)",
+   "settings": [
+    {
+     "key": "seal",
+     "title": "북쪽 신전의 봉인",
+     "folder": "WORLDVIEW",
+     "body": [
+      "북쪽 신전의 봉인은 왕족의 피로만 풀린다."
+     ],
+     "core": [],
+     "properties": []
+    },
+    {
+     "key": "tess",
+     "title": "테스",
+     "folder": "CHARACTER",
+     "body": [
+      "대장간에서 자란 소년."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 봉인",
+     "body": [
+      "그날 이후 왕의 검은 북쪽 신전에 봉인되었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 검",
+     "body": [
+      "테스는 신전 제단에 손을 대는 것만으로 봉인을 풀고 왕의 검을 뽑아 들었다.",
+      "그제야 신관은 테스가 이십 년 전 사라진 왕의 아들이라는 사실을 알아보았다."
+     ]
+    }
+   ],
+   "expect": [],
+   "may": [],
+   "avoid": [
+    {
+     "id": "royal-blood",
+     "quote": [
+      "봉인을 풀고 왕의 검을"
+     ],
+     "note": "같은 회차에서 왕족임이 밝혀진다"
+    }
+   ]
+  },
+  {
+   "id": "seal-unexplained",
+   "title": "풀리지 않은 모순(평민이 봉인을 푼다)",
+   "settings": [
+    {
+     "key": "seal",
+     "title": "북쪽 신전의 봉인",
+     "folder": "WORLDVIEW",
+     "body": [
+      "북쪽 신전의 봉인은 왕족의 피로만 풀린다."
+     ],
+     "core": [],
+     "properties": []
+    },
+    {
+     "key": "tess",
+     "title": "테스",
+     "folder": "CHARACTER",
+     "body": [
+      "대장간에서 자란 평민 소년. 부모는 마을의 대장장이 부부다."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 봉인",
+     "body": [
+      "그날 이후 왕의 검은 북쪽 신전에 봉인되었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 검",
+     "body": [
+      "테스는 신전 제단에 손을 대는 것만으로 봉인을 풀고 왕의 검을 뽑아 들었다.",
+      "신관들은 놀라 서로를 바라볼 뿐이었다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "commoner-seal",
+     "quote": [
+      "봉인을 풀고 왕의 검을"
+     ],
+     "sources": [
+      "seal",
+      "tess"
+     ],
+     "note": "왕족의 피로만 풀린다, 테스는 평민"
+    }
+   ],
+   "may": [],
+   "avoid": []
+  },
+  {
+   "id": "english-letters",
+   "title": "English: reading and pretending",
+   "locale": "en",
+   "settings": [
+    {
+     "key": "mira-en",
+     "title": "Mira",
+     "folder": "CHARACTER",
+     "body": [
+      "A tavern girl who cannot read. Nobody ever taught her letters."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "Ch. 1 · The Tavern",
+     "body": [
+      "Mira carried plates between the long tables until midnight."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "Ch. 2 · The Letter",
+     "body": [
+      "Mira pretended to read the menu, tracing the lines with her finger and nodding.",
+      "When the courier left, Mira read the sealed letter aloud to the whole tavern, word by word."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "reads-aloud",
+     "quote": [
+      "read the sealed letter aloud"
+     ],
+     "sources": [
+      "mira-en"
+     ],
+     "note": "she cannot read"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "pretends",
+     "quote": [
+      "pretended to read the menu"
+     ],
+     "note": "pretending is consistent"
+    }
+   ]
+  },
+  {
+   "id": "glass-garden-8-sea",
+   "title": "장편: 바다를 두려워하는 레나가 배에 오른다",
+   "from": "glass-garden",
+   "chapter": 8,
+   "expect": [
+    {
+     "id": "lena-boards",
+     "quote": [
+      "작은 배를 타고",
+      "배에 오르자",
+      "바다 위에 있다는"
+     ],
+     "sources": [
+      "lena"
+     ],
+     "note": "바다를 두려워해 배에 오르지 않는다"
+    }
+   ],
+   "may": [],
+   "avoid": []
+  },
+  {
+   "id": "spring-table-18-years",
+   "title": "장편: 태오의 근무 연수 10년과 5년",
+   "from": "spring-table",
+   "chapter": 18,
+   "expect": [
+    {
+     "id": "five-years",
+     "quote": [
+      "5년을 함께했다"
+     ],
+     "sources": [
+      "teo"
+     ],
+     "note": "10년째 일했다"
+    }
+   ],
+   "may": [],
+   "avoid": []
+  },
+  {
+   "id": "fog-harbor-13-tea",
+   "title": "장편: 차를 마시지 않는 선장의 독 찻잔",
+   "from": "fog-harbor",
+   "chapter": 13,
+   "expect": [],
+   "may": [
+    {
+     "id": "teacup",
+     "quote": [
+      "찻잔에서 나왔다"
+     ],
+     "sources": [
+      "bae"
+     ],
+     "note": "차를 입에 대지 않는다. 추리의 단서일 수 있어 어느 쪽이든 받는다"
+    }
+   ],
+   "avoid": []
+  }
+ ]
+}

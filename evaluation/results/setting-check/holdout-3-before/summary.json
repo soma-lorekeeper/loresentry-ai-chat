@@ -1,0 +1,19 @@
+{
+ "runs": 3,
+ "recall": 0.889,
+ "stable_recall": 0.667,
+ "trap_rate": 0.0,
+ "precision": 1.0,
+ "extras_per_run": 0.0,
+ "agreement": 0.87,
+ "seconds_median": 18.0,
+ "usage": {
+  "input_tokens": 24667,
+  "cached_tokens": 0,
+  "cache_write_tokens": 10099,
+  "output_tokens": 4145,
+  "reasoning_tokens": 1501
+ },
+ "model": "gpt-6-luna",
+ "judge_model": "gpt-6-luna"
+}

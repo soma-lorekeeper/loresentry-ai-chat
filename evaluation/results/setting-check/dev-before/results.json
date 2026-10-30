@@ -1,0 +1,2304 @@
+{
+ "glass-garden-7-planted": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "주머니 속 열쇠는 갓 벼린 듯 은빛으로 반짝였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": true,
+      "group": "expect",
+      "entry": "silver-key"
+     },
+     {
+      "quote": "서윤이 기록단에 들던 날부터 줄곧 목에 걸고 다닌 열쇠였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": true,
+      "group": "expect",
+      "entry": "silver-key"
+     },
+     {
+      "quote": "주머니 속 열쇠는 갓 벼린 듯 은빛으로 반짝였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": false,
+      "group": "expect",
+      "entry": "silver-key"
+     },
+     {
+      "quote": "서윤이 기록단에 들던 날부터 줄곧 목에 걸고 다닌 열쇠였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": false,
+      "group": "expect",
+      "entry": "silver-key"
+     },
+     {
+      "quote": "그 시각 항구에서 올라오던 레나는 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맸다.",
+      "source": "lena",
+      "source_quote": "짙은 안개 속에서도 그는 한 번도 길을 잃지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-lost"
+     },
+     {
+      "quote": "서윤은 처음 정원에 온 날 테오에게서 받은 기록장을 펼쳐, 문 앞의 발자국을 옮겨 적었다.",
+      "source": "harin",
+      "source_quote": "서윤에게 기록장을 건넨 사람이며, 테오가 떠난 날의 일을 아직 누구에게도 말하지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "notebook-giver"
+     }
+    ],
+    "unverified": 3,
+    "judged": [
+     {
+      "quote": "주머니 속 열쇠는 갓 벼린 듯 은빛으로 반짝였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": true,
+      "group": "expect",
+      "entry": "silver-key",
+      "verdict": "INSUFFICIENT"
+     },
+     {
+      "quote": "그 시각 항구에서 올라오던 레나는 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맸다.",
+      "source": "lena",
+      "source_quote": "짙은 안개 속에서도 그는 한 번도 길을 잃지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-lost",
+      "verdict": "CONFLICT"
+     },
+     {
+      "quote": "서윤은 처음 정원에 온 날 테오에게서 받은 기록장을 펼쳐, 문 앞의 발자국을 옮겨 적었다.",
+      "source": "harin",
+      "source_quote": "서윤에게 기록장을 건넨 사람이며, 테오가 떠난 날의 일을 아직 누구에게도 말하지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "notebook-giver",
+      "verdict": "INSUFFICIENT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "그 시각 항구에서 올라오던 레나는 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맸다.",
+      "source": "lena",
+      "source_quote": "짙은 안개 속에서도 그는 한 번도 길을 잃지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-lost",
+      "confidence": "HIGH",
+      "explanation": "「레나 아르벨」 설정은 레나가 짙은 안개 속에서도 한 번도 길을 잃지 않는다고 정해 두었어요. 그런데 7화에서는 항구에서 오던 레나가 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맨다고 나와요. 같은 안개 속에서 길을 잃지 않는 레나와 길을 잃은 레나는 동시에 성립할 수 없고, 그 능력이 달라졌거나 이번에는 작동하지 않은 이유도 제시되지 않아요.",
+      "quote_focus": "짙은 안개 속에서 길을 잃고",
+      "source_focus": "한 번도 길을 잃지 않았다"
+     }
+    ],
+    "seconds": 23.4,
+    "usage": {
+     "input_tokens": 8833,
+     "cached_tokens": 7012,
+     "cache_write_tokens": 825,
+     "output_tokens": 2748,
+     "reasoning_tokens": 1513
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "주머니 속 열쇠는 갓 벼린 듯 은빛으로 반짝였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": true,
+      "group": "expect",
+      "entry": "silver-key"
+     },
+     {
+      "quote": "주머니 속 열쇠는 갓 벼린 듯 은빛으로 반짝였다. 서윤이 기록단에 들던 날부터 줄곧 목에 걸고 다닌 열쇠였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": false,
+      "group": "expect",
+      "entry": "silver-key"
+     },
+     {
+      "quote": "서윤은 처음 정원에 온 날 테오에게서 받은 기록장을 펼쳐, 문 앞의 발자국을 옮겨 적었다.",
+      "source": "c1",
+      "source_quote": "하린은 인사 대신 두꺼운 기록장 한 권을 건넸다.",
+      "core": false,
+      "group": "expect",
+      "entry": "notebook-giver"
+     },
+     {
+      "quote": "그 시각 항구에서 올라오던 레나는 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맸다.",
+      "source": "lena",
+      "source_quote": "짙은 안개 속에서도 그는 한 번도 길을 잃지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-lost"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "주머니 속 열쇠는 갓 벼린 듯 은빛으로 반짝였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": true,
+      "group": "expect",
+      "entry": "silver-key",
+      "verdict": "INSUFFICIENT"
+     },
+     {
+      "quote": "서윤은 처음 정원에 온 날 테오에게서 받은 기록장을 펼쳐, 문 앞의 발자국을 옮겨 적었다.",
+      "source": "c1",
+      "source_quote": "하린은 인사 대신 두꺼운 기록장 한 권을 건넸다.",
+      "core": false,
+      "group": "expect",
+      "entry": "notebook-giver",
+      "verdict": "INSUFFICIENT"
+     },
+     {
+      "quote": "그 시각 항구에서 올라오던 레나는 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맸다.",
+      "source": "lena",
+      "source_quote": "짙은 안개 속에서도 그는 한 번도 길을 잃지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-lost",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "그 시각 항구에서 올라오던 레나는 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맸다.",
+      "source": "lena",
+      "source_quote": "짙은 안개 속에서도 그는 한 번도 길을 잃지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-lost",
+      "confidence": "HIGH",
+      "explanation": "‘레나 아르벨’ 설정은 레나가 짙은 안개 속에서도 한 번도 길을 잃지 않는다고 정해 두었어요. 그런데 7화에서는 레나가 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맨다고 서술해요. 같은 안개 속에서 레나가 길을 잃지 않는다는 설정과 길을 잃었다는 서술은 함께 성립할 수 없고, 이 장에는 그 능력이 달라졌거나 작동하지 않은 이유가 나오지 않아요.",
+      "quote_focus": "길을 잃고 새벽까지 정원 밖을 헤맸다",
+      "source_focus": "한 번도 길을 잃지 않았다"
+     }
+    ],
+    "seconds": 21.6,
+    "usage": {
+     "input_tokens": 8892,
+     "cached_tokens": 4524,
+     "cache_write_tokens": 3372,
+     "output_tokens": 2545,
+     "reasoning_tokens": 1455
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "주머니 속 열쇠는 갓 벼린 듯 은빛으로 반짝였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": true,
+      "group": "expect",
+      "entry": "silver-key"
+     },
+     {
+      "quote": "주머니 속 열쇠는 갓 벼린 듯 은빛으로 반짝였다. 서윤이 기록단에 들던 날부터 줄곧 목에 걸고 다닌 열쇠였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": false,
+      "group": "expect",
+      "entry": "silver-key"
+     },
+     {
+      "quote": "서윤은 처음 정원에 온 날 테오에게서 받은 기록장을 펼쳐, 문 앞의 발자국을 옮겨 적었다.",
+      "source": "harin",
+      "source_quote": "서윤에게 기록장을 건넨 사람이며,",
+      "core": false,
+      "group": "expect",
+      "entry": "notebook-giver"
+     },
+     {
+      "quote": "그 시각 항구에서 올라오던 레나는 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맸다.",
+      "source": "lena",
+      "source_quote": "짙은 안개 속에서도 그는 한 번도 길을 잃지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-lost"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "주머니 속 열쇠는 갓 벼린 듯 은빛으로 반짝였다.",
+      "source": "key",
+      "source_quote": "녹이 슨 놋쇠 열쇠. 하린이 서랍 깊은 곳에 보관해 왔다.",
+      "core": true,
+      "group": "expect",
+      "entry": "silver-key",
+      "verdict": "INSUFFICIENT"
+     },
+     {
+      "quote": "서윤은 처음 정원에 온 날 테오에게서 받은 기록장을 펼쳐, 문 앞의 발자국을 옮겨 적었다.",
+      "source": "harin",
+      "source_quote": "서윤에게 기록장을 건넨 사람이며,",
+      "core": false,
+      "group": "expect",
+      "entry": "notebook-giver",
+      "verdict": "CONFLICT"
+     },
+     {
+      "quote": "그 시각 항구에서 올라오던 레나는 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맸다.",
+      "source": "lena",
+      "source_quote": "짙은 안개 속에서도 그는 한 번도 길을 잃지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-lost",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "서윤은 처음 정원에 온 날 테오에게서 받은 기록장을 펼쳐, 문 앞의 발자국을 옮겨 적었다.",
+      "source": "harin",
+      "source_quote": "서윤에게 기록장을 건넨 사람이며,",
+      "core": false,
+      "group": "expect",
+      "entry": "notebook-giver",
+      "confidence": "HIGH",
+      "explanation": "‘하린’ 설정은 서윤에게 기록장을 건넨 사람이 하린이라고 정해 두었어요. 그런데 7화에서는 서윤이 처음 정원에 온 날 테오에게서 그 기록장을 받았다고 밝혀요. 같은 기록장을 서윤에게 건넨 사람이 한쪽에서는 하린, 다른 쪽에서는 테오이므로 두 내용은 함께 성립할 수 없어요. 두 사람이 함께 건넸거나 전달 경위가 달랐다는 설명은 원고에 나오지 않아요.",
+      "quote_focus": "테오에게서 받은 기록장",
+      "source_focus": "서윤에게 기록장을 건넨 사람"
+     },
+     {
+      "quote": "그 시각 항구에서 올라오던 레나는 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤맸다.",
+      "source": "lena",
+      "source_quote": "짙은 안개 속에서도 그는 한 번도 길을 잃지 않았다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-lost",
+      "confidence": "HIGH",
+      "explanation": "‘레나 아르벨’ 설정은 레나가 짙은 안개 속에서도 한 번도 길을 잃지 않는다고 정해 두었어요. 그런데 7화에서는 레나가 짙은 안개 속에서 길을 잃고 새벽까지 정원 밖을 헤매요. 같은 안개 속에서 길을 잃지 않는다는 설정과 길을 잃었다는 장면은 함께 성립할 수 없고, 이 장면을 꿈이나 착각으로 볼 근거도 없어요.",
+      "quote_focus": "길을 잃고",
+      "source_focus": "한 번도 길을 잃지 않았다"
+     }
+    ],
+    "seconds": 18.9,
+    "usage": {
+     "input_tokens": 8835,
+     "cached_tokens": 3732,
+     "cache_write_tokens": 4107,
+     "output_tokens": 2101,
+     "reasoning_tokens": 1016
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "silver-key": 0,
+    "notebook-giver": 1,
+    "lena-lost": 3
+   },
+   "found_by_finder": {
+    "silver-key": 3,
+    "notebook-giver": 3,
+    "lena-lost": 3
+   },
+   "traps": {
+    "harin-tells": 0
+   },
+   "extras": {},
+   "agreement": 0.67
+  }
+ },
+ "starlight-rule": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "noon-magic"
+     },
+     {
+      "quote": "한낮의 광장에 불길이 번졌다. 이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": false,
+      "group": "expect",
+      "entry": "noon-magic"
+     },
+     {
+      "quote": "카일은 망설임 없이 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 건져 냈다.",
+      "source": "kyle",
+      "source_quote": "어릴 적 강에 빠진 뒤로 물을 무서워해 헤엄을 치지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "kyle-swims"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "noon-magic",
+      "verdict": "CONFLICT"
+     },
+     {
+      "quote": "카일은 망설임 없이 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 건져 냈다.",
+      "source": "kyle",
+      "source_quote": "어릴 적 강에 빠진 뒤로 물을 무서워해 헤엄을 치지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "kyle-swims",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "noon-magic",
+      "confidence": "HIGH",
+      "explanation": "‘별빛 마법’ 설정은 해가 떠 있을 때 사용하면 시전자가 그 자리에서 쓰러진다고 정해 두었어요. 그런데 2화에서 한낮에 이리스가 그 마법으로 불길을 잠재운 뒤 다음 골목으로 걸어가요. 한낮에 마법을 쓴 이리스가 쓰러지지 않고 걸어가는 모습은 설정과 함께 성립할 수 없고, 원고에는 이 결과를 달리 설명할 사건이나 이유가 없어요.",
+      "quote_focus": "다음 골목으로 걸어갔다",
+      "source_focus": "그 자리에서 쓰러진다"
+     },
+     {
+      "quote": "카일은 망설임 없이 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 건져 냈다.",
+      "source": "kyle",
+      "source_quote": "어릴 적 강에 빠진 뒤로 물을 무서워해 헤엄을 치지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "kyle-swims",
+      "confidence": "HIGH",
+      "explanation": "「카일」 설정은 카일이 어릴 적 강에 빠진 뒤 물을 무서워해 헤엄을 치지 못한다고 정해 두었어요. 그런데 2화에서 카일은 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 구해요. 그 시점에 헤엄을 익혔거나 두려움을 극복했다는 일이 나오지 않아 두 내용은 함께 성립할 수 없어요.",
+      "quote_focus": "맞은편 기슭까지 헤엄쳐",
+      "source_focus": "헤엄을 치지 못한다"
+     }
+    ],
+    "seconds": 10.4,
+    "usage": {
+     "input_tokens": 4758,
+     "cached_tokens": 2116,
+     "cache_write_tokens": 1828,
+     "output_tokens": 1242,
+     "reasoning_tokens": 398
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "한낮의 광장에 불길이 번졌다. 이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "noon-magic"
+     },
+     {
+      "quote": "이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": false,
+      "group": "expect",
+      "entry": "noon-magic"
+     },
+     {
+      "quote": "카일은 망설임 없이 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 건져 냈다.",
+      "source": "kyle",
+      "source_quote": "어릴 적 강에 빠진 뒤로 물을 무서워해 헤엄을 치지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "kyle-swims"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "한낮의 광장에 불길이 번졌다. 이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "noon-magic",
+      "verdict": "CONFLICT"
+     },
+     {
+      "quote": "카일은 망설임 없이 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 건져 냈다.",
+      "source": "kyle",
+      "source_quote": "어릴 적 강에 빠진 뒤로 물을 무서워해 헤엄을 치지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "kyle-swims",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "한낮의 광장에 불길이 번졌다. 이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "noon-magic",
+      "confidence": "HIGH",
+      "explanation": "‘별빛 마법’ 설정은 별빛 마법을 해가 진 뒤에만 쓸 수 있고, 낮에 쓰면 시전자가 그 자리에서 쓰러진다고 정해 두었어요. 그런데 2화에서 한낮에 이리스가 별빛 마법으로 불을 끈 뒤 다음 골목으로 걸어가요. 이리스가 낮에 마법을 썼으면서 쓰러지지 않았으므로 두 내용은 함께 성립할 수 없어요. 낮에도 쓸 수 있게 된 까닭이나 쓰러짐을 피한 방법은 원고에 나오지 않아요.",
+      "quote_focus": "별빛 마법으로 불길을 단숨에 잠재운 뒤",
+      "source_focus": "해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다"
+     },
+     {
+      "quote": "카일은 망설임 없이 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 건져 냈다.",
+      "source": "kyle",
+      "source_quote": "어릴 적 강에 빠진 뒤로 물을 무서워해 헤엄을 치지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "kyle-swims",
+      "confidence": "HIGH",
+      "explanation": "「카일」 설정은 카일이 어릴 적 강에 빠진 뒤 물을 무서워해 헤엄을 치지 못한다고 정해 두었어요. 그런데 2화에서 그는 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 구해요. 헤엄을 치지 못한다는 설정과 실제로 강을 헤엄쳐 건넌 행동은 그 시점에 함께 성립할 수 없어요. 카일이 헤엄치는 법을 익혔다는 장면이나 달리 헤엄칠 수 있게 된 까닭은 나오지 않아요.",
+      "quote_focus": "헤엄쳐",
+      "source_focus": "헤엄을 치지 못한다"
+     }
+    ],
+    "seconds": 12.5,
+    "usage": {
+     "input_tokens": 4780,
+     "cached_tokens": 2116,
+     "cache_write_tokens": 1850,
+     "output_tokens": 1487,
+     "reasoning_tokens": 572
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "한낮의 광장에 불길이 번졌다. 이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "noon-magic"
+     },
+     {
+      "quote": "이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": false,
+      "group": "expect",
+      "entry": "noon-magic"
+     },
+     {
+      "quote": "카일은 망설임 없이 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 건져 냈다.",
+      "source": "kyle",
+      "source_quote": "어릴 적 강에 빠진 뒤로 물을 무서워해 헤엄을 치지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "kyle-swims"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "한낮의 광장에 불길이 번졌다. 이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "noon-magic",
+      "verdict": "CONFLICT"
+     },
+     {
+      "quote": "카일은 망설임 없이 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 건져 냈다.",
+      "source": "kyle",
+      "source_quote": "어릴 적 강에 빠진 뒤로 물을 무서워해 헤엄을 치지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "kyle-swims",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "한낮의 광장에 불길이 번졌다. 이리스는 소매를 걷어붙이고 별빛 마법으로 불길을 단숨에 잠재운 뒤, 땀 한 방울 흘리지 않고 다음 골목으로 걸어갔다.",
+      "source": "magic",
+      "source_quote": "별빛 마법은 해가 진 뒤에만 쓸 수 있다. 해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "noon-magic",
+      "confidence": "HIGH",
+      "explanation": "‘별빛 마법’ 설정은 별빛 마법을 해가 진 뒤에만 쓸 수 있고, 낮에 쓰면 시전자가 그 자리에서 쓰러진다고 정해 두었어요. 그런데 2화에서 한낮에 이리스가 별빛 마법으로 불길을 끈 뒤 다음 골목으로 걸어가요. 낮에 마법을 썼는데도 쓰러지지 않은 모습은 설정과 양립할 수 없고, 이리스가 쓰러지지 않은 이유나 예외가 이야기에서 제시되지 않아요.",
+      "quote_focus": null,
+      "source_focus": "해가 떠 있을 때 쓰면 시전자가 그 자리에서 쓰러진다"
+     },
+     {
+      "quote": "카일은 망설임 없이 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 건져 냈다.",
+      "source": "kyle",
+      "source_quote": "어릴 적 강에 빠진 뒤로 물을 무서워해 헤엄을 치지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "kyle-swims",
+      "confidence": "HIGH",
+      "explanation": "‘카일’ 설정은 카일이 어릴 적 강에 빠진 뒤 물을 무서워해 헤엄을 치지 못한다고 정해 두었어요. 그런데 2화에서 카일은 강물에 뛰어들어 맞은편 기슭까지 헤엄쳐 아이를 구해요. 헤엄을 치지 못하는 사람은 이 장면에서 헤엄쳐 건널 수 없어 두 내용이 함께 성립하지 않아요. 카일이 수영을 배우거나 다른 방법으로 강을 건너게 된 계기는 원고에 나오지 않아요.",
+      "quote_focus": "맞은편 기슭까지 헤엄쳐",
+      "source_focus": "헤엄을 치지 못한다"
+     }
+    ],
+    "seconds": 9.6,
+    "usage": {
+     "input_tokens": 4772,
+     "cached_tokens": 2353,
+     "cache_write_tokens": 1605,
+     "output_tokens": 1144,
+     "reasoning_tokens": 262
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "noon-magic": 3,
+    "kyle-swims": 3
+   },
+   "found_by_finder": {
+    "noon-magic": 3,
+    "kyle-swims": 3
+   },
+   "traps": {
+    "kyle-bluff": 0,
+    "night-magic": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "numbers-across-chapters": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "견습 기사가 된 지 한 달 만에, 에단은 열여덟 번째 생일을 맞았다.",
+      "source": "c1",
+      "source_quote": "에단은 열여섯 살 봄에 견습 기사가 되었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "age-jump"
+     },
+     {
+      "quote": "망루는 그것이 전부였다.",
+      "source": "c1",
+      "source_quote": "회색 성의 성벽에는 망루가 모두 일곱 개 있었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "tower-count"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "견습 기사가 된 지 한 달 만에, 에단은 열여덟 번째 생일을 맞았다.",
+      "source": "c1",
+      "source_quote": "에단은 열여섯 살 봄에 견습 기사가 되었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "age-jump",
+      "verdict": "CONFLICT"
+     },
+     {
+      "quote": "망루는 그것이 전부였다.",
+      "source": "c1",
+      "source_quote": "회색 성의 성벽에는 망루가 모두 일곱 개 있었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "tower-count",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "견습 기사가 된 지 한 달 만에, 에단은 열여덟 번째 생일을 맞았다.",
+      "source": "c1",
+      "source_quote": "에단은 열여섯 살 봄에 견습 기사가 되었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "age-jump",
+      "confidence": "HIGH",
+      "explanation": "1화 「견습 기사」에서는 에단이 열여섯 살 봄에 견습 기사가 되었다고 정해요. 그런데 3화에서는 견습 기사가 된 지 한 달 만에 열여덟 번째 생일을 맞았다고 해요. 입문 후 한 달 만에 열여섯 살에서 열여덟 살이 될 수는 없고, 그 사이에 시간이 더 흘렀다는 설명도 없어서 두 내용은 함께 성립하지 않아요.",
+      "quote_focus": "한 달 만에",
+      "source_focus": "열여섯 살 봄에"
+     },
+     {
+      "quote": "망루는 그것이 전부였다.",
+      "source": "c1",
+      "source_quote": "회색 성의 성벽에는 망루가 모두 일곱 개 있었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "tower-count",
+      "confidence": "HIGH",
+      "explanation": "1화 「견습 기사」에서는 회색 성 성벽의 망루가 모두 일곱 개라고 정해요. 그런데 3화에서는 그날 밤 횃불을 올린 다섯 개가 망루의 전부라고 해요. 같은 성의 망루가 일곱 개이면서 다섯 개뿐일 수는 없고, 그사이 망루가 사라졌다는 사건도 나오지 않아요.",
+      "quote_focus": "망루는 그것이 전부였다.",
+      "source_focus": "모두 일곱 개"
+     }
+    ],
+    "seconds": 21.0,
+    "usage": {
+     "input_tokens": 3527,
+     "cached_tokens": 0,
+     "cache_write_tokens": 3518,
+     "output_tokens": 1014,
+     "reasoning_tokens": 459
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "견습 기사가 된 지 한 달 만에, 에단은 열여덟 번째 생일을 맞았다.",
+      "source": "c1",
+      "source_quote": "에단은 열여섯 살 봄에 견습 기사가 되었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "age-jump"
+     },
+     {
+      "quote": "그날 밤 성벽 위 다섯 개의 망루마다 차례로 횃불이 올랐다. 망루는 그것이 전부였다.",
+      "source": "c1",
+      "source_quote": "회색 성의 성벽에는 망루가 모두 일곱 개 있었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "tower-count"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "견습 기사가 된 지 한 달 만에, 에단은 열여덟 번째 생일을 맞았다.",
+      "source": "c1",
+      "source_quote": "에단은 열여섯 살 봄에 견습 기사가 되었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "age-jump",
+      "verdict": "CONFLICT"
+     },
+     {
+      "quote": "그날 밤 성벽 위 다섯 개의 망루마다 차례로 횃불이 올랐다. 망루는 그것이 전부였다.",
+      "source": "c1",
+      "source_quote": "회색 성의 성벽에는 망루가 모두 일곱 개 있었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "tower-count",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "견습 기사가 된 지 한 달 만에, 에단은 열여덟 번째 생일을 맞았다.",
+      "source": "c1",
+      "source_quote": "에단은 열여섯 살 봄에 견습 기사가 되었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "age-jump",
+      "confidence": "HIGH",
+      "explanation": "1화 「견습 기사」에서는 에단이 열여섯 살 봄에 견습 기사가 되었다고 정해요. 그런데 3화에서는 견습 기사가 된 지 한 달 만에 열여덟 번째 생일을 맞았다고 해요. 견습 기사가 된 뒤 한 달만 지났다면 열여덟 살이 될 수 없어서 두 시점의 나이가 함께 성립하지 않아요. 그 사이에 시간이 더 흘렀거나 나이가 달라질 이유는 원고에 나오지 않아요.",
+      "quote_focus": "열여덟 번째 생일",
+      "source_focus": "열여섯 살 봄에"
+     },
+     {
+      "quote": "그날 밤 성벽 위 다섯 개의 망루마다 차례로 횃불이 올랐다. 망루는 그것이 전부였다.",
+      "source": "c1",
+      "source_quote": "회색 성의 성벽에는 망루가 모두 일곱 개 있었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "tower-count",
+      "confidence": "HIGH",
+      "explanation": "1화 「견습 기사」에서는 회색 성의 성벽에 망루가 모두 일곱 개라고 정해 두었어요. 그런데 3화에서 그날 밤 횃불이 오른 망루는 다섯 개뿐이고, 그것이 전부라고 서술해요. 성벽의 망루가 일곱 개이면서 동시에 다섯 개가 전부일 수는 없어요. 그사이에 망루가 사라졌거나 다섯 개만 남은 까닭은 원고에 나오지 않아요.",
+      "quote_focus": "망루는 그것이 전부였다",
+      "source_focus": "모두 일곱 개"
+     }
+    ],
+    "seconds": 20.8,
+    "usage": {
+     "input_tokens": 3557,
+     "cached_tokens": 1142,
+     "cache_write_tokens": 2406,
+     "output_tokens": 1206,
+     "reasoning_tokens": 583
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "견습 기사가 된 지 한 달 만에, 에단은 열여덟 번째 생일을 맞았다.",
+      "source": "c1",
+      "source_quote": "에단은 열여섯 살 봄에 견습 기사가 되었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "age-jump"
+     },
+     {
+      "quote": "망루는 그것이 전부였다.",
+      "source": "c1",
+      "source_quote": "회색 성의 성벽에는 망루가 모두 일곱 개 있었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "tower-count"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "견습 기사가 된 지 한 달 만에, 에단은 열여덟 번째 생일을 맞았다.",
+      "source": "c1",
+      "source_quote": "에단은 열여섯 살 봄에 견습 기사가 되었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "age-jump",
+      "verdict": "CONFLICT"
+     },
+     {
+      "quote": "망루는 그것이 전부였다.",
+      "source": "c1",
+      "source_quote": "회색 성의 성벽에는 망루가 모두 일곱 개 있었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "tower-count",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "견습 기사가 된 지 한 달 만에, 에단은 열여덟 번째 생일을 맞았다.",
+      "source": "c1",
+      "source_quote": "에단은 열여섯 살 봄에 견습 기사가 되었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "age-jump",
+      "confidence": "HIGH",
+      "explanation": "1화에서는 에단이 열여섯 살 봄에 견습 기사가 되었다고 정해요. 그런데 3화에서는 견습 기사가 된 지 한 달 만에 열여덟 번째 생일을 맞았다고 해요. 한 달 사이에 열여섯 살에서 열여덟 살이 될 수는 없고, 그 차이를 설명할 사건이나 이유도 원고에 나오지 않아요.",
+      "quote_focus": "한 달 만에",
+      "source_focus": "열여섯 살 봄에"
+     },
+     {
+      "quote": "망루는 그것이 전부였다.",
+      "source": "c1",
+      "source_quote": "회색 성의 성벽에는 망루가 모두 일곱 개 있었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "tower-count",
+      "confidence": "HIGH",
+      "explanation": "1화 「견습 기사」에서는 회색 성의 성벽에 망루가 일곱 개 있다고 정해 두었어요. 그런데 3화에서는 횃불을 올린 다섯 개가 망루의 전부라고 해요. 두 내용은 같은 회색 성의 망루 수를 일곱 개와 다섯 개로 달리 말해 함께 성립할 수 없어요. 1화 이후 망루가 사라지거나 수가 줄었다는 사건은 나오지 않아요.",
+      "quote_focus": "그것이 전부였다.",
+      "source_focus": "일곱 개 있었다"
+     }
+    ],
+    "seconds": 30.1,
+    "usage": {
+     "input_tokens": 3549,
+     "cached_tokens": 1142,
+     "cache_write_tokens": 2398,
+     "output_tokens": 1263,
+     "reasoning_tokens": 687
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "age-jump": 3,
+    "tower-count": 3
+   },
+   "found_by_finder": {
+    "age-jump": 3,
+    "tower-count": 3
+   },
+   "traps": {
+    "well-refilled": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "dead-man": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "아침이 되자 베른은 여느 때처럼 대장간 앞 의자에 앉아 지나가는 아이들에게 손을 흔들었다.",
+      "source": "c1",
+      "source_quote": "겨울 끝자락에 베른은 숨을 거두었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "alive-again"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "아침이 되자 베른은 여느 때처럼 대장간 앞 의자에 앉아 지나가는 아이들에게 손을 흔들었다.",
+      "source": "c1",
+      "source_quote": "겨울 끝자락에 베른은 숨을 거두었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "alive-again",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "아침이 되자 베른은 여느 때처럼 대장간 앞 의자에 앉아 지나가는 아이들에게 손을 흔들었다.",
+      "source": "c1",
+      "source_quote": "겨울 끝자락에 베른은 숨을 거두었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "alive-again",
+      "confidence": "HIGH",
+      "explanation": "1화 「겨울 끝」에서는 베른이 겨울 끝자락에 숨을 거뒀다고 정해 두었어요. 그런데 2화 아침에는 베른이 대장간 앞 의자에 앉아 아이들에게 손을 흔들어요. 죽은 베른이 같은 시점에 살아 있는 모습으로 나타날 수는 없고, 2화에는 그가 되살아났거나 아침 장면도 꿈이라는 설명이 없어요.",
+      "quote_focus": "베른은 여느 때처럼 대장간 앞 의자에 앉아",
+      "source_focus": "숨을 거두었다"
+     }
+    ],
+    "seconds": 26.7,
+    "usage": {
+     "input_tokens": 2301,
+     "cached_tokens": 0,
+     "cache_write_tokens": 2295,
+     "output_tokens": 599,
+     "reasoning_tokens": 289
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "아침이 되자 베른은 여느 때처럼 대장간 앞 의자에 앉아 지나가는 아이들에게 손을 흔들었다.",
+      "source": "c1",
+      "source_quote": "겨울 끝자락에 베른은 숨을 거두었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "alive-again"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "아침이 되자 베른은 여느 때처럼 대장간 앞 의자에 앉아 지나가는 아이들에게 손을 흔들었다.",
+      "source": "c1",
+      "source_quote": "겨울 끝자락에 베른은 숨을 거두었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "alive-again",
+      "verdict": "INSUFFICIENT"
+     }
+    ],
+    "findings": [],
+    "seconds": 31.3,
+    "usage": {
+     "input_tokens": 2305,
+     "cached_tokens": 1084,
+     "cache_write_tokens": 1215,
+     "output_tokens": 797,
+     "reasoning_tokens": 532
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "아침이 되자 베른은 여느 때처럼 대장간 앞 의자에 앉아 지나가는 아이들에게 손을 흔들었다.",
+      "source": "c1",
+      "source_quote": "겨울 끝자락에 베른은 숨을 거두었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "alive-again"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "아침이 되자 베른은 여느 때처럼 대장간 앞 의자에 앉아 지나가는 아이들에게 손을 흔들었다.",
+      "source": "c1",
+      "source_quote": "겨울 끝자락에 베른은 숨을 거두었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "alive-again",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "아침이 되자 베른은 여느 때처럼 대장간 앞 의자에 앉아 지나가는 아이들에게 손을 흔들었다.",
+      "source": "c1",
+      "source_quote": "겨울 끝자락에 베른은 숨을 거두었다.",
+      "core": false,
+      "group": "expect",
+      "entry": "alive-again",
+      "confidence": "HIGH",
+      "explanation": "1화 「겨울 끝」에서는 베른이 숨을 거두고 언덕 위 참나무 아래에 묻혔다고 정해 두었어요. 그런데 2화에서는 아침에 베른이 대장간 앞 의자에 앉아 아이들에게 손을 흔들어요. 죽어 묻힌 베른이 그 아침에 살아서 그 자리에 앉아 있을 수는 없어요. 1화 뒤로 베른이 되살아났거나 다른 이유로 나타났다는 장면이나 설명이 없어 두 내용이 함께 성립하지 않아요.",
+      "quote_focus": "의자에 앉아 지나가는 아이들에게 손을 흔들었다",
+      "source_focus": "숨을 거두었다"
+     }
+    ],
+    "seconds": 29.3,
+    "usage": {
+     "input_tokens": 2299,
+     "cached_tokens": 1084,
+     "cache_write_tokens": 1209,
+     "output_tokens": 576,
+     "reasoning_tokens": 245
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "alive-again": 2
+   },
+   "found_by_finder": {
+    "alive-again": 3
+   },
+   "traps": {
+    "flashback": 0,
+    "dream": 0
+   },
+   "extras": {},
+   "agreement": 0.33
+  }
+ },
+ "alias-family": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "비 오는 아침, 검은 백작은 남동생의 무덤 앞에 흰 꽃을 놓고 오래 서 있었다.",
+      "source": "sera",
+      "source_quote": "블랙우드 가의 외동딸. 형제자매가 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "brother-grave"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "비 오는 아침, 검은 백작은 남동생의 무덤 앞에 흰 꽃을 놓고 오래 서 있었다.",
+      "source": "sera",
+      "source_quote": "블랙우드 가의 외동딸. 형제자매가 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "brother-grave",
+      "verdict": "INSUFFICIENT"
+     }
+    ],
+    "findings": [],
+    "seconds": 28.0,
+    "usage": {
+     "input_tokens": 2212,
+     "cached_tokens": 0,
+     "cache_write_tokens": 2206,
+     "output_tokens": 347,
+     "reasoning_tokens": 140
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "비 오는 아침, 검은 백작은 남동생의 무덤 앞에 흰 꽃을 놓고 오래 서 있었다.",
+      "source": "sera",
+      "source_quote": "블랙우드 가의 외동딸. 형제자매가 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "brother-grave"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "비 오는 아침, 검은 백작은 남동생의 무덤 앞에 흰 꽃을 놓고 오래 서 있었다.",
+      "source": "sera",
+      "source_quote": "블랙우드 가의 외동딸. 형제자매가 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "brother-grave",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "비 오는 아침, 검은 백작은 남동생의 무덤 앞에 흰 꽃을 놓고 오래 서 있었다.",
+      "source": "sera",
+      "source_quote": "블랙우드 가의 외동딸. 형제자매가 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "brother-grave",
+      "confidence": "HIGH",
+      "explanation": "「세라 블랙우드」 설정은 세라가 블랙우드 가의 외동딸이며 형제자매가 없다고 정해 두었어요. 그런데 2화에서 검은 백작인 세라가 남동생의 무덤 앞에 서 있는 것으로 서술돼요. 세라에게 남동생이 있다면 설정의 내용과 양립할 수 없고, 두 내용이 함께 성립하도록 형제 관계가 바뀌었거나 다른 사정이 생겼다는 장면도 나오지 않아요.",
+      "quote_focus": "남동생의 무덤",
+      "source_focus": "형제자매가 없다"
+     }
+    ],
+    "seconds": 31.9,
+    "usage": {
+     "input_tokens": 2218,
+     "cached_tokens": 1058,
+     "cache_write_tokens": 1154,
+     "output_tokens": 574,
+     "reasoning_tokens": 279
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "비 오는 아침, 검은 백작은 남동생의 무덤 앞에 흰 꽃을 놓고 오래 서 있었다.",
+      "source": "sera",
+      "source_quote": "형제자매가 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "brother-grave"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "비 오는 아침, 검은 백작은 남동생의 무덤 앞에 흰 꽃을 놓고 오래 서 있었다.",
+      "source": "sera",
+      "source_quote": "형제자매가 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "brother-grave",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "비 오는 아침, 검은 백작은 남동생의 무덤 앞에 흰 꽃을 놓고 오래 서 있었다.",
+      "source": "sera",
+      "source_quote": "형제자매가 없다.",
+      "core": false,
+      "group": "expect",
+      "entry": "brother-grave",
+      "confidence": "HIGH",
+      "explanation": "「세라 블랙우드」 설정은 세라가 블랙우드 가의 외동딸이며 형제자매가 없다고 정해 두었어요. 그런데 2화에서는 검은 백작이 남동생의 무덤에 흰 꽃을 놓았다고 서술하고, 설정상 검은 백작은 세라의 별칭이에요. 따라서 그 무덤의 남동생이 세라의 동생이라면 두 내용은 함께 성립할 수 없어요. 세라에게 남동생이 생겼거나 설정이 바뀌었다고 볼 사건이나 설명은 제시되지 않아요.",
+      "quote_focus": "남동생의 무덤",
+      "source_focus": "형제자매가 없다."
+     }
+    ],
+    "seconds": 37.3,
+    "usage": {
+     "input_tokens": 2204,
+     "cached_tokens": 1058,
+     "cache_write_tokens": 1140,
+     "output_tokens": 739,
+     "reasoning_tokens": 439
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "brother-grave": 2
+   },
+   "found_by_finder": {
+    "brother-grave": 3
+   },
+   "traps": {
+    "like-sister": 0,
+    "rumor": 0
+   },
+   "extras": {},
+   "agreement": 0.33
+  }
+ },
+ "lighthouse-place": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "light-at-two"
+     },
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": false,
+      "group": "expect",
+      "entry": "light-at-two"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "light-at-two",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "light-at-two",
+      "confidence": "HIGH",
+      "explanation": "‘흰 등대’ 설정은 등대의 불이 매일 밤 자정에 꺼진다고 정해 두었어요. 그런데 2화에서는 새벽 두 시에도 불이 환하게 타오른다고 보여 줘요. 자정이 지난 뒤인데도 불이 켜져 있으므로 두 내용은 그 시점에 함께 성립할 수 없어요. 자정에 불이 다시 켜졌다는 사건이나 이유는 나오지 않아요.",
+      "quote_focus": "새벽 두 시",
+      "source_focus": "매일 밤 자정에 꺼진다"
+     }
+    ],
+    "seconds": 34.2,
+    "usage": {
+     "input_tokens": 2878,
+     "cached_tokens": 0,
+     "cache_write_tokens": 2192,
+     "output_tokens": 576,
+     "reasoning_tokens": 162
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "light-at-two"
+     },
+     {
+      "quote": "노을이 지는 쪽, 항구 서쪽 끝 절벽 위의 흰 등대로 노아는 걸음을 옮겼다.",
+      "source": "lighthouse",
+      "source_quote": "항구 동쪽 끝 절벽 위에 있다.",
+      "core": false,
+      "group": "expect",
+      "entry": "west-cliff"
+     },
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": false,
+      "group": "expect",
+      "entry": "light-at-two"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "light-at-two",
+      "verdict": "CONFLICT"
+     },
+     {
+      "quote": "노을이 지는 쪽, 항구 서쪽 끝 절벽 위의 흰 등대로 노아는 걸음을 옮겼다.",
+      "source": "lighthouse",
+      "source_quote": "항구 동쪽 끝 절벽 위에 있다.",
+      "core": false,
+      "group": "expect",
+      "entry": "west-cliff",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "light-at-two",
+      "confidence": "HIGH",
+      "explanation": "〈흰 등대〉 설정은 등대의 불이 매일 밤 자정에 꺼진다고 정해 두었어요. 그런데 2화에서 새벽 두 시에도 흰 등대의 불이 환하게 타오른다고 나와요. 자정에 꺼진 불이 새벽 두 시까지 계속 타오를 수는 없고, 그 사이에 다시 불을 켰다는 사건이나 이유도 제시되지 않아요.",
+      "quote_focus": "여전히 환하게 타오르고 있었다",
+      "source_focus": "매일 밤 자정에 꺼진다"
+     },
+     {
+      "quote": "노을이 지는 쪽, 항구 서쪽 끝 절벽 위의 흰 등대로 노아는 걸음을 옮겼다.",
+      "source": "lighthouse",
+      "source_quote": "항구 동쪽 끝 절벽 위에 있다.",
+      "core": false,
+      "group": "expect",
+      "entry": "west-cliff",
+      "confidence": "HIGH",
+      "explanation": "‘흰 등대’ 설정은 등대가 항구 동쪽 끝 절벽 위에 있다고 정해 두었어요. 그런데 2화에서 노아는 항구 서쪽 끝 절벽 위의 흰 등대로 걸음을 옮겨요. 같은 흰 등대가 항구의 동쪽 끝과 서쪽 끝에 동시에 있을 수 없고, 그 위치가 바뀌었거나 서쪽에 다른 등대가 있다는 내용도 나오지 않아요.",
+      "quote_focus": "항구 서쪽 끝",
+      "source_focus": "항구 동쪽 끝"
+     }
+    ],
+    "seconds": 38.0,
+    "usage": {
+     "input_tokens": 4070,
+     "cached_tokens": 1028,
+     "cache_write_tokens": 2353,
+     "output_tokens": 1127,
+     "reasoning_tokens": 438
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "light-at-two"
+     },
+     {
+      "quote": "노을이 지는 쪽, 항구 서쪽 끝 절벽 위의 흰 등대로 노아는 걸음을 옮겼다.",
+      "source": "lighthouse",
+      "source_quote": "항구 동쪽 끝 절벽 위에 있다.",
+      "core": false,
+      "group": "expect",
+      "entry": "west-cliff"
+     },
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": false,
+      "group": "expect",
+      "entry": "light-at-two"
+     }
+    ],
+    "unverified": 1,
+    "judged": [
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "light-at-two",
+      "verdict": "CONFLICT"
+     },
+     {
+      "quote": "노을이 지는 쪽, 항구 서쪽 끝 절벽 위의 흰 등대로 노아는 걸음을 옮겼다.",
+      "source": "lighthouse",
+      "source_quote": "항구 동쪽 끝 절벽 위에 있다.",
+      "core": false,
+      "group": "expect",
+      "entry": "west-cliff",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "새벽 두 시, 흰 등대의 불은 여전히 환하게 타오르고 있었다.",
+      "source": "lighthouse",
+      "source_quote": "등대의 불은 매일 밤 자정에 꺼진다.",
+      "core": true,
+      "group": "expect",
+      "entry": "light-at-two",
+      "confidence": "HIGH",
+      "explanation": "「흰 등대」 설정은 등대의 불이 매일 밤 자정에 꺼진다고 정해 두었어요. 그런데 2화에서 새벽 두 시에도 흰 등대의 불이 환하게 타오르고 있어요. 자정에 꺼진 불이 두 시간 뒤 다시 켜졌다는 설명이나 장면이 없어서, 두 내용은 함께 성립할 수 없어요.",
+      "quote_focus": "여전히 환하게 타오르고 있었다",
+      "source_focus": "매일 밤 자정에 꺼진다"
+     },
+     {
+      "quote": "노을이 지는 쪽, 항구 서쪽 끝 절벽 위의 흰 등대로 노아는 걸음을 옮겼다.",
+      "source": "lighthouse",
+      "source_quote": "항구 동쪽 끝 절벽 위에 있다.",
+      "core": false,
+      "group": "expect",
+      "entry": "west-cliff",
+      "confidence": "HIGH",
+      "explanation": "‘흰 등대’ 설정은 등대가 항구 동쪽 끝 절벽 위에 있다고 정해 두었어요. 그런데 2화에서 노아는 항구 서쪽 끝 절벽 위의 흰 등대로 걸어가요. 같은 등대가 항구의 동쪽 끝과 서쪽 끝에 동시에 있을 수는 없고, 위치가 바뀌었거나 서쪽 끝에도 등대가 있다는 내용은 원고에 나오지 않아요.",
+      "quote_focus": "항구 서쪽 끝 절벽 위",
+      "source_focus": "항구 동쪽 끝"
+     }
+    ],
+    "seconds": 38.5,
+    "usage": {
+     "input_tokens": 4063,
+     "cached_tokens": 1028,
+     "cache_write_tokens": 2346,
+     "output_tokens": 952,
+     "reasoning_tokens": 277
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "west-cliff": 2,
+    "light-at-two": 3
+   },
+   "found_by_finder": {
+    "west-cliff": 2,
+    "light-at-two": 3
+   },
+   "traps": {
+    "stairs": 0
+   },
+   "extras": {},
+   "agreement": 0.67
+  }
+ },
+ "appearance": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "허리까지 내려오는 은발을 쓸어 넘기며 유나가 웃었다.",
+      "source": "yuna",
+      "source_quote": "열일곱 살 고등학생. 검은 단발머리.",
+      "core": false,
+      "group": "expect",
+      "entry": "long-silver-hair"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "허리까지 내려오는 은발을 쓸어 넘기며 유나가 웃었다.",
+      "source": "yuna",
+      "source_quote": "열일곱 살 고등학생. 검은 단발머리.",
+      "core": false,
+      "group": "expect",
+      "entry": "long-silver-hair",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "허리까지 내려오는 은발을 쓸어 넘기며 유나가 웃었다.",
+      "source": "yuna",
+      "source_quote": "열일곱 살 고등학생. 검은 단발머리.",
+      "core": false,
+      "group": "expect",
+      "entry": "long-silver-hair",
+      "confidence": "HIGH",
+      "explanation": "「유나」 설정은 유나가 검은 단발머리인 열일곱 살 고등학생이라고 정해 두었어요. 그런데 2화에서는 유나의 머리가 허리까지 내려오는 은발이라고 나와요. 머리색과 길이가 모두 달라 두 묘사는 함께 성립할 수 없고, 머리를 염색하거나 길게 바꾸었다는 설명도 원고에 없어요.",
+      "quote_focus": "허리까지 내려오는 은발",
+      "source_focus": "검은 단발머리"
+     }
+    ],
+    "seconds": 39.3,
+    "usage": {
+     "input_tokens": 2084,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1100,
+     "output_tokens": 482,
+     "reasoning_tokens": 221
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "허리까지 내려오는 은발을 쓸어 넘기며 유나가 웃었다.",
+      "source": "yuna",
+      "source_quote": "열일곱 살 고등학생. 검은 단발머리.",
+      "core": false,
+      "group": "expect",
+      "entry": "long-silver-hair"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "허리까지 내려오는 은발을 쓸어 넘기며 유나가 웃었다.",
+      "source": "yuna",
+      "source_quote": "열일곱 살 고등학생. 검은 단발머리.",
+      "core": false,
+      "group": "expect",
+      "entry": "long-silver-hair",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "허리까지 내려오는 은발을 쓸어 넘기며 유나가 웃었다.",
+      "source": "yuna",
+      "source_quote": "열일곱 살 고등학생. 검은 단발머리.",
+      "core": false,
+      "group": "expect",
+      "entry": "long-silver-hair",
+      "confidence": "HIGH",
+      "explanation": "‘유나’ 인물 설정은 유나가 검은 단발머리라고 정해 두었어요. 그런데 2화에서 유나는 허리까지 내려오는 은발로 묘사돼요. 같은 시점의 유나가 검은 단발머리이면서 허리까지 내려오는 은발일 수는 없고, 머리색이나 길이가 달라진 까닭도 원고에 나오지 않아요.",
+      "quote_focus": "허리까지 내려오는 은발",
+      "source_focus": "검은 단발머리"
+     }
+    ],
+    "seconds": 37.7,
+    "usage": {
+     "input_tokens": 2089,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1105,
+     "output_tokens": 332,
+     "reasoning_tokens": 68
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "허리까지 내려오는 은발을 쓸어 넘기며 유나가 웃었다.",
+      "source": "yuna",
+      "source_quote": "열일곱 살 고등학생. 검은 단발머리.",
+      "core": false,
+      "group": "expect",
+      "entry": "long-silver-hair"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "허리까지 내려오는 은발을 쓸어 넘기며 유나가 웃었다.",
+      "source": "yuna",
+      "source_quote": "열일곱 살 고등학생. 검은 단발머리.",
+      "core": false,
+      "group": "expect",
+      "entry": "long-silver-hair",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "허리까지 내려오는 은발을 쓸어 넘기며 유나가 웃었다.",
+      "source": "yuna",
+      "source_quote": "열일곱 살 고등학생. 검은 단발머리.",
+      "core": false,
+      "group": "expect",
+      "entry": "long-silver-hair",
+      "confidence": "HIGH",
+      "explanation": "‘유나’ 설정은 유나가 검은 단발머리인 열일곱 살 학생이라고 정해 두었어요. 그런데 2화 옥상 장면에서 유나는 허리까지 내려오는 은발을 쓸어 넘겨요. 검은 단발과 허리까지 오는 은발은 같은 시점의 머리 모양과 색으로 함께 성립할 수 없어요. 머리색이나 길이가 바뀌었다는 계기나 설명은 제시되지 않았어요.",
+      "quote_focus": "허리까지 내려오는 은발",
+      "source_focus": "검은 단발머리"
+     }
+    ],
+    "seconds": 40.3,
+    "usage": {
+     "input_tokens": 2087,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1103,
+     "output_tokens": 363,
+     "reasoning_tokens": 85
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "long-silver-hair": 3
+   },
+   "found_by_finder": {
+    "long-silver-hair": 3
+   },
+   "traps": {
+    "mole": 0,
+    "birthday": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "clean-exception": {
+  "runs": [
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 39.1,
+    "usage": {
+     "input_tokens": 1715,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1052,
+     "output_tokens": 70,
+     "reasoning_tokens": 37
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 39.2,
+    "usage": {
+     "input_tokens": 1715,
+     "cached_tokens": 1052,
+     "cache_write_tokens": 0,
+     "output_tokens": 70,
+     "reasoning_tokens": 37
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 39.6,
+    "usage": {
+     "input_tokens": 1715,
+     "cached_tokens": 1052,
+     "cache_write_tokens": 0,
+     "output_tokens": 87,
+     "reasoning_tokens": 54
+    }
+   }
+  ],
+  "score": {
+   "expected": {},
+   "found_by_finder": {},
+   "traps": {
+    "permitted-night": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "seal-explained": {
+  "runs": [
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 40.7,
+    "usage": {
+     "input_tokens": 1027,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1024,
+     "output_tokens": 96,
+     "reasoning_tokens": 80
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 41.7,
+    "usage": {
+     "input_tokens": 1027,
+     "cached_tokens": 1024,
+     "cache_write_tokens": 0,
+     "output_tokens": 95,
+     "reasoning_tokens": 79
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 41.7,
+    "usage": {
+     "input_tokens": 1027,
+     "cached_tokens": 1024,
+     "cache_write_tokens": 0,
+     "output_tokens": 79,
+     "reasoning_tokens": 63
+    }
+   }
+  ],
+  "score": {
+   "expected": {},
+   "found_by_finder": {},
+   "traps": {
+    "royal-blood": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "seal-unexplained": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "테스는 신전 제단에 손을 대는 것만으로 봉인을 풀고 왕의 검을 뽑아 들었다.",
+      "source": "seal",
+      "source_quote": "북쪽 신전의 봉인은 왕족의 피로만 풀린다.",
+      "core": false,
+      "group": "expect",
+      "entry": "commoner-seal"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "테스는 신전 제단에 손을 대는 것만으로 봉인을 풀고 왕의 검을 뽑아 들었다.",
+      "source": "seal",
+      "source_quote": "북쪽 신전의 봉인은 왕족의 피로만 풀린다.",
+      "core": false,
+      "group": "expect",
+      "entry": "commoner-seal",
+      "verdict": "INSUFFICIENT"
+     }
+    ],
+    "findings": [],
+    "seconds": 48.2,
+    "usage": {
+     "input_tokens": 2155,
+     "cached_tokens": 0,
+     "cache_write_tokens": 2149,
+     "output_tokens": 593,
+     "reasoning_tokens": 348
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "테스는 신전 제단에 손을 대는 것만으로 봉인을 풀고 왕의 검을 뽑아 들었다.",
+      "source": "seal",
+      "source_quote": "북쪽 신전의 봉인은 왕족의 피로만 풀린다.",
+      "core": false,
+      "group": "expect",
+      "entry": "commoner-seal"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "테스는 신전 제단에 손을 대는 것만으로 봉인을 풀고 왕의 검을 뽑아 들었다.",
+      "source": "seal",
+      "source_quote": "북쪽 신전의 봉인은 왕족의 피로만 풀린다.",
+      "core": false,
+      "group": "expect",
+      "entry": "commoner-seal",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "테스는 신전 제단에 손을 대는 것만으로 봉인을 풀고 왕의 검을 뽑아 들었다.",
+      "source": "seal",
+      "source_quote": "북쪽 신전의 봉인은 왕족의 피로만 풀린다.",
+      "core": false,
+      "group": "expect",
+      "entry": "commoner-seal",
+      "confidence": "HIGH",
+      "explanation": "‘북쪽 신전의 봉인’ 설정은 봉인이 왕족의 피로만 풀린다고 정해 두었어요. 그런데 2화에서는 테스가 제단에 손을 대는 것만으로 봉인을 풀고 왕의 검을 뽑아요. 테스가 왕족의 피를 지녔다는 내용이나 다른 해제 원인이 제시되지 않아, 두 내용은 함께 성립할 수 없어요.",
+      "quote_focus": "손을 대는 것만으로 봉인을 풀고",
+      "source_focus": "왕족의 피로만"
+     }
+    ],
+    "seconds": 47.2,
+    "usage": {
+     "input_tokens": 2161,
+     "cached_tokens": 1025,
+     "cache_write_tokens": 1130,
+     "output_tokens": 491,
+     "reasoning_tokens": 196
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "테스는 신전 제단에 손을 대는 것만으로 봉인을 풀고 왕의 검을 뽑아 들었다.",
+      "source": "seal",
+      "source_quote": "북쪽 신전의 봉인은 왕족의 피로만 풀린다.",
+      "core": false,
+      "group": "expect",
+      "entry": "commoner-seal"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "테스는 신전 제단에 손을 대는 것만으로 봉인을 풀고 왕의 검을 뽑아 들었다.",
+      "source": "seal",
+      "source_quote": "북쪽 신전의 봉인은 왕족의 피로만 풀린다.",
+      "core": false,
+      "group": "expect",
+      "entry": "commoner-seal",
+      "verdict": "INSUFFICIENT"
+     }
+    ],
+    "findings": [],
+    "seconds": 46.6,
+    "usage": {
+     "input_tokens": 2153,
+     "cached_tokens": 1025,
+     "cache_write_tokens": 1122,
+     "output_tokens": 370,
+     "reasoning_tokens": 156
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "commoner-seal": 1
+   },
+   "found_by_finder": {
+    "commoner-seal": 3
+   },
+   "traps": {},
+   "extras": {},
+   "agreement": 0.33
+  }
+ },
+ "english-letters": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "When the courier left, Mira read the sealed letter aloud to the whole tavern, word by word.",
+      "source": "mira-en",
+      "source_quote": "A tavern girl who cannot read.",
+      "core": false,
+      "group": "expect",
+      "entry": "reads-aloud"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "When the courier left, Mira read the sealed letter aloud to the whole tavern, word by word.",
+      "source": "mira-en",
+      "source_quote": "A tavern girl who cannot read.",
+      "core": false,
+      "group": "expect",
+      "entry": "reads-aloud",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "When the courier left, Mira read the sealed letter aloud to the whole tavern, word by word.",
+      "source": "mira-en",
+      "source_quote": "A tavern girl who cannot read.",
+      "core": false,
+      "group": "expect",
+      "entry": "reads-aloud",
+      "confidence": "HIGH",
+      "explanation": "The “Mira” character document establishes that Mira cannot read and was never taught letters. In Chapter 2, she reads the courier’s sealed letter aloud, word by word. Those facts cannot both be true at that point, and the chapter gives no explanation for how she can read the letter.",
+      "quote_focus": "read the sealed letter aloud",
+      "source_focus": "cannot read"
+     }
+    ],
+    "seconds": 46.2,
+    "usage": {
+     "input_tokens": 2044,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1074,
+     "output_tokens": 277,
+     "reasoning_tokens": 71
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "When the courier left, Mira read the sealed letter aloud to the whole tavern, word by word.",
+      "source": "mira-en",
+      "source_quote": "A tavern girl who cannot read.",
+      "core": false,
+      "group": "expect",
+      "entry": "reads-aloud"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "When the courier left, Mira read the sealed letter aloud to the whole tavern, word by word.",
+      "source": "mira-en",
+      "source_quote": "A tavern girl who cannot read.",
+      "core": false,
+      "group": "expect",
+      "entry": "reads-aloud",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "When the courier left, Mira read the sealed letter aloud to the whole tavern, word by word.",
+      "source": "mira-en",
+      "source_quote": "A tavern girl who cannot read.",
+      "core": false,
+      "group": "expect",
+      "entry": "reads-aloud",
+      "confidence": "HIGH",
+      "explanation": "The Mira character document establishes that she cannot read and was never taught letters. In Chapter 2, after the courier leaves, she reads the sealed letter aloud to the whole tavern, word by word. Those facts cannot both be true at that point, and the chapter shows no reason she can read the letter despite the established inability.",
+      "quote_focus": "read the sealed letter aloud",
+      "source_focus": "cannot read"
+     }
+    ],
+    "seconds": 47.3,
+    "usage": {
+     "input_tokens": 2042,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1072,
+     "output_tokens": 315,
+     "reasoning_tokens": 104
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "When the courier left, Mira read the sealed letter aloud to the whole tavern, word by word.",
+      "source": "mira-en",
+      "source_quote": "A tavern girl who cannot read.",
+      "core": false,
+      "group": "expect",
+      "entry": "reads-aloud"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "When the courier left, Mira read the sealed letter aloud to the whole tavern, word by word.",
+      "source": "mira-en",
+      "source_quote": "A tavern girl who cannot read.",
+      "core": false,
+      "group": "expect",
+      "entry": "reads-aloud",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "When the courier left, Mira read the sealed letter aloud to the whole tavern, word by word.",
+      "source": "mira-en",
+      "source_quote": "A tavern girl who cannot read.",
+      "core": false,
+      "group": "expect",
+      "entry": "reads-aloud",
+      "confidence": "HIGH",
+      "explanation": "The “Mira” character document establishes that Mira cannot read and was never taught her letters. In Chapter 2, she reads the sealed letter aloud word by word to the tavern. Those facts cannot both hold at this point, and the chapter gives no reason she can read the letter despite the established setting.",
+      "quote_focus": "read the sealed letter aloud",
+      "source_focus": "cannot read"
+     }
+    ],
+    "seconds": 47.9,
+    "usage": {
+     "input_tokens": 2056,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1086,
+     "output_tokens": 368,
+     "reasoning_tokens": 147
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "reads-aloud": 3
+   },
+   "found_by_finder": {
+    "reads-aloud": 3
+   },
+   "traps": {
+    "pretends": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "glass-garden-8-sea": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "레나는 은빛 항구에서 작은 배를 타고 처음으로 바다에 나갔다.",
+      "source": "lena",
+      "source_quote": "바다를 몹시 두려워해 배에 오르지 않는다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-boards"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "레나는 은빛 항구에서 작은 배를 타고 처음으로 바다에 나갔다.",
+      "source": "lena",
+      "source_quote": "바다를 몹시 두려워해 배에 오르지 않는다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-boards",
+      "verdict": "CHANGED_OVER_TIME"
+     }
+    ],
+    "findings": [],
+    "seconds": 60.7,
+    "usage": {
+     "input_tokens": 14272,
+     "cached_tokens": 2083,
+     "cache_write_tokens": 12183,
+     "output_tokens": 986,
+     "reasoning_tokens": 681
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "레나는 은빛 항구에서 작은 배를 타고 처음으로 바다에 나갔다.",
+      "source": "lena",
+      "source_quote": "바다를 몹시 두려워해 배에 오르지 않는다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-boards"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "레나는 은빛 항구에서 작은 배를 타고 처음으로 바다에 나갔다.",
+      "source": "lena",
+      "source_quote": "바다를 몹시 두려워해 배에 오르지 않는다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-boards",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "레나는 은빛 항구에서 작은 배를 타고 처음으로 바다에 나갔다.",
+      "source": "lena",
+      "source_quote": "바다를 몹시 두려워해 배에 오르지 않는다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-boards",
+      "confidence": "HIGH",
+      "explanation": "‘레나 아르벨’ 설정은 레나가 바다를 몹시 두려워해 배에 오르지 않는다고 정해 두었어요. 그런데 8화에서는 레나가 은빛 항구에서 작은 배를 타고 바다에 나가요. 배를 타지 않는다는 설정과 실제 승선 장면은 같은 시점에 함께 성립할 수 없어요. 레나가 두려움을 극복했거나 마음을 바꾸게 된 계기는 원고에 나오지 않아요.",
+      "quote_focus": "작은 배를 타고 처음으로 바다에 나갔다",
+      "source_focus": "배에 오르지 않는다"
+     }
+    ],
+    "seconds": 53.6,
+    "usage": {
+     "input_tokens": 14273,
+     "cached_tokens": 11914,
+     "cache_write_tokens": 2353,
+     "output_tokens": 486,
+     "reasoning_tokens": 178
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "레나는 은빛 항구에서 작은 배를 타고 처음으로 바다에 나갔다.",
+      "source": "lena",
+      "source_quote": "바다를 몹시 두려워해 배에 오르지 않는다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-boards"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "레나는 은빛 항구에서 작은 배를 타고 처음으로 바다에 나갔다.",
+      "source": "lena",
+      "source_quote": "바다를 몹시 두려워해 배에 오르지 않는다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-boards",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "레나는 은빛 항구에서 작은 배를 타고 처음으로 바다에 나갔다.",
+      "source": "lena",
+      "source_quote": "바다를 몹시 두려워해 배에 오르지 않는다.",
+      "core": false,
+      "group": "expect",
+      "entry": "lena-boards",
+      "confidence": "HIGH",
+      "explanation": "‘레나 아르벨’ 설정은 레나가 바다를 몹시 두려워해 배에 오르지 않는다고 정해 두었어요. 그런데 8화에서는 서윤이 지켜보는 가운데 레나가 작은 배에 올라 처음 바다로 나가요. 배를 탈 수 없다는 설정과 실제로 배를 타는 행동은 이 시점에 함께 성립할 수 없어요. 레나가 두려움을 극복하게 된 계기나 배에 오를 수밖에 없는 사정은 원고에 나오지 않아요.",
+      "quote_focus": "작은 배를 타고 처음으로 바다에 나갔다",
+      "source_focus": "배에 오르지 않는다"
+     }
+    ],
+    "seconds": 62.3,
+    "usage": {
+     "input_tokens": 14277,
+     "cached_tokens": 13997,
+     "cache_write_tokens": 274,
+     "output_tokens": 1121,
+     "reasoning_tokens": 798
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "lena-boards": 2
+   },
+   "found_by_finder": {
+    "lena-boards": 3
+   },
+   "traps": {},
+   "extras": {},
+   "agreement": 0.33
+  }
+ },
+ "spring-table-18-years": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "태오는 다른 식당의 스카우트 제안을 받았지만 봄날에서 5년을 함께했다며 거절했다.",
+      "source": "teo",
+      "source_quote": "봄날에서 10년째 일했다.",
+      "core": false,
+      "group": "expect",
+      "entry": "five-years"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "태오는 다른 식당의 스카우트 제안을 받았지만 봄날에서 5년을 함께했다며 거절했다.",
+      "source": "teo",
+      "source_quote": "봄날에서 10년째 일했다.",
+      "core": false,
+      "group": "expect",
+      "entry": "five-years",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "태오는 다른 식당의 스카우트 제안을 받았지만 봄날에서 5년을 함께했다며 거절했다.",
+      "source": "teo",
+      "source_quote": "봄날에서 10년째 일했다.",
+      "core": false,
+      "group": "expect",
+      "entry": "five-years",
+      "confidence": "HIGH",
+      "explanation": "인물 설정 「박태오」는 태오가 봄날에서 10년째 일했다고 정해 두었어요. 그런데 18화에서는 스카우트를 거절하는 이유로 봄날에서 5년을 함께했다고 서술해요. 같은 시점에 태오의 근무 기간이 10년째이면서 5년이라고 할 수는 없고, 그 사이 근무 기간이 달라졌거나 이 말을 설명할 사정도 나오지 않아요.",
+      "quote_focus": "5년을 함께했다며",
+      "source_focus": "10년째 일했다"
+     }
+    ],
+    "seconds": 55.0,
+    "usage": {
+     "input_tokens": 27522,
+     "cached_tokens": 0,
+     "cache_write_tokens": 27516,
+     "output_tokens": 494,
+     "reasoning_tokens": 212
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "태오는 다른 식당의 스카우트 제안을 받았지만 봄날에서 5년을 함께했다며 거절했다.",
+      "source": "teo",
+      "source_quote": "봄날의 요리사. 봄날에서 10년째 일했다.",
+      "core": false,
+      "group": "expect",
+      "entry": "five-years"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "태오는 다른 식당의 스카우트 제안을 받았지만 봄날에서 5년을 함께했다며 거절했다.",
+      "source": "teo",
+      "source_quote": "봄날의 요리사. 봄날에서 10년째 일했다.",
+      "core": false,
+      "group": "expect",
+      "entry": "five-years",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "태오는 다른 식당의 스카우트 제안을 받았지만 봄날에서 5년을 함께했다며 거절했다.",
+      "source": "teo",
+      "source_quote": "봄날의 요리사. 봄날에서 10년째 일했다.",
+      "core": false,
+      "group": "expect",
+      "entry": "five-years",
+      "confidence": "HIGH",
+      "explanation": "‘박태오’ 설정은 태오가 봄날에서 10년째 일했다고 정해 두었어요. 그런데 18화에서는 스카우트 제안을 거절한 이유로 봄날에서 5년을 함께했다고 말해요. 같은 시점의 태오가 봄날에서 일한 기간이 10년째이면서 5년일 수는 없고, 그 사이에 기간을 다르게 설명할 만한 사건이나 이유도 나오지 않아요.",
+      "quote_focus": "5년을 함께했다며",
+      "source_focus": "10년째"
+     }
+    ],
+    "seconds": 56.0,
+    "usage": {
+     "input_tokens": 27534,
+     "cached_tokens": 27320,
+     "cache_write_tokens": 208,
+     "output_tokens": 459,
+     "reasoning_tokens": 167
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "태오는 다른 식당의 스카우트 제안을 받았지만 봄날에서 5년을 함께했다며 거절했다.",
+      "source": "teo",
+      "source_quote": "봄날의 요리사. 봄날에서 10년째 일했다.",
+      "core": false,
+      "group": "expect",
+      "entry": "five-years"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "태오는 다른 식당의 스카우트 제안을 받았지만 봄날에서 5년을 함께했다며 거절했다.",
+      "source": "teo",
+      "source_quote": "봄날의 요리사. 봄날에서 10년째 일했다.",
+      "core": false,
+      "group": "expect",
+      "entry": "five-years",
+      "verdict": "CONFLICT"
+     }
+    ],
+    "findings": [
+     {
+      "quote": "태오는 다른 식당의 스카우트 제안을 받았지만 봄날에서 5년을 함께했다며 거절했다.",
+      "source": "teo",
+      "source_quote": "봄날의 요리사. 봄날에서 10년째 일했다.",
+      "core": false,
+      "group": "expect",
+      "entry": "five-years",
+      "confidence": "HIGH",
+      "explanation": "‘박태오’ 설정은 태오가 봄날에서 10년째 일했다고 정해 두었어요. 그런데 18화에서 태오는 스카우트 제안을 거절하며 봄날에서 함께한 시간이 5년이라고 말해요. 두 기간은 이 장면에서 함께 성립할 수 없고, 태오가 봄날을 떠났다가 돌아왔거나 근속 기간을 다르게 계산한다는 내용도 나오지 않아요.",
+      "quote_focus": "5년을 함께했다며",
+      "source_focus": "10년째 일했다"
+     }
+    ],
+    "seconds": 55.8,
+    "usage": {
+     "input_tokens": 27528,
+     "cached_tokens": 27320,
+     "cache_write_tokens": 202,
+     "output_tokens": 435,
+     "reasoning_tokens": 152
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "five-years": 3
+   },
+   "found_by_finder": {
+    "five-years": 3
+   },
+   "traps": {},
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "fog-harbor-13-tea": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "나왔습니다. 부검 결과 사인은 독이었고 독은 선장의 찻잔에서 나왔다.",
+      "source": "bae",
+      "source_quote": "해풍호 선장. 커피만 마시고 차는 입에 대지 않는다.",
+      "core": false,
+      "group": "may",
+      "entry": "teacup"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "나왔습니다. 부검 결과 사인은 독이었고 독은 선장의 찻잔에서 나왔다.",
+      "source": "bae",
+      "source_quote": "해풍호 선장. 커피만 마시고 차는 입에 대지 않는다.",
+      "core": false,
+      "group": "may",
+      "entry": "teacup",
+      "verdict": "INSUFFICIENT"
+     }
+    ],
+    "findings": [],
+    "seconds": 60.5,
+    "usage": {
+     "input_tokens": 19163,
+     "cached_tokens": 0,
+     "cache_write_tokens": 19157,
+     "output_tokens": 475,
+     "reasoning_tokens": 221
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "나왔습니다. 부검 결과 사인은 독이었고 독은 선장의 찻잔에서 나왔다.",
+      "source": "bae",
+      "source_quote": "해풍호 선장. 커피만 마시고 차는 입에 대지 않는다.",
+      "core": false,
+      "group": "may",
+      "entry": "teacup"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "나왔습니다. 부검 결과 사인은 독이었고 독은 선장의 찻잔에서 나왔다.",
+      "source": "bae",
+      "source_quote": "해풍호 선장. 커피만 마시고 차는 입에 대지 않는다.",
+      "core": false,
+      "group": "may",
+      "entry": "teacup",
+      "verdict": "INSUFFICIENT"
+     }
+    ],
+    "findings": [],
+    "seconds": 64.7,
+    "usage": {
+     "input_tokens": 19167,
+     "cached_tokens": 18949,
+     "cache_write_tokens": 212,
+     "output_tokens": 658,
+     "reasoning_tokens": 420
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "“나왔습니다. 부검 결과 사인은 독이었고 독은 선장의 찻잔에서 나왔다.”",
+      "source": "bae",
+      "source_quote": "해풍호 선장. 커피만 마시고 차는 입에 대지 않는다.",
+      "core": false,
+      "group": "may",
+      "entry": "teacup"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "나왔습니다. 부검 결과 사인은 독이었고 독은 선장의 찻잔에서 나왔다.",
+      "source": "bae",
+      "source_quote": "해풍호 선장. 커피만 마시고 차는 입에 대지 않는다.",
+      "core": false,
+      "group": "may",
+      "entry": "teacup",
+      "verdict": "INSUFFICIENT"
+     }
+    ],
+    "findings": [],
+    "seconds": 64.9,
+    "usage": {
+     "input_tokens": 19166,
+     "cached_tokens": 18949,
+     "cache_write_tokens": 211,
+     "output_tokens": 650,
+     "reasoning_tokens": 366
+    }
+   }
+  ],
+  "score": {
+   "expected": {},
+   "found_by_finder": {},
+   "traps": {},
+   "extras": {},
+   "agreement": 1.0
+  }
+ }
+}

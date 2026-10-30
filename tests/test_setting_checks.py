@@ -4,6 +4,7 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
+from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import psycopg
@@ -20,8 +21,9 @@ from app.setting_check.findings import (
     dedupe,
     fingerprint,
     judged,
+    parse_candidates,
 )
-from app.setting_check.prompts import JUDGE_SCHEMA
+from app.setting_check.prompts import JUDGE_SCHEMA, judge_input
 from app.settings import Settings
 from tests.support import (
     CH1,
@@ -49,7 +51,7 @@ FACT = "북쪽 문은 낡은 열쇠 없이는 열리지 않는다."
 REASON = "12화에서 열쇠를 미리 줬어요"
 LENA_EXPLANATION = "‘레나 아르벨’ 설정은 레나의 눈을 검은색으로 정해 두었어요. 그런데 3화에서 레나는 은빛 눈으로 정원을 봐요. 눈 색이 바뀌는 장면이 앞 회차에 없어서 두 내용이 함께 성립하지 않아요."
 
-CORE = [
+BY_SETTING = [
     candidate(
         GREENHOUSE,
         FACT,
@@ -197,7 +199,7 @@ def make_env(database, checker: FakeChecker | None = None, **overrides):
     user, project = uuid4(), uuid4()
     content = FakeContent(user, project)
     story(content)
-    checker = checker or FakeChecker(WHOLE, CORE, VERDICTS)
+    checker = checker or FakeChecker(WHOLE, BY_SETTING, VERDICTS)
     settings = Settings(
         db_host=database["host"],
         db_port=str(database["port"]),
@@ -284,17 +286,63 @@ def test_quotes_must_occur_and_kind_and_core_come_from_the_source():
     assert reading.verify(make(CH1, "서윤은", "레나")) is None
 
 
-def test_duplicates_share_a_source_and_an_overlapping_quote():
-    first = Candidate("SETTING", GREENHOUSE, FACT, "서윤은 문을 밀었다.", "", "")
-    same_fact = replace(first, quote="등불을 내려놓고")
-    same_sentence = replace(first, source_quote="유리 지붕이 금 간 온실.")
-    elsewhere = replace(first, source_id=LENA)
-    unrelated = replace(first, quote="등불", source_quote="유리 지붕")
+def test_the_judge_reads_the_earlier_chapters_a_candidate_relies_on():
+    content = FakeContent(uuid4(), uuid4())
+    story(content)
+    docs = content.docs
+    reading = Reading(docs[CH3], (docs[CH1], docs[CH2]), (docs[LENA], docs[GREENHOUSE]))
+    item = {
+        **candidate(
+            LENA, "레나의 눈은 검은색이다.", "레나는 은빛 눈으로 정원을 보았다."
+        ),
+        "related_ids": [short(CH1), short(LENA), "nope", short(CH1), short(CH2)],
+    }
+    (found,) = parse_candidates({"candidates": [item]}, reading.by_short, False)
 
-    assert dedupe([first, same_fact, same_sentence, elsewhere, unrelated]) == [
+    assert found.related_ids == (CH1, LENA, CH2)
+
+    def blocks(item):
+        return [
+            block["text"]
+            for block in judge_input(reading, item, [], "ko")[0]["content"]
+        ]
+
+    first, rest, _ = blocks(found)
+    assert first.startswith("<settings>") and CHAPTER in first
+    assert docs[CH1].body_text in first and docs[CH2].body_text in first
+    assert "<related>" not in rest
+    assert rest.count("레나의 눈은 검은색이다.") == 1
+
+    with patch(
+        "app.setting_check.prompts.JUDGE_EARLIER_CHARS", len(docs[CH2].body_text)
+    ):
+        first, rest, _ = blocks(found)
+    assert docs[CH2].body_text in first and docs[CH1].body_text not in first
+    assert "<related>" in rest and docs[CH1].body_text in rest
+
+    (alone,) = parse_candidates(
+        {"candidates": [candidate(LENA, "a", "b")]}, reading.by_short, False
+    )
+    with patch("app.setting_check.prompts.JUDGE_EARLIER_CHARS", 0):
+        first, rest, _ = blocks(alone)
+    assert alone.related_ids == ()
+    assert "<earlier/>" in first and "<related>" not in rest
+
+
+def test_duplicates_are_one_chapter_place_against_one_source():
+    first = Candidate("SETTING", GREENHOUSE, FACT, "서윤은 문을 밀었다.", "", "")
+    same_place = replace(first, quote="문을 밀었다", source_quote="유리 지붕")
+    other_place = replace(first, quote="등불을 내려놓고")
+    elsewhere = replace(first, source_id=LENA)
+
+    assert dedupe([first, same_place, other_place, elsewhere]) == [
         first,
+        other_place,
         elsewhere,
-        unrelated,
+    ]
+    with_chapters = replace(same_place, related_ids=(CH1, CH2))
+    assert dedupe([first, with_chapters, replace(first, related_ids=(CH2,))]) == [
+        replace(first, related_ids=(CH1, CH2))
     ]
 
 
@@ -473,6 +521,9 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
 
     judged = env.checker.judged
     assert len(judged) == 4
+    assert all(
+        "<settings>" in text and "레나의 눈은 검은색이다." in text for text in judged
+    )
     assert not any("이미 열 번" in text for text in judged)
     assert not any("온실의 유리는 붉다" in text for text in judged)
     whole = env.checker.finds["setting_check_candidates"][0]["content"]
@@ -482,9 +533,11 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
     )
     assert '<author locale="en"/>' in whole[2]["text"]
     assert CHAPTER in whole[2]["text"]
-    core = env.checker.finds["setting_check_core_candidates"][0]["content"][0]["text"]
-    assert f'<fact source="{short(GREENHOUSE)}" kind="place"' in core
-    assert env.content.docs[CH1].body_text not in core
+    by_setting = env.checker.finds["setting_check_setting_candidates"][0]["content"]
+    assert f'<document id="{short(GREENHOUSE)}" kind="place"' in by_setting[0]["text"]
+    assert f"<core>{FACT}</core>" in by_setting[0]["text"]
+    assert CHAPTER in by_setting[1]["text"]
+    assert env.content.docs[CH1].body_text not in by_setting[1]["text"]
 
     assert env.query(
         "select status, model, input_tokens, cached_tokens, output_tokens "
@@ -743,11 +796,14 @@ def test_failures_are_recorded_on_the_run(env):
     assert env.check()["failure_code"] == "CONTENT_UNAVAILABLE"
 
 
-def test_without_core_facts_only_the_whole_pass_runs(env):
+def test_without_core_facts_both_passes_run_and_nothing_is_core(env):
     env.content.docs[GREENHOUSE] = replace(env.content.docs[GREENHOUSE], core_facts=())
     run = env.check()
 
-    assert list(env.checker.finds) == ["setting_check_candidates"]
+    assert sorted(env.checker.finds) == [
+        "setting_check_candidates",
+        "setting_check_setting_candidates",
+    ]
     assert run["read"]["core_facts"] == 0
     assert all(not finding["core"] for finding in run["findings"])
 

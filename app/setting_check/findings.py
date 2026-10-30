@@ -70,6 +70,7 @@ class Candidate:
     quote_focus: str | None = None
     source_focus: str | None = None
     explanation: str = ""
+    related_ids: tuple[str, ...] = ()
 
 
 def sentences(*parts: str) -> str:
@@ -81,8 +82,16 @@ def text_of(item: dict[str, Any], key: str) -> str:
     return value if isinstance(value, str) else ""
 
 
+def ids_of(item: dict[str, Any], by_short: dict[str, str]) -> tuple[str, ...]:
+    value = item.get("related_ids")
+    if not isinstance(value, list):
+        return ()
+    found = (by_short.get(alias.strip()) for alias in value if isinstance(alias, str))
+    return tuple(dict.fromkeys(doc_id for doc_id in found if doc_id))[:3]
+
+
 def parse_candidates(
-    value: dict[str, Any], by_short: dict[str, str], core: bool
+    value: dict[str, Any], by_short: dict[str, str], settings_only: bool
 ) -> list[Candidate]:
     items = value.get("candidates")
     if not isinstance(items, list):
@@ -96,13 +105,13 @@ def parse_candidates(
             continue
         found.append(
             Candidate(
-                kind="SETTING" if core else text_of(item, "kind"),
+                kind="SETTING" if settings_only else text_of(item, "kind"),
                 source_id=source,
                 source_quote=text_of(item, "source_quote"),
                 quote=text_of(item, "quote"),
                 summary=collapse(text_of(item, "summary")),
                 direction=collapse(text_of(item, "direction")),
-                core=core,
+                related_ids=ids_of(item, by_short),
             )
         )
     return found
@@ -126,15 +135,20 @@ def judged(candidate: Candidate, value: dict[str, Any]) -> Candidate | None:
 
 
 def same(a: Candidate, b: Candidate) -> bool:
-    return a.source_id == b.source_id and (
-        overlaps(a.quote, b.quote) or overlaps(a.source_quote, b.source_quote)
-    )
+    return a.source_id == b.source_id and overlaps(a.quote, b.quote)
 
 
 def dedupe(candidates: list[Candidate]) -> list[Candidate]:
     kept: list[Candidate] = []
     for candidate in candidates:
-        if not any(same(candidate, other) for other in kept):
+        for index, other in enumerate(kept):
+            if same(candidate, other):
+                related = (*other.related_ids, *candidate.related_ids)
+                kept[index] = replace(
+                    other, related_ids=tuple(dict.fromkeys(related))[:3]
+                )
+                break
+        else:
             kept.append(candidate)
     return kept
 
