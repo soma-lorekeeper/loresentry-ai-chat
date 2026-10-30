@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -10,6 +12,7 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
 from app.errors import ChatFailure
+from app.manuscript import KeyUnavailable, ProjectKeys, Unreadable, unseal
 from app.navigation import Summary
 from app.prompt import Exchange, Question
 from app.text import chat_preview, chat_title, search_text, snippet
@@ -20,6 +23,8 @@ MESSAGE_COLUMNS = (
     "id, session_id, role, content_md, intent, quote, citations, grounding, created_at"
 )
 SEARCH_LIMIT = 50
+
+log = logging.getLogger("ai_chat.store")
 
 
 def iso(value: datetime) -> str:
@@ -90,9 +95,12 @@ def like(term: str) -> str:
 
 
 class Store:
-    def __init__(self, pool: AsyncConnectionPool, stale_seconds: int):
+    def __init__(
+        self, pool: AsyncConnectionPool, stale_seconds: int, keys: ProjectKeys
+    ):
         self.pool = pool
         self.stale_seconds = stale_seconds
+        self.keys = keys
 
     async def create_session(
         self, user_id: UUID, project_id: UUID, title: str
@@ -471,15 +479,49 @@ class Store:
         async with self.pool.connection() as conn:
             rows = await (
                 await conn.execute(
-                    "select document_id, revision_no, summary from document_summaries "
+                    "select document_id, project_id, revision_no, summary, "
+                    "summary_enc, wrapped_key from document_summaries "
                     "where document_id = any(%s::uuid[])",
                     (document_ids,),
                 )
             ).fetchall()
-        return {
-            str(row["document_id"]): Summary(row["revision_no"], row["summary"])
-            for row in rows
-        }
+        if all(row["summary_enc"] is None for row in rows):
+            return {
+                str(row["document_id"]): Summary(row["revision_no"], row["summary"])
+                for row in rows
+            }
+        return await asyncio.to_thread(self.open_summaries, rows)
+
+    def open_summaries(self, rows: list[dict[str, Any]]) -> dict[str, Summary]:
+        keys: dict[tuple[str, bytes], bytes | None] = {}
+        summaries: dict[str, Summary] = {}
+        for row in rows:
+            document, project = str(row["document_id"]), str(row["project_id"])
+            text = row["summary"]
+            if row["summary_enc"] is not None:
+                entry = (project, bytes(row["wrapped_key"]))
+                if entry not in keys:
+                    try:
+                        keys[entry] = self.keys.unwrap(*entry)
+                    except KeyUnavailable as failure:
+                        keys[entry] = None
+                        log.warning(
+                            "summary key unavailable",
+                            extra={"project_id": project, "code": failure.code},
+                        )
+                key = keys[entry]
+                if key is None:
+                    continue
+                try:
+                    text = unseal(key, row["summary_enc"], project, document, "summary")
+                except Unreadable as failure:
+                    log.warning(
+                        "summary unreadable",
+                        extra={"document_id": document, "reason": str(failure)},
+                    )
+                    continue
+            summaries[document] = Summary(row["revision_no"], text)
+        return summaries
 
     async def turn_status(self, turn_id: UUID) -> str | None:
         async with self.pool.connection() as conn:

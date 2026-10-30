@@ -14,6 +14,7 @@ from psycopg_pool import AsyncConnectionPool
 from app import db, logs
 from app.content import ContentClient, ContentSource
 from app.errors import ChatFailure, handle_failure, handle_unexpected, handle_validation
+from app.manuscript import ProjectKeys, kms_client
 from app.model import (
     AnswerModel,
     CheckModel,
@@ -39,6 +40,7 @@ def create_app(
     content: ContentSource | None = None,
     model: AnswerModel | None = None,
     checker: CheckModel | None = None,
+    keys: ProjectKeys | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_environment()
 
@@ -102,7 +104,18 @@ def create_app(
                     if client
                     else UnconfiguredModel(config.openai_model)
                 )
-            store = Store(pool, config.stale_turn_seconds)
+            if keys is None and not config.manuscript_key_id:
+                log.warning(
+                    "MANUSCRIPT_KEY_ID is not set; encrypted summaries are left out"
+                )
+            store = Store(
+                pool,
+                config.stale_turn_seconds,
+                keys
+                or ProjectKeys(
+                    kms_client(config.manuscript_key_region), config.manuscript_key_id
+                ),
+            )
             runner = TurnRunner(store, source, answers, config)
             check_store = CheckStore(pool, config.setting_check_stale_seconds)
             checks = CheckRunner(check_store, source, checks_model, config)

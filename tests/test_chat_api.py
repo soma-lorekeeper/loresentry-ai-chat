@@ -1,3 +1,6 @@
+import asyncio
+import json
+import os
 import threading
 import time
 from contextlib import contextmanager
@@ -9,12 +12,16 @@ from uuid import UUID, uuid4
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from psycopg.rows import dict_row
+from psycopg_pool import AsyncConnectionPool
 from testcontainers.community.postgres import PostgresContainer
 
 from app.main import create_app
+from app.manuscript import ProjectKeys, seal
 from app.model import ModelFailure
 from app.navigation import AnswerCheck, Sufficiency
 from app.settings import Settings
+from app.store import Store
 from tests.support import (
     CH1,
     CH2,
@@ -22,6 +29,7 @@ from tests.support import (
     GREENHOUSE,
     LENA,
     FakeContent,
+    FakeKms,
     FakeModel,
     answer,
     documents,
@@ -110,7 +118,12 @@ class Env:
 
 
 @contextmanager
-def make_env(database, model: FakeModel | None = None, **overrides):
+def make_env(
+    database,
+    model: FakeModel | None = None,
+    keys: ProjectKeys | None = None,
+    **overrides,
+):
     with psycopg.connect(**database, autocommit=True) as conn:
         conn.execute("truncate chat_sessions, chat_usage cascade")
     user, project = uuid4(), uuid4()
@@ -126,7 +139,7 @@ def make_env(database, model: FakeModel | None = None, **overrides):
         cancel_poll_seconds=0.05,
         **overrides,
     )
-    with TestClient(create_app(settings, content, model)) as client:
+    with TestClient(create_app(settings, content, model, keys=keys)) as client:
         yield Env(client, user, project, content, model, database)
 
 
@@ -899,3 +912,104 @@ def test_usage_survives_project_data_deletion_but_not_account_deletion(env):
 
     env.client.delete("/users/me/data", headers=env.headers)
     assert used(env) == 0
+
+
+class Summaries:
+    def __init__(self, database, project: str, kms: FakeKms | None = None):
+        self.database = database
+        self.project = project
+        self.kms = kms or FakeKms()
+        self.key = os.urandom(32)
+        self.wrapped_key = self.kms.wrap(project, self.key)
+        self.keys = ProjectKeys(self.kms, self.kms.key_id)
+        with psycopg.connect(**database, autocommit=True) as conn:
+            conn.execute("truncate document_summaries")
+
+    def insert(self, document: str, summary: str, sealed: bool = True, subject=None):
+        summary_enc = seal(
+            self.key, self.project, subject or document, "summary", summary
+        )
+        with psycopg.connect(**self.database, autocommit=True) as conn:
+            conn.execute(
+                "insert into document_summaries (document_id, project_id, "
+                "revision_no, summary, summary_enc, wrapped_key, fingerprint, model, "
+                "prompt_version) values (%s, %s, 1, %s, %s, %s, '[]', 'm', 'v')",
+                (
+                    document,
+                    self.project,
+                    None if sealed else summary,
+                    summary_enc if sealed else None,
+                    self.wrapped_key if sealed else None,
+                ),
+            )
+
+    def read(self, document_ids: list[str]) -> dict[str, str]:
+        async def run():
+            pool = AsyncConnectionPool(
+                " ".join(f"{name}={value}" for name, value in self.database.items()),
+                kwargs={"row_factory": dict_row, "autocommit": True},
+                open=False,
+            )
+            await pool.open()
+            try:
+                return await Store(pool, 300, self.keys).summaries(document_ids)
+            finally:
+                await pool.close()
+
+        return {
+            document: summary.text for document, summary in asyncio.run(run()).items()
+        }
+
+
+def test_sealed_summaries_are_opened_next_to_plain_ones(database):
+    summaries = Summaries(database, str(uuid4()))
+    summaries.insert(CH1, "서윤이 정원을 본다.", sealed=False)
+    summaries.insert(CH2, "레나가 북쪽 문 앞에 선다.")
+    summaries.insert(CH3, "서윤이 문을 민다.")
+
+    assert summaries.read([CH1, CH2, CH3, LENA]) == {
+        CH1: "서윤이 정원을 본다.",
+        CH2: "레나가 북쪽 문 앞에 선다.",
+        CH3: "서윤이 문을 민다.",
+    }
+    assert len(summaries.kms.calls) == 1
+
+
+def test_summaries_that_do_not_open_are_left_out(database):
+    summaries = Summaries(database, str(uuid4()))
+    summaries.insert(CH1, "서윤이 정원을 본다.", sealed=False)
+    summaries.insert(CH2, "레나가 북쪽 문 앞에 선다.", subject=CH3)
+    summaries.insert(CH3, "서윤이 문을 민다.")
+
+    assert summaries.read([CH1, CH2, CH3]) == {
+        CH1: "서윤이 정원을 본다.",
+        CH3: "서윤이 문을 민다.",
+    }
+
+    summaries.kms.fail_with = "KMSInternalException"
+    summaries.keys = ProjectKeys(summaries.kms, summaries.kms.key_id)
+    calls = len(summaries.kms.calls)
+    assert summaries.read([CH1, CH2, CH3]) == {CH1: "서윤이 정원을 본다."}
+    assert len(summaries.kms.calls) == calls + 1
+
+
+def test_a_turn_sees_sealed_summaries_and_survives_a_kms_failure(database):
+    kms = FakeKms()
+    with make_env(database, keys=ProjectKeys(kms, kms.key_id)) as env:
+        summaries = Summaries(database, str(env.project), kms)
+        summaries.insert(CH2, "레나가 북쪽 문 앞에 선다.", sealed=False)
+        summaries.insert(CH3, "서윤이 등불을 들고 문을 민다.")
+
+        status, events = env.send(env.create()["id"])
+        assert status == 200 and "done" in names(events)
+        prompt = json.dumps(env.model.inputs[0], ensure_ascii=False)
+        assert "<summary>서윤이 등불을 들고 문을 민다.</summary>" in prompt
+        assert "<summary>레나가 북쪽 문 앞에 선다.</summary>" in prompt
+
+    kms.fail_with = "AccessDeniedException"
+    with make_env(database, keys=ProjectKeys(kms, kms.key_id)) as env:
+        status, events = env.send(env.create()["id"])
+        assert status == 200 and "done" in names(events)
+        prompt = json.dumps(env.model.inputs[0], ensure_ascii=False)
+        assert "서윤이 등불을 들고 문을 민다." not in prompt
+        assert "<summary>레나가 북쪽 문 앞에 선다.</summary>" in prompt
