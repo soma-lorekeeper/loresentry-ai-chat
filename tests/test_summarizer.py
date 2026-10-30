@@ -273,7 +273,10 @@ class Rig:
 @pytest.fixture
 def rig(database):
     with psycopg.connect(**database, autocommit=True) as conn:
-        conn.execute("truncate summary_queue, document_summaries")
+        conn.execute(
+            "truncate summary_queue, document_summaries, setting_check_runs, "
+            "setting_check_verdicts cascade"
+        )
     return Rig(database)
 
 
@@ -347,6 +350,28 @@ def test_trash_and_project_deletion_remove_summaries(rig):
     rig.change(rig.upsert(str(uuid4()), 1), RemoveProject(rig.project))
     assert rig.query("select count(*) from document_summaries") == [(0,)]
     assert rig.query("select count(*) from summary_queue") == [(0,)]
+
+
+def test_project_deletion_removes_its_setting_checks(rig):
+    kept = str(uuid4())
+    for project in (rig.project, kept):
+        rig.query(
+            "insert into setting_check_runs (project_id, user_id, document_id, "
+            "document_title, revision_no, status) "
+            "values (%s, uuidv7(), uuidv7(), 't', 1, 'DONE') returning id",
+            project,
+        )
+        rig.query(
+            "insert into setting_check_verdicts (project_id, user_id, fingerprint, "
+            "verdict, source_document_id, source_quote) "
+            "values (%s, uuidv7(), 'f', 'INTENDED', uuidv7(), 'q') returning 1",
+            project,
+        )
+
+    rig.change(RemoveProject(rig.project))
+
+    for table in ("setting_check_runs", "setting_check_verdicts"):
+        assert rig.query(f"select project_id::text from {table}") == [(kept,)]
 
 
 def test_documents_still_being_edited_wait(rig):

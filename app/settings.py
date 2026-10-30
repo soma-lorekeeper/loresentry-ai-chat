@@ -41,6 +41,14 @@ class Settings:
     stale_turn_seconds: int = 300
     daily_credit_limit: int = 3_500_000
     shutdown_grace_seconds: float = 15.0
+    setting_check_max_chars: int = 600_000
+    setting_check_reasoning_effort: str = "medium"
+    setting_check_judge_reasoning_effort: str = "low"
+    setting_check_judge_max_output_tokens: int = 4000
+    setting_check_judge_concurrency: int = 4
+    setting_check_timeout_seconds: float = 300.0
+    setting_check_deadline_seconds: float = 600.0
+    setting_check_stale_seconds: int = 900
 
     @property
     def judge(self) -> str:
@@ -102,5 +110,31 @@ class Settings:
             daily_credit_limit=_int("CHAT_DAILY_CREDIT_LIMIT", cls.daily_credit_limit),
             shutdown_grace_seconds=_float(
                 "CHAT_SHUTDOWN_GRACE_SECONDS", cls.shutdown_grace_seconds
+            ),
+            setting_check_max_chars=_int(
+                "SETTING_CHECK_MAX_CHARS", cls.setting_check_max_chars
+            ),
+            setting_check_reasoning_effort=os.getenv(
+                "SETTING_CHECK_REASONING_EFFORT", cls.setting_check_reasoning_effort
+            ),
+            setting_check_judge_reasoning_effort=os.getenv(
+                "SETTING_CHECK_JUDGE_REASONING_EFFORT",
+                cls.setting_check_judge_reasoning_effort,
+            ),
+            setting_check_judge_max_output_tokens=_int(
+                "SETTING_CHECK_JUDGE_MAX_OUTPUT_TOKENS",
+                cls.setting_check_judge_max_output_tokens,
+            ),
+            setting_check_judge_concurrency=_int(
+                "SETTING_CHECK_JUDGE_CONCURRENCY", cls.setting_check_judge_concurrency
+            ),
+            setting_check_timeout_seconds=_float(
+                "SETTING_CHECK_TIMEOUT_SECONDS", cls.setting_check_timeout_seconds
+            ),
+            setting_check_deadline_seconds=_float(
+                "SETTING_CHECK_DEADLINE_SECONDS", cls.setting_check_deadline_seconds
+            ),
+            setting_check_stale_seconds=_int(
+                "SETTING_CHECK_STALE_SECONDS", cls.setting_check_stale_seconds
             ),
         )

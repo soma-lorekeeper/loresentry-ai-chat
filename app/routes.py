@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.content import ContentSource
 from app.errors import NO_STORE, ChatFailure
 from app.prompt import Profile, Question
+from app.setting_check.runner import CheckRunner
 from app.settings import Settings
 from app.store import Replayed, Store
 from app.text import default_title
@@ -29,6 +30,7 @@ class Services:
     store: Store
     content: ContentSource
     runner: TurnRunner
+    checks: CheckRunner
 
 
 def services(request: Request) -> Services:
@@ -238,6 +240,7 @@ async def cancel(session_id: str, user: User, deps: Deps) -> Response:
 @router.delete("/users/me/data", status_code=204)
 async def delete_user_data(user: User, deps: Deps) -> Response:
     deps.runner.stop(await deps.store.delete_user_data(user))
+    deps.checks.stop_for(user)
     return Response(status_code=204, headers=NO_STORE)
 
 
@@ -248,4 +251,5 @@ async def delete_project_data(project_id: str, user: User, deps: Deps) -> Respon
     except ValueError:
         return Response(status_code=204, headers=NO_STORE)
     deps.runner.stop(await deps.store.delete_project_data(user, project))
+    deps.checks.stop_for(user, project)
     return Response(status_code=204, headers=NO_STORE)
