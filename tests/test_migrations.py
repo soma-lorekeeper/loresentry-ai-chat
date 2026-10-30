@@ -4,10 +4,16 @@ import psycopg
 import pytest
 from testcontainers.community.postgres import PostgresContainer
 
+
+def version(path: Path) -> int:
+    return int(path.name[1:].split("__")[0])
+
+
 MIGRATIONS = sorted(
     (Path(__file__).parent.parent / "db" / "migration").glob("V*__*.sql"),
-    key=lambda path: int(path.name[1:].split("__")[0]),
+    key=version,
 )
+SEALED = b"\x01" + bytes(28)
 
 
 @pytest.fixture(scope="module")
@@ -100,15 +106,16 @@ def test_summary_rows_written_without_event_seq_start_before_any_event(conn):
     document = conn.execute("select uuidv7()").fetchone()[0]
     conn.execute(
         "insert into summary_queue (document_id, project_id, revision_no, "
-        "folder_code, title, body, changed_at, attempts, next_attempt_at) "
-        "values (%s, uuidv7(), 1, 'MANUSCRIPT', 't', 'b', now(), 0, now())",
-        (document,),
+        "folder_code, title, body_enc, wrapped_key, changed_at, attempts, "
+        "next_attempt_at) "
+        "values (%s, uuidv7(), 1, 'MANUSCRIPT', 't', %s, 'w', now(), 0, now())",
+        (document, SEALED),
     )
     conn.execute(
         "insert into document_summaries (document_id, project_id, revision_no, "
-        "summary, fingerprint, model, prompt_version) "
-        "values (%s, uuidv7(), 1, 's', '[]', 'm', 'v')",
-        (document,),
+        "summary_enc, wrapped_key, fingerprint, model, prompt_version) "
+        "values (%s, uuidv7(), 1, %s, 'w', '[]', 'm', 'v')",
+        (document, SEALED),
     )
 
     for table in ("summary_queue", "document_summaries"):
@@ -117,38 +124,85 @@ def test_summary_rows_written_without_event_seq_start_before_any_event(conn):
         ).fetchone() == (0,)
 
 
-def test_a_queued_body_is_either_plain_or_sealed_with_its_key(conn):
-    insert = (
+def test_queued_bodies_and_summaries_are_only_kept_sealed(conn):
+    queue = (
         "insert into summary_queue (document_id, project_id, revision_no, "
         "folder_code, title, body_enc, wrapped_key, changed_at) "
-        "values (uuidv7(), uuidv7(), 1, 'MANUSCRIPT', 't', %s, %s, now()) "
-        "returning body"
+        "values (uuidv7(), uuidv7(), 1, 'MANUSCRIPT', 't', %s, %s, now())"
     )
-
-    assert conn.execute(insert, (b"\x01sealed", b"wrapped")).fetchone() == ("",)
-    for body_enc, wrapped_key in ((b"\x01sealed", None), (None, b"wrapped")):
-        with pytest.raises(psycopg.errors.CheckViolation):
-            conn.execute(insert, (body_enc, wrapped_key))
-
-
-def test_a_summary_is_either_plain_or_sealed_with_its_key(conn):
-    insert = (
+    summary = (
         "insert into document_summaries (document_id, project_id, revision_no, "
-        "summary, summary_enc, wrapped_key, fingerprint, model, prompt_version) "
-        "values (uuidv7(), uuidv7(), 1, %s, %s, %s, '[]', 'm', 'v')"
+        "summary_enc, wrapped_key, fingerprint, model, prompt_version) "
+        "values (uuidv7(), uuidv7(), 1, %s, %s, '[]', 'm', 'v')"
     )
 
-    conn.execute(insert, ("s", None, None))
-    conn.execute(insert, (None, b"\x01sealed", b"wrapped"))
-    for summary, summary_enc, wrapped_key in (
-        (None, None, None),
-        ("s", b"\x01sealed", b"wrapped"),
-        (None, b"\x01sealed", None),
-        (None, None, b"wrapped"),
-        ("s", None, b"wrapped"),
-    ):
-        with pytest.raises(psycopg.errors.CheckViolation):
-            conn.execute(insert, (summary, summary_enc, wrapped_key))
+    for insert in (queue, summary):
+        conn.execute(insert, (SEALED, b"wrapped"))
+        for sealed, wrapped_key in ((None, b"wrapped"), (SEALED, None)):
+            with pytest.raises(psycopg.errors.NotNullViolation):
+                conn.execute(insert, (sealed, wrapped_key))
+        for sealed, wrapped_key in (
+            (SEALED[:-1], b"wrapped"),
+            (b"{" + SEALED[1:], b"wrapped"),
+            (SEALED, b""),
+        ):
+            with pytest.raises(psycopg.errors.CheckViolation):
+                conn.execute(insert, (sealed, wrapped_key))
+    for table, column in (("summary_queue", "body"), ("document_summaries", "summary")):
+        assert conn.execute(
+            "select count(*) from information_schema.columns "
+            "where table_schema = 'public' and table_name = %s and column_name = %s",
+            (table, column),
+        ).fetchone() == (0,)
+
+
+def test_dropping_plaintext_refuses_while_any_is_left(conn):
+    conn.execute("create schema contract")
+    try:
+        conn.execute("set search_path to contract")
+        for migration in MIGRATIONS:
+            if version(migration) < 11:
+                conn.execute(migration.read_text())
+        contract = next(m for m in MIGRATIONS if version(m) == 11).read_text()
+        emptied, kept = (conn.execute("select uuidv7()").fetchone()[0] for _ in "ab")
+        queue = (
+            "insert into summary_queue (document_id, project_id, event_seq, "
+            "revision_no, folder_code, title, body, body_enc, wrapped_key, "
+            "changed_at) values (%s, uuidv7(), %s, 1, 'MANUSCRIPT', 't', %s, %s, "
+            "%s, now())"
+        )
+        summary = (
+            "insert into document_summaries (document_id, project_id, event_seq, "
+            "revision_no, summary, summary_enc, wrapped_key, fingerprint, model, "
+            "prompt_version) values (%s, uuidv7(), %s, 1, %s, %s, %s, '[]', 'm', "
+            "'v')"
+        )
+
+        conn.execute(queue, (emptied, 1, "plain body", None, None))
+        with pytest.raises(psycopg.errors.RaiseException, match="bodies"):
+            conn.execute(contract)
+        conn.execute("delete from summary_queue")
+        conn.execute(summary, (emptied, 1, "plain summary", None, None))
+        with pytest.raises(psycopg.errors.RaiseException, match="summaries"):
+            conn.execute(contract)
+        conn.execute("delete from document_summaries")
+
+        conn.execute(queue, (emptied, 5, "", None, None))
+        conn.execute(queue, (kept, 4, "", None, None))
+        conn.execute(summary, (emptied, 3, None, SEALED, b"w"))
+        conn.execute(summary, (kept, 9, None, SEALED, b"w"))
+        conn.execute(
+            queue, (conn.execute("select uuidv7()").fetchone()[0], 6, "", SEALED, b"w")
+        )
+        conn.execute(contract)
+
+        assert conn.execute(
+            "select document_id from document_summaries"
+        ).fetchall() == [(kept,)]
+        assert conn.execute("select event_seq from summary_queue").fetchall() == [(6,)]
+    finally:
+        conn.execute("set search_path to public")
+        conn.execute("drop schema contract cascade")
 
 
 def insert_run(conn, project, status: str = "RUNNING"):

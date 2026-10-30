@@ -20,9 +20,8 @@ class Upsert:
     revision_no: int
     folder_code: str
     title: str
-    body: str
-    body_enc: bytes | None = None
-    wrapped_key: bytes | None = None
+    body_enc: bytes
+    wrapped_key: bytes
 
 
 @dataclass(frozen=True)
@@ -55,17 +54,17 @@ def sequence_of(headers: dict[str, str]) -> int:
     return int(raw)
 
 
-def body_of(payload: dict, document: dict) -> tuple[str, bytes | None, bytes | None]:
+def body_of(payload: dict, document: dict) -> tuple[bytes, bytes]:
     sealed = document.get("body_text_enc")
-    if sealed is None:
-        return document["body_text"] or "", None, None
+    if not isinstance(sealed, str):
+        raise Malformed("body_text_enc")
     body_enc = base64.b64decode(sealed, validate=True)
     if not is_envelope(body_enc):
         raise Malformed("body_text_enc")
     wrapped = payload.get("wrapped_key")
     if not isinstance(wrapped, str) or not wrapped:
         raise Malformed("wrapped_key")
-    return "", body_enc, base64.b64decode(wrapped, validate=True)
+    return body_enc, base64.b64decode(wrapped, validate=True)
 
 
 def parse(headers: dict[str, str], value: bytes | None) -> Change | None:
@@ -90,7 +89,7 @@ def parse(headers: dict[str, str], value: bytes | None) -> Change | None:
     # so its state, not change_type, says whether it is gone.
     if document["state"] == "TRASHED":
         return Remove(file_id, sequence)
-    body, body_enc, wrapped_key = body_of(payload, document)
+    body_enc, wrapped_key = body_of(payload, document)
     return Upsert(
         document_id=file_id,
         project_id=str(payload["project_id"]),
@@ -98,7 +97,6 @@ def parse(headers: dict[str, str], value: bytes | None) -> Change | None:
         revision_no=document["revision_no"],
         folder_code=document["folder_code"],
         title=document["title"] or "",
-        body=body,
         body_enc=body_enc,
         wrapped_key=wrapped_key,
     )

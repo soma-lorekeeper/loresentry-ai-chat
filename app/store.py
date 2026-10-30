@@ -479,17 +479,14 @@ class Store:
         async with self.pool.connection() as conn:
             rows = await (
                 await conn.execute(
-                    "select document_id, project_id, revision_no, summary, "
-                    "summary_enc, wrapped_key from document_summaries "
+                    "select document_id, project_id, revision_no, summary_enc, "
+                    "wrapped_key from document_summaries "
                     "where document_id = any(%s::uuid[])",
                     (document_ids,),
                 )
             ).fetchall()
-        if all(row["summary_enc"] is None for row in rows):
-            return {
-                str(row["document_id"]): Summary(row["revision_no"], row["summary"])
-                for row in rows
-            }
+        if not rows:
+            return {}
         return await asyncio.to_thread(self.open_summaries, rows)
 
     def open_summaries(self, rows: list[dict[str, Any]]) -> dict[str, Summary]:
@@ -497,29 +494,27 @@ class Store:
         summaries: dict[str, Summary] = {}
         for row in rows:
             document, project = str(row["document_id"]), str(row["project_id"])
-            text = row["summary"]
-            if row["summary_enc"] is not None:
-                entry = (project, bytes(row["wrapped_key"]))
-                if entry not in keys:
-                    try:
-                        keys[entry] = self.keys.unwrap(*entry)
-                    except KeyUnavailable as failure:
-                        keys[entry] = None
-                        log.warning(
-                            "summary key unavailable",
-                            extra={"project_id": project, "code": failure.code},
-                        )
-                key = keys[entry]
-                if key is None:
-                    continue
+            entry = (project, bytes(row["wrapped_key"]))
+            if entry not in keys:
                 try:
-                    text = unseal(key, row["summary_enc"], project, document, "summary")
-                except Unreadable as failure:
+                    keys[entry] = self.keys.unwrap(*entry)
+                except KeyUnavailable as failure:
+                    keys[entry] = None
                     log.warning(
-                        "summary unreadable",
-                        extra={"document_id": document, "reason": str(failure)},
+                        "summary key unavailable",
+                        extra={"project_id": project, "code": failure.code},
                     )
-                    continue
+            key = keys[entry]
+            if key is None:
+                continue
+            try:
+                text = unseal(key, row["summary_enc"], project, document, "summary")
+            except Unreadable as failure:
+                log.warning(
+                    "summary unreadable",
+                    extra={"document_id": document, "reason": str(failure)},
+                )
+                continue
             summaries[document] = Summary(row["revision_no"], text)
         return summaries
 

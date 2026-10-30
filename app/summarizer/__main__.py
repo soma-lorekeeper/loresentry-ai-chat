@@ -40,7 +40,17 @@ async def wait_for_schema(settings: SummarizerSettings, stop: asyncio.Event) -> 
                 await conn.execute(
                     "select project_id from setting_check_verdicts limit 0"
                 )
-                return
+                plaintext = await (
+                    await conn.execute(
+                        "select count(*) from information_schema.columns "
+                        "where table_schema = current_schema() and "
+                        "(table_name, column_name) in "
+                        "(('summary_queue', 'body'), ('document_summaries', 'summary'))"
+                    )
+                ).fetchone()
+                if plaintext == (0,):
+                    return
+                log.warning("waiting for schema", extra={"error": "plaintext columns"})
         except psycopg.Error as error:
             log.warning("waiting for schema", extra={"error": type(error).__name__})
         try:
