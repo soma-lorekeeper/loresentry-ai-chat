@@ -1,14 +1,18 @@
 import asyncio
+import base64
 import json
+import os
 from pathlib import Path
 from uuid import uuid4
 
 import psycopg
 import pytest
+from confluent_kafka import KafkaError
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 from testcontainers.community.postgres import PostgresContainer
 
+from app.manuscript import ProjectKeys, seal
 from app.model import ModelFailure, Usage
 from app.settings import Settings
 from app.summarizer.consumer import changes_of
@@ -24,6 +28,7 @@ from app.summarizer.fingerprint import changed, fingerprint, threshold
 from app.summarizer.settings import SummarizerSettings
 from app.summarizer.store import SummaryStore, apply
 from app.summarizer.worker import Worker
+from tests.support import FakeKms
 
 MIGRATIONS = sorted(
     (Path(__file__).parent.parent / "db" / "migration").glob("V*__*.sql"),
@@ -111,6 +116,60 @@ def test_file_changes_become_upserts_and_removals():
     assert parse(*event("GraphRefreshRequested", {"project_id": project})) is None
 
 
+def encrypted(payload: dict, body_enc: bytes, wrapped_key: bytes | None) -> dict:
+    file = {key: value for key, value in payload["file"].items() if key != "body_text"}
+    file["body_text_enc"] = base64.b64encode(body_enc).decode()
+    return {
+        **payload,
+        "wrapped_key": (
+            None if wrapped_key is None else base64.b64encode(wrapped_key).decode()
+        ),
+        "file": file,
+    }
+
+
+def test_encrypted_bodies_are_kept_sealed_with_their_wrapped_key():
+    project, file = str(uuid4()), str(uuid4())
+    body_enc = seal(os.urandom(32), project, file, "body_text", "본문")
+    wrapped = os.urandom(180)
+    payload = encrypted(file_changed(project, file, "UPDATED"), body_enc, wrapped)
+
+    assert parse(*event("FileChanged", payload)) == Upsert(
+        file, project, 7, 3, "MANUSCRIPT", "1화", "", body_enc, wrapped
+    )
+    trashed = encrypted(
+        file_changed(project, file, "UPDATED", "TRASHED"), body_enc, wrapped
+    )
+    assert parse(*event("FileChanged", trashed)) == Remove(file, 7)
+    both = file_changed(project, file, "UPDATED")
+    both["file"]["body_text_enc"] = payload["file"]["body_text_enc"]
+    both["wrapped_key"] = payload["wrapped_key"]
+    assert parse(*event("FileChanged", both)).body_enc == body_enc
+    legacy = {**file_changed(project, file, "UPDATED"), "wrapped_key": None}
+    legacy["file"]["body_text_enc"] = None
+    assert parse(*event("FileChanged", legacy)) == Upsert(
+        file, project, 7, 3, "MANUSCRIPT", "1화", "본문"
+    )
+
+
+def test_encrypted_bodies_off_the_contract_are_malformed():
+    project, file = str(uuid4()), str(uuid4())
+    body_enc = seal(os.urandom(32), project, file, "body_text", "본문")
+    current = file_changed(project, file, "UPDATED")
+
+    for payload in (
+        encrypted(current, body_enc, None),
+        encrypted(current, body_enc, b""),
+        encrypted(current, b'{"body_text": "x"}', os.urandom(180)),
+    ):
+        with pytest.raises(Malformed):
+            parse(*event("FileChanged", payload))
+    not_base64 = encrypted(current, body_enc, os.urandom(180))
+    not_base64["file"]["body_text_enc"] = "not base64!"
+    with pytest.raises(ValueError):
+        parse(*event("FileChanged", not_base64))
+
+
 def test_events_off_the_contract_are_malformed():
     project, file = str(uuid4()), str(uuid4())
     before = {
@@ -132,13 +191,14 @@ def test_events_off_the_contract_are_malformed():
 
 
 class Message:
-    def __init__(self, offset: int, headers: dict[str, str], value: bytes):
+    def __init__(self, offset: int, headers: dict[str, str], value: bytes, error=None):
         self._offset = offset
         self._headers = [(name, text.encode()) for name, text in headers.items()]
         self._value = value
+        self._error = error
 
     def error(self):
-        return None
+        return self._error
 
     def headers(self):
         return self._headers
@@ -173,6 +233,32 @@ def test_events_off_the_contract_are_skipped_and_the_rest_applied():
 
     assert changes == [Upsert(file, project, 7, 3, "MANUSCRIPT", "1화", "본문")]
     assert skipped == 2
+
+
+def test_a_topic_that_does_not_exist_yet_is_passed_over():
+    project, file = str(uuid4()), str(uuid4())
+    current = event("FileChanged", file_changed(project, file, "UPDATED"))
+    missing = KafkaError(KafkaError.UNKNOWN_TOPIC_OR_PART)
+
+    changes, skipped = changes_of([Message(0, {}, b"", missing), Message(1, *current)])
+
+    assert changes == [Upsert(file, project, 7, 3, "MANUSCRIPT", "1화", "본문")]
+    assert skipped == 0
+
+
+def test_both_topic_versions_are_consumed_by_default(monkeypatch):
+    for name in ("SUMMARY_TOPICS", "SUMMARY_TOPIC"):
+        monkeypatch.delenv(name, raising=False)
+    assert SummarizerSettings.from_environment().topics == (
+        "content.project.changed.v1",
+        "content.project.changed.v2",
+    )
+    monkeypatch.setenv("SUMMARY_TOPIC", "content.project.changed.v1")
+    assert SummarizerSettings.from_environment().topics == (
+        "content.project.changed.v1",
+    )
+    monkeypatch.setenv("SUMMARY_TOPICS", " a.v1, a.v2 ,")
+    assert SummarizerSettings.from_environment().topics == ("a.v1", "a.v2")
 
 
 @pytest.fixture(scope="module")
@@ -226,6 +312,9 @@ class Rig:
         )
         self.model = FakeSummaries()
         self.project = str(uuid4())
+        self.kms = FakeKms()
+        self.key = os.urandom(32)
+        self.wrapped_key = self.kms.wrap(self.project, self.key)
 
     def change(self, *changes) -> None:
         with psycopg.connect(self.settings.base.conninfo) as conn:
@@ -249,6 +338,21 @@ class Rig:
             body,
         )
 
+    def sealed(
+        self, document: str, sequence: int, body: str = CHAPTER, title: str = "1화"
+    ) -> Upsert:
+        return Upsert(
+            document,
+            self.project,
+            sequence,
+            sequence,
+            "MANUSCRIPT",
+            title,
+            "",
+            seal(self.key, self.project, document, "body_text", body),
+            self.wrapped_key,
+        )
+
     def tick(self) -> list[str]:
         async def once() -> list[str]:
             pool = AsyncConnectionPool(
@@ -258,7 +362,8 @@ class Rig:
             )
             await pool.open()
             try:
-                worker = Worker(SummaryStore(pool), self.model, self.settings)
+                keys = ProjectKeys(self.kms, self.kms.key_id)
+                worker = Worker(SummaryStore(pool), self.model, self.settings, keys)
                 return await worker.tick()
             finally:
                 await pool.close()
@@ -454,3 +559,74 @@ def test_a_retry_leaves_a_change_that_came_during_the_call(rig):
 
     assert rig.tick() == ["failed"]
     assert rig.query("select event_seq, attempts from summary_queue") == [(11, 0)]
+
+
+def test_queued_bodies_follow_the_newest_event_in_either_form(rig):
+    document = str(uuid4())
+    sealed = rig.sealed(document, 2)
+    columns = "select body, body_enc, wrapped_key from summary_queue"
+
+    rig.change(rig.upsert(document, 1, "평문 본문"), sealed)
+    assert rig.query(columns) == [("", sealed.body_enc, rig.wrapped_key)]
+
+    rig.change(rig.upsert(document, 1, "늦게 온 평문"))
+    assert rig.query(columns) == [("", sealed.body_enc, rig.wrapped_key)]
+
+    rig.change(rig.upsert(document, 3, "새 평문"))
+    assert rig.query(columns) == [("새 평문", None, None)]
+
+    newer = rig.sealed(document, 4)
+    rig.change(newer)
+    assert rig.query(columns) == [("", newer.body_enc, rig.wrapped_key)]
+
+
+def test_sealed_bodies_are_opened_only_to_summarize(rig):
+    first, second = str(uuid4()), str(uuid4())
+    rig.change(rig.sealed(first, 1), rig.sealed(second, 1, "레나는 정원사다."))
+
+    assert sorted(rig.tick()) == ["copied", "summarized"]
+    assert CHAPTER in rig.model.inputs[0]
+    assert sorted(rig.query("select summary from document_summaries")) == [
+        ("레나는 정원사다.",),
+        ("요약 1",),
+    ]
+    assert rig.query("select count(*) from summary_queue") == [(0,)]
+    assert len(rig.kms.calls) == 1
+
+
+def test_a_kms_outage_keeps_the_row_without_using_an_attempt(rig):
+    document = str(uuid4())
+    rig.kms.fail_with = "KMSInternalException"
+    rig.change(rig.sealed(document, 1))
+
+    assert rig.tick() == ["deferred"]
+    assert rig.query("select attempts, next_attempt_at > now() from summary_queue") == [
+        (0, True)
+    ]
+    assert rig.model.inputs == []
+
+    rig.kms.fail_with = None
+    rig.query("update summary_queue set next_attempt_at = now() returning 1")
+    assert rig.tick() == ["summarized"]
+    assert rig.query("select count(*) from summary_queue") == [(0,)]
+
+
+def test_a_body_that_does_not_open_is_dropped(rig):
+    document = str(uuid4())
+    wrong_subject = Upsert(
+        document,
+        rig.project,
+        1,
+        1,
+        "MANUSCRIPT",
+        "1화",
+        "",
+        seal(rig.key, rig.project, str(uuid4()), "body_text", CHAPTER),
+        rig.wrapped_key,
+    )
+    rig.change(wrong_subject)
+
+    assert rig.tick() == ["unreadable"]
+    assert rig.query("select count(*) from summary_queue") == [(0,)]
+    assert rig.query("select count(*) from document_summaries") == [(0,)]
+    assert rig.model.inputs == []

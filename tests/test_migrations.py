@@ -117,6 +117,20 @@ def test_summary_rows_written_without_event_seq_start_before_any_event(conn):
         ).fetchone() == (0,)
 
 
+def test_a_queued_body_is_either_plain_or_sealed_with_its_key(conn):
+    insert = (
+        "insert into summary_queue (document_id, project_id, revision_no, "
+        "folder_code, title, body_enc, wrapped_key, changed_at) "
+        "values (uuidv7(), uuidv7(), 1, 'MANUSCRIPT', 't', %s, %s, now()) "
+        "returning body"
+    )
+
+    assert conn.execute(insert, (b"\x01sealed", b"wrapped")).fetchone() == ("",)
+    for body_enc, wrapped_key in ((b"\x01sealed", None), (None, b"wrapped")):
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute(insert, (body_enc, wrapped_key))
+
+
 def insert_run(conn, project, status: str = "RUNNING"):
     return conn.execute(
         "insert into setting_check_runs (project_id, user_id, document_id, "

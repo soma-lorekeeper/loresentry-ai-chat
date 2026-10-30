@@ -15,8 +15,8 @@ messages, held documents and per-turn metrics live in the `ai_chat` database.
 There is no vector store and no agent framework; the loop is `app/agent.py`.
 
 A second process from the same image, the summarizer (`python -m app.summarizer`),
-consumes `content.project.changed.v1` and keeps a summary of every document for
-the map.
+consumes `content.project.changed.v1` and `content.project.changed.v2` and keeps
+a summary of every document for the map.
 
 Product requirements and the API contract:
 [`docs/AI_CHAT_REQUIREMENTS.md`](https://github.com/soma-lorekeeper/docs/blob/main/AI_CHAT_REQUIREMENTS.md).
@@ -45,6 +45,8 @@ the only CORS boundary.
 | psycopg / psycopg-pool | 3.3.5 / 3.3.3 | Async connection pool. |
 | openai | 3.24.0 | Responses API with function tools and JSON schema output. Same version as `loresentry-graph-rag`. |
 | confluent-kafka | 2.16.0 | Summarizer consumer. Same version as `loresentry-graph-rag`. |
+| boto3 / botocore | 1.43.108 | KMS `Decrypt` of project keys in the summarizer. Same version as `loresentry-graph-rag`. |
+| cryptography | 50.0.2 | AES-256-GCM for manuscript envelopes. |
 | ruff | 0.17.0 | Lint and format, run in CI. |
 | Flyway | 12.11 (CLI) | Copied into the image from `flyway/flyway`; only the PostgreSQL plugin and driver are kept. |
 | Port | 8000 | Platform convention, shared with every other service. |
@@ -152,8 +154,9 @@ or stopped by a shutdown becomes `INTERRUPTED`.
 
 ### Summarizer
 
-Consumes `FileChanged`/`ProjectDeleted` (group `ai-chat-summarizer`) into
-`summary_queue`, newest event only. Events of one document are ordered by the
+Consumes `FileChanged`/`ProjectDeleted` from every topic in `SUMMARY_TOPICS`
+(group `ai-chat-summarizer`) into `summary_queue`, newest event only. A topic that
+does not exist is logged and passed over. Events of one document are ordered by the
 `ce_sequence` header (`event_seq`); `file.revision_no` is only kept to show which
 revision a summary was written from, since a rename or a move does not raise it.
 A document is removed when the event is `DELETED` or its `file.state` is
@@ -170,6 +173,18 @@ characters changed. Bodies up to 500 characters are used as their own summary.
 Trash, delete and project deletion remove summaries; project deletion also
 removes setting checks and verdicts. Liveness is the mtime of
 `SUMMARY_HEARTBEAT_PATH`.
+
+A FileChanged either carries `file.body_text` or, from content's encrypted
+manuscripts, `file.body_text_enc` (a manuscript envelope, purpose `body_text`,
+subject the document id) with the project's `wrapped_key`; both forms are accepted
+on both topics. The envelope and the wrapped key are queued as received
+(`body_enc`, `wrapped_key`, with `body` empty) and opened only when the document is
+summarized: KMS `Decrypt` of the wrapped key (`MANUSCRIPT_KEY_ID`, encryption
+context `{"project_id": …}`, credentials from Pod Identity), cached in memory per
+project for 10 minutes (at most 1000 keys), then AES-256-GCM and zlib
+(`app/manuscript.py`). A KMS failure leaves the row queued for another minute
+without using an attempt; an envelope that does not open is logged without its
+text and dropped.
 
 ## Configuration
 
@@ -196,6 +211,9 @@ removes setting checks and verdicts. Liveness is the mtime of
 | `SETTING_CHECK_TIMEOUT_SECONDS` | `300` | Per model call |
 | `SETTING_CHECK_DEADLINE_SECONDS`, `SETTING_CHECK_STALE_SECONDS` | `600`, `900` | Whole run; `RUNNING` older than this is `INTERRUPTED` |
 | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Summarizer |
+| `SUMMARY_TOPICS` | `content.project.changed.v1,content.project.changed.v2` | Summarizer, comma-separated; `SUMMARY_TOPIC` still names a single topic |
+| `MANUSCRIPT_KEY_ID` | — | Summarizer. KMS key of the manuscript project keys, prod `alias/lore-sentry-manuscript`, dev `alias/lore-sentry-manuscript-dev`; unset, encrypted bodies stay queued |
+| `MANUSCRIPT_KEY_REGION` | `ap-northeast-2` | Summarizer |
 | `SUMMARY_OPENAI_API_KEY`, `SUMMARY_MODEL` | `OPENAI_API_KEY`, `OPENAI_MODEL` | Summarizer |
 | `SUMMARY_IDLE_MINUTES`, `SUMMARY_MIN_CHANGE_CHARS`, `SUMMARY_MIN_CHANGE_RATIO` | `10`, `1000`, `0.3` | Summarizer |
 
@@ -213,7 +231,7 @@ keeps the pod from becoming ready.
 | `chat_turns` | One row per attempt: status, failure code, model, tokens, timings, steps, reviews and grounding. At most one `GENERATING` per session |
 | `chat_held_documents` | Documents and memos a session has read, in reading order |
 | `document_summaries` | One summary per document with its revision, sentence fingerprint and the `event_seq` it stands for |
-| `summary_queue` | Latest change per document (by `event_seq`) waiting to be summarized |
+| `summary_queue` | Latest change per document (by `event_seq`) waiting to be summarized, with its body either in `body` or sealed in `body_enc` with `wrapped_key` |
 | `setting_check_runs` | One row per setting check: chapter and revision, status and stage, what was read, tokens. At most one `RUNNING` per project |
 | `setting_check_findings` | Findings of a finished run in chapter order, with the explanation, both quotes, their focus phrases and the fingerprint |
 | `setting_check_verdicts` | The author's verdict and reason per project and fingerprint, kept across runs |

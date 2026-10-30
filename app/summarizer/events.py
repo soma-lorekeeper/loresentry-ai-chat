@@ -1,5 +1,8 @@
+import base64
 import json
 from dataclasses import dataclass
+
+from app.manuscript import is_envelope
 
 TYPES = {"FileChanged", "ProjectDeleted"}
 STATES = {"ACTIVE", "TRASHED"}
@@ -18,6 +21,8 @@ class Upsert:
     folder_code: str
     title: str
     body: str
+    body_enc: bytes | None = None
+    wrapped_key: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -50,6 +55,19 @@ def sequence_of(headers: dict[str, str]) -> int:
     return int(raw)
 
 
+def body_of(payload: dict, document: dict) -> tuple[str, bytes | None, bytes | None]:
+    sealed = document.get("body_text_enc")
+    if sealed is None:
+        return document["body_text"] or "", None, None
+    body_enc = base64.b64decode(sealed, validate=True)
+    if not is_envelope(body_enc):
+        raise Malformed("body_text_enc")
+    wrapped = payload.get("wrapped_key")
+    if not isinstance(wrapped, str) or not wrapped:
+        raise Malformed("wrapped_key")
+    return "", body_enc, base64.b64decode(wrapped, validate=True)
+
+
 def parse(headers: dict[str, str], value: bytes | None) -> Change | None:
     kind = headers.get("ce_type")
     if kind not in TYPES or value is None:
@@ -72,6 +90,7 @@ def parse(headers: dict[str, str], value: bytes | None) -> Change | None:
     # so its state, not change_type, says whether it is gone.
     if document["state"] == "TRASHED":
         return Remove(file_id, sequence)
+    body, body_enc, wrapped_key = body_of(payload, document)
     return Upsert(
         document_id=file_id,
         project_id=str(payload["project_id"]),
@@ -79,5 +98,7 @@ def parse(headers: dict[str, str], value: bytes | None) -> Change | None:
         revision_no=document["revision_no"],
         folder_code=document["folder_code"],
         title=document["title"] or "",
-        body=document["body_text"] or "",
+        body=body,
+        body_enc=body_enc,
+        wrapped_key=wrapped_key,
     )
