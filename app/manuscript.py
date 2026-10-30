@@ -7,6 +7,8 @@ from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
+import boto3
+from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -73,6 +75,18 @@ def unseal(
         return data.decode("utf-8")
     except UnicodeDecodeError:
         raise Unreadable("utf-8") from None
+
+
+def kms_client(region: str) -> Any:
+    return boto3.client(
+        "kms",
+        region_name=region,
+        config=Config(
+            connect_timeout=2,
+            read_timeout=5,
+            retries={"mode": "standard", "max_attempts": 3},
+        ),
+    )
 
 
 def error_code(error: Exception) -> str:

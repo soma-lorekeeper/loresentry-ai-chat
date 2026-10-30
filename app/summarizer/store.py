@@ -29,6 +29,7 @@ class Previous:
     revision_no: int
     fingerprint: list[list[str | int]]
     prompt_version: str
+    summary: str | None = None
 
 
 # event_seq is the ce_sequence of the event a row came from and orders everything
@@ -132,19 +133,25 @@ class SummaryStore:
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
-                    "select revision_no, fingerprint, prompt_version "
+                    "select revision_no, fingerprint, prompt_version, summary "
                     "from document_summaries where document_id = %s",
                     (document_id,),
                 )
             ).fetchone()
         if row is None:
             return None
-        return Previous(row["revision_no"], row["fingerprint"], row["prompt_version"])
+        return Previous(
+            row["revision_no"],
+            row["fingerprint"],
+            row["prompt_version"],
+            row["summary"],
+        )
 
     async def save(
         self,
         job: Job,
-        summary: str,
+        summary: str | None,
+        summary_enc: bytes | None,
         fingerprint: list[list[str | int]],
         model: str,
         prompt_version: str,
@@ -152,12 +159,15 @@ class SummaryStore:
         async with self.pool.connection() as conn, conn.transaction():
             await conn.execute(
                 "insert into document_summaries (document_id, project_id, event_seq, "
-                "revision_no, summary, fingerprint, model, prompt_version) "
-                "values (%s, %s, %s, %s, %s, %s, %s, %s) "
+                "revision_no, summary, summary_enc, wrapped_key, fingerprint, model, "
+                "prompt_version) "
+                "values (%s, %s, %s, %s, %s, %s::bytea, %s::bytea, %s, %s, %s) "
                 "on conflict (document_id) do update set "
                 "project_id = excluded.project_id, event_seq = excluded.event_seq, "
-                "revision_no = excluded.revision_no, "
-                "summary = excluded.summary, fingerprint = excluded.fingerprint, "
+                "revision_no = excluded.revision_no, summary = excluded.summary, "
+                "summary_enc = excluded.summary_enc, "
+                "wrapped_key = excluded.wrapped_key, "
+                "fingerprint = excluded.fingerprint, "
                 "model = excluded.model, prompt_version = excluded.prompt_version, "
                 "created_at = now() "
                 "where document_summaries.event_seq <= excluded.event_seq",
@@ -167,6 +177,8 @@ class SummaryStore:
                     job.sequence,
                     job.revision_no,
                     summary,
+                    summary_enc,
+                    None if summary_enc is None else job.wrapped_key,
                     Jsonb(fingerprint),
                     model,
                     prompt_version,
@@ -187,12 +199,32 @@ class SummaryStore:
         # The summary keeps its text, revision and fingerprint, but it now stands
         # for this event too, so an older event that arrives late is not queued.
         async with self.pool.connection() as conn, conn.transaction():
-            await conn.execute(
-                "update document_summaries set event_seq = greatest(event_seq, %s) "
-                "where document_id = %s",
-                (job.sequence, job.document_id),
-            )
+            await self._stands_for(conn, job)
             await self._done(conn, job)
+
+    async def reseal(self, job: Job, summary: str, summary_enc: bytes) -> None:
+        async with self.pool.connection() as conn, conn.transaction():
+            await conn.execute(
+                "update document_summaries set summary = null, summary_enc = %s, "
+                "wrapped_key = %s where document_id = %s and project_id = %s "
+                "and summary = %s",
+                (
+                    summary_enc,
+                    job.wrapped_key,
+                    job.document_id,
+                    job.project_id,
+                    summary,
+                ),
+            )
+            await self._stands_for(conn, job)
+            await self._done(conn, job)
+
+    async def _stands_for(self, conn: Any, job: Job) -> None:
+        await conn.execute(
+            "update document_summaries set event_seq = greatest(event_seq, %s) "
+            "where document_id = %s",
+            (job.sequence, job.document_id),
+        )
 
     async def _done(self, conn: Any, job: Job) -> None:
         # A rename during the model call queues a newer event with the same

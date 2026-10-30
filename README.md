@@ -186,6 +186,16 @@ project for 10 minutes (at most 1000 keys), then AES-256-GCM and zlib
 without using an attempt; an envelope that does not open is logged without its
 text and dropped.
 
+When the queued row has a wrapped key, every summary written for it, a copied
+short body or a model summary, is stored only as an envelope (purpose `summary`,
+subject the document id) in `summary_enc` with the same `wrapped_key`, and
+`summary` is null. When such a row leaves the summary unchanged and the stored
+summary is still plain text, it is sealed in place without calling the model, so
+replaying FileChanged v2 for every document leaves no plain summary behind. Rows
+from plain events keep plain summaries. The API opens sealed summaries for the map
+with the same key cache, off the event loop; a summary whose key or envelope does
+not open is left out of the map and logged without its text.
+
 ## Configuration
 
 | Variable | Default | |
@@ -212,8 +222,8 @@ text and dropped.
 | `SETTING_CHECK_DEADLINE_SECONDS`, `SETTING_CHECK_STALE_SECONDS` | `600`, `900` | Whole run; `RUNNING` older than this is `INTERRUPTED` |
 | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Summarizer |
 | `SUMMARY_TOPICS` | `content.project.changed.v1,content.project.changed.v2` | Summarizer, comma-separated; `SUMMARY_TOPIC` still names a single topic |
-| `MANUSCRIPT_KEY_ID` | — | Summarizer. KMS key of the manuscript project keys, prod `alias/lore-sentry-manuscript`, dev `alias/lore-sentry-manuscript-dev`; unset, encrypted bodies stay queued |
-| `MANUSCRIPT_KEY_REGION` | `ap-northeast-2` | Summarizer |
+| `MANUSCRIPT_KEY_ID` | — | API and summarizer. KMS key of the manuscript project keys, prod `alias/lore-sentry-manuscript`, dev `alias/lore-sentry-manuscript-dev`; unset, encrypted bodies stay queued and sealed summaries are left out of the map |
+| `MANUSCRIPT_KEY_REGION` | `ap-northeast-2` | API and summarizer |
 | `SUMMARY_OPENAI_API_KEY`, `SUMMARY_MODEL` | `OPENAI_API_KEY`, `OPENAI_MODEL` | Summarizer |
 | `SUMMARY_IDLE_MINUTES`, `SUMMARY_MIN_CHANGE_CHARS`, `SUMMARY_MIN_CHANGE_RATIO` | `10`, `1000`, `0.3` | Summarizer |
 
@@ -230,7 +240,7 @@ keeps the pod from becoming ready.
 | `chat_messages` | Finished questions (intent, quote, `client_message_id`) and answers (citations); streaming chunks are not stored |
 | `chat_turns` | One row per attempt: status, failure code, model, tokens, timings, steps, reviews and grounding. At most one `GENERATING` per session |
 | `chat_held_documents` | Documents and memos a session has read, in reading order |
-| `document_summaries` | One summary per document with its revision, sentence fingerprint and the `event_seq` it stands for |
+| `document_summaries` | One summary per document with its revision, sentence fingerprint and the `event_seq` it stands for; the summary is either in `summary` or sealed in `summary_enc` with `wrapped_key` |
 | `summary_queue` | Latest change per document (by `event_seq`) waiting to be summarized, with its body either in `body` or sealed in `body_enc` with `wrapped_key` |
 | `setting_check_runs` | One row per setting check: chapter and revision, status and stage, what was read, tokens. At most one `RUNNING` per project |
 | `setting_check_findings` | Findings of a finished run in chapter order, with the explanation, both quotes, their focus phrases and the fingerprint |

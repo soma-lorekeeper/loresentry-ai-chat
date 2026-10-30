@@ -34,8 +34,6 @@ class SummarizerSettings:
     min_change_ratio: float = 0.3
     max_attempts: int = 3
     heartbeat_path: str = "/tmp/summarizer-heartbeat"
-    manuscript_key_id: str = ""
-    manuscript_key_region: str = "ap-northeast-2"
 
     @classmethod
     def from_environment(cls) -> "SummarizerSettings":
@@ -62,8 +60,4 @@ class SummarizerSettings:
             min_change_chars=_int("SUMMARY_MIN_CHANGE_CHARS", cls.min_change_chars),
             min_change_ratio=_float("SUMMARY_MIN_CHANGE_RATIO", cls.min_change_ratio),
             heartbeat_path=os.getenv("SUMMARY_HEARTBEAT_PATH", cls.heartbeat_path),
-            manuscript_key_id=os.getenv("MANUSCRIPT_KEY_ID", cls.manuscript_key_id),
-            manuscript_key_region=os.getenv(
-                "MANUSCRIPT_KEY_REGION", cls.manuscript_key_region
-            ),
         )

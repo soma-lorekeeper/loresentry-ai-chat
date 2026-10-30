@@ -12,7 +12,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 from testcontainers.community.postgres import PostgresContainer
 
-from app.manuscript import ProjectKeys, seal
+from app.manuscript import ProjectKeys, seal, unseal
 from app.model import ModelFailure, Usage
 from app.settings import Settings
 from app.summarizer.consumer import changes_of
@@ -353,6 +353,26 @@ class Rig:
             self.wrapped_key,
         )
 
+    def summaries(self) -> dict[str, str | None]:
+        found: dict[str, str | None] = {}
+        for document, project, summary, summary_enc, wrapped_key in self.query(
+            "select document_id::text, project_id::text, summary, summary_enc, "
+            "wrapped_key from document_summaries"
+        ):
+            if summary_enc is None:
+                found[document] = summary
+            else:
+                assert summary is None and wrapped_key == self.wrapped_key
+                found[document] = unseal(
+                    self.key, summary_enc, project, document, "summary"
+                )
+        return found
+
+    def plaintext(self) -> int:
+        return self.query(
+            "select count(*) from document_summaries where summary is not null"
+        )[0][0]
+
     def tick(self) -> list[str]:
         async def once() -> list[str]:
             pool = AsyncConnectionPool(
@@ -586,12 +606,80 @@ def test_sealed_bodies_are_opened_only_to_summarize(rig):
 
     assert sorted(rig.tick()) == ["copied", "summarized"]
     assert CHAPTER in rig.model.inputs[0]
-    assert sorted(rig.query("select summary from document_summaries")) == [
-        ("레나는 정원사다.",),
-        ("요약 1",),
-    ]
+    assert rig.summaries() == {first: "요약 1", second: "레나는 정원사다."}
+    assert rig.plaintext() == 0
     assert rig.query("select count(*) from summary_queue") == [(0,)]
     assert len(rig.kms.calls) == 1
+
+
+def test_a_replay_seals_every_summary_and_calls_the_model_only_for_changes(rig):
+    unchanged, short, edited, emptied = (str(uuid4()) for _ in range(4))
+    rig.change(
+        rig.upsert(unchanged, 1),
+        rig.upsert(short, 1, "레나는 정원사다."),
+        rig.upsert(edited, 1),
+        rig.upsert(emptied, 1, "곧 지워질 문장."),
+    )
+    assert sorted(rig.tick()) == ["copied", "copied", "summarized", "summarized"]
+    assert rig.plaintext() == 4
+    before = rig.summaries()
+    fingerprints = dict(
+        rig.query("select document_id::text, fingerprint from document_summaries")
+    )
+
+    rig.change(
+        rig.sealed(unchanged, 5),
+        rig.sealed(short, 5, "레나는 정원사다."),
+        rig.sealed(edited, 5, CHAPTER.replace("성당으로", "온실로")),
+        rig.sealed(emptied, 5, ""),
+    )
+
+    assert sorted(rig.tick()) == ["empty", "resealed", "resealed", "summarized"]
+    assert len(rig.model.inputs) == 3
+    assert rig.plaintext() == 0
+    assert rig.summaries() == {
+        unchanged: before[unchanged],
+        short: "레나는 정원사다.",
+        edited: "요약 3",
+    }
+    assert sorted(
+        rig.query("select document_id::text, event_seq from document_summaries")
+    ) == sorted([(unchanged, 5), (short, 5), (edited, 5)])
+    assert (
+        dict(
+            rig.query("select document_id::text, fingerprint from document_summaries")
+        )[unchanged]
+        == fingerprints[unchanged]
+    )
+    assert rig.query("select count(*) from summary_queue") == [(0,)]
+
+
+def test_a_changed_short_body_replaces_a_plaintext_summary_sealed(rig):
+    document = str(uuid4())
+    rig.change(rig.upsert(document, 1, "레나는 정원사다."))
+    rig.tick()
+
+    rig.change(rig.sealed(document, 2, "레나는 요리사다."))
+
+    assert rig.tick() == ["copied"]
+    assert rig.summaries() == {document: "레나는 요리사다."}
+    assert rig.plaintext() == 0
+
+
+def test_plaintext_events_keep_writing_plaintext_summaries(rig):
+    document = str(uuid4())
+    rig.change(rig.sealed(document, 1))
+    rig.tick()
+
+    rig.change(rig.upsert(document, 2, CHAPTER + " 짧은 문장."))
+    assert rig.tick() == ["unchanged"]
+    assert rig.plaintext() == 0
+
+    rig.change(rig.upsert(document, 3, CHAPTER.replace("성당으로", "온실로")))
+    assert rig.tick() == ["summarized"]
+    assert rig.query(
+        "select summary, summary_enc, wrapped_key from document_summaries"
+    ) == [("요약 2", None, None)]
 
 
 def test_a_kms_outage_keeps_the_row_without_using_an_attempt(rig):

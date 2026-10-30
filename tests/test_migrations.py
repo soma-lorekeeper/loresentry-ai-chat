@@ -131,6 +131,26 @@ def test_a_queued_body_is_either_plain_or_sealed_with_its_key(conn):
             conn.execute(insert, (body_enc, wrapped_key))
 
 
+def test_a_summary_is_either_plain_or_sealed_with_its_key(conn):
+    insert = (
+        "insert into document_summaries (document_id, project_id, revision_no, "
+        "summary, summary_enc, wrapped_key, fingerprint, model, prompt_version) "
+        "values (uuidv7(), uuidv7(), 1, %s, %s, %s, '[]', 'm', 'v')"
+    )
+
+    conn.execute(insert, ("s", None, None))
+    conn.execute(insert, (None, b"\x01sealed", b"wrapped"))
+    for summary, summary_enc, wrapped_key in (
+        (None, None, None),
+        ("s", b"\x01sealed", b"wrapped"),
+        (None, b"\x01sealed", None),
+        (None, None, b"wrapped"),
+        ("s", None, b"wrapped"),
+    ):
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute(insert, (summary, summary_enc, wrapped_key))
+
+
 def insert_run(conn, project, status: str = "RUNNING"):
     return conn.execute(
         "insert into setting_check_runs (project_id, user_id, document_id, "

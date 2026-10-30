@@ -4,7 +4,7 @@ import pathlib
 import time
 
 from app.content import doc_type
-from app.manuscript import KeyUnavailable, ProjectKeys, Unreadable, unseal
+from app.manuscript import KeyUnavailable, ProjectKeys, Unreadable, seal, unseal
 from app.model import ModelFailure, SummaryModel
 from app.prompt import attr
 from app.summarizer.fingerprint import changed, fingerprint, threshold
@@ -40,14 +40,22 @@ class Worker:
         self.keys = keys
         self.gate = asyncio.Semaphore(settings.workers)
 
-    def text_of(self, job: Job) -> str:
+    def opened(self, job: Job) -> tuple[str, bytes | None]:
         if job.body_enc is None:
-            return job.body
+            return job.body, None
         key = self.keys.unwrap(job.project_id, job.wrapped_key)
-        return unseal(key, job.body_enc, job.project_id, job.document_id, "body_text")
+        text = unseal(key, job.body_enc, job.project_id, job.document_id, "body_text")
+        return text, key
+
+    def stored(
+        self, job: Job, key: bytes | None, summary: str
+    ) -> tuple[str | None, bytes | None]:
+        if key is None:
+            return summary, None
+        return None, seal(key, job.project_id, job.document_id, "summary", summary)
 
     async def process(self, job: Job) -> str:
-        text = await asyncio.to_thread(self.text_of, job)
+        text, key = await asyncio.to_thread(self.opened, job)
         body = text.strip()
         current = fingerprint(text)
         previous = await self.store.previous(job.document_id)
@@ -61,6 +69,12 @@ class Worker:
                 self.settings.min_change_ratio,
             )
         ):
+            if key is not None and previous.summary is not None:
+                sealed = seal(
+                    key, job.project_id, job.document_id, "summary", previous.summary
+                )
+                await self.store.reseal(job, previous.summary, sealed)
+                return "resealed"
             await self.store.skip(job)
             return "unchanged"
         if not body:
@@ -68,14 +82,22 @@ class Worker:
             return "empty"
         if len(body) <= self.settings.short_chars:
             await self.store.save(
-                job, body, current, "body", self.settings.prompt_version
+                job,
+                *self.stored(job, key, body),
+                current,
+                "body",
+                self.settings.prompt_version,
             )
             return "copied"
         summary, usage = await self.model.summarize(
             SUMMARY_INSTRUCTIONS, document_input(job, text)
         )
         await self.store.save(
-            job, summary, current, self.model.name, self.settings.prompt_version
+            job,
+            *self.stored(job, key, summary),
+            current,
+            self.model.name,
+            self.settings.prompt_version,
         )
         log.info(
             "summary written",
