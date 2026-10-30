@@ -20,6 +20,8 @@ class Job:
     title: str
     body: str
     attempts: int
+    body_enc: bytes | None = None
+    wrapped_key: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -38,10 +40,11 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
             if isinstance(change, Upsert):
                 conn.execute(
                     "insert into summary_queue (document_id, project_id, event_seq, "
-                    "revision_no, folder_code, title, body, changed_at, attempts, "
-                    "next_attempt_at) "
+                    "revision_no, folder_code, title, body, body_enc, wrapped_key, "
+                    "changed_at, attempts, next_attempt_at) "
                     "select %(id)s, %(project)s, %(seq)s, %(revision)s, %(folder)s, "
-                    "%(title)s, %(body)s, now(), 0, now() "
+                    "%(title)s, %(body)s, %(body_enc)s::bytea, "
+                    "%(wrapped_key)s::bytea, now(), 0, now() "
                     "where not exists (select 1 from document_summaries s "
                     "where s.document_id = %(id)s and s.event_seq >= %(seq)s "
                     "and s.prompt_version = %(version)s) "
@@ -50,7 +53,9 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
                     "event_seq = excluded.event_seq, "
                     "revision_no = excluded.revision_no, "
                     "folder_code = excluded.folder_code, title = excluded.title, "
-                    "body = excluded.body, changed_at = excluded.changed_at, "
+                    "body = excluded.body, body_enc = excluded.body_enc, "
+                    "wrapped_key = excluded.wrapped_key, "
+                    "changed_at = excluded.changed_at, "
                     "attempts = 0, next_attempt_at = excluded.next_attempt_at "
                     "where summary_queue.event_seq < excluded.event_seq",
                     {
@@ -61,6 +66,8 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
                         "folder": change.folder_code,
                         "title": change.title,
                         "body": change.body,
+                        "body_enc": change.body_enc,
+                        "wrapped_key": change.wrapped_key,
                         "version": prompt_version,
                     },
                 )
@@ -100,7 +107,8 @@ class SummaryStore:
                     "and next_attempt_at <= now() "
                     "order by changed_at desc limit %(limit)s for update skip locked) "
                     "returning q.document_id, q.project_id, q.event_seq, "
-                    "q.revision_no, q.folder_code, q.title, q.body, q.attempts",
+                    "q.revision_no, q.folder_code, q.title, q.body, q.attempts, "
+                    "q.body_enc, q.wrapped_key",
                     {"lease": lease, "idle": idle_seconds, "limit": limit},
                 )
             ).fetchall()
@@ -112,8 +120,10 @@ class SummaryStore:
                 row["revision_no"],
                 row["folder_code"],
                 row["title"],
-                row["body"],
+                row["body"] or "",
                 row["attempts"],
+                row["body_enc"],
+                row["wrapped_key"],
             )
             for row in rows
         ]
@@ -191,6 +201,19 @@ class SummaryStore:
             "delete from summary_queue where document_id = %s and event_seq = %s",
             (job.document_id, job.sequence),
         )
+
+    async def discard(self, job: Job) -> None:
+        async with self.pool.connection() as conn:
+            await self._done(conn, job)
+
+    async def postpone(self, job: Job, seconds: int) -> None:
+        async with self.pool.connection() as conn:
+            await conn.execute(
+                "update summary_queue "
+                "set next_attempt_at = now() + make_interval(secs => %s) "
+                "where document_id = %s and event_seq = %s",
+                (seconds, job.document_id, job.sequence),
+            )
 
     async def retry(self, job: Job, max_attempts: int) -> bool:
         attempts = job.attempts + 1

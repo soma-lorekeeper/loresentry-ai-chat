@@ -11,7 +11,7 @@ from app.summarizer.store import apply
 log = logging.getLogger("ai_chat.summarizer")
 
 BATCH = 50
-MESSAGE_BYTES = 4 * 1024 * 1024
+MESSAGE_BYTES = 6 * 1024 * 1024
 
 
 def consumer_config(settings: SummarizerSettings) -> dict:
@@ -36,6 +36,9 @@ def changes_of(messages) -> tuple[list[Change], int]:
         error = message.error()
         if error is not None:
             if error.code() == KafkaError._PARTITION_EOF:
+                continue
+            if error.code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                log.warning("topic not available", extra={"topic": message.topic()})
                 continue
             raise KafkaException(error)
         headers: dict[str, str] = {}
@@ -65,7 +68,7 @@ def changes_of(messages) -> tuple[list[Change], int]:
 
 def consume(settings: SummarizerSettings, stop: threading.Event) -> None:
     consumer = Consumer(consumer_config(settings))
-    consumer.subscribe([settings.topic])
+    consumer.subscribe(list(settings.topics))
     try:
         with psycopg.connect(settings.base.conninfo) as conn:
             while not stop.is_set():
