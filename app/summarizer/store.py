@@ -18,10 +18,9 @@ class Job:
     revision_no: int
     folder_code: str
     title: str
-    body: str
     attempts: int
-    body_enc: bytes | None = None
-    wrapped_key: bytes | None = None
+    body_enc: bytes
+    wrapped_key: bytes
 
 
 @dataclass(frozen=True)
@@ -29,7 +28,6 @@ class Previous:
     revision_no: int
     fingerprint: list[list[str | int]]
     prompt_version: str
-    summary: str | None = None
 
 
 # event_seq is the ce_sequence of the event a row came from and orders everything
@@ -41,11 +39,10 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
             if isinstance(change, Upsert):
                 conn.execute(
                     "insert into summary_queue (document_id, project_id, event_seq, "
-                    "revision_no, folder_code, title, body, body_enc, wrapped_key, "
+                    "revision_no, folder_code, title, body_enc, wrapped_key, "
                     "changed_at, attempts, next_attempt_at) "
                     "select %(id)s, %(project)s, %(seq)s, %(revision)s, %(folder)s, "
-                    "%(title)s, %(body)s, %(body_enc)s::bytea, "
-                    "%(wrapped_key)s::bytea, now(), 0, now() "
+                    "%(title)s, %(body_enc)s, %(wrapped_key)s, now(), 0, now() "
                     "where not exists (select 1 from document_summaries s "
                     "where s.document_id = %(id)s and s.event_seq >= %(seq)s "
                     "and s.prompt_version = %(version)s) "
@@ -54,7 +51,7 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
                     "event_seq = excluded.event_seq, "
                     "revision_no = excluded.revision_no, "
                     "folder_code = excluded.folder_code, title = excluded.title, "
-                    "body = excluded.body, body_enc = excluded.body_enc, "
+                    "body_enc = excluded.body_enc, "
                     "wrapped_key = excluded.wrapped_key, "
                     "changed_at = excluded.changed_at, "
                     "attempts = 0, next_attempt_at = excluded.next_attempt_at "
@@ -66,7 +63,6 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
                         "revision": change.revision_no,
                         "folder": change.folder_code,
                         "title": change.title,
-                        "body": change.body,
                         "body_enc": change.body_enc,
                         "wrapped_key": change.wrapped_key,
                         "version": prompt_version,
@@ -108,7 +104,7 @@ class SummaryStore:
                     "and next_attempt_at <= now() "
                     "order by changed_at desc limit %(limit)s for update skip locked) "
                     "returning q.document_id, q.project_id, q.event_seq, "
-                    "q.revision_no, q.folder_code, q.title, q.body, q.attempts, "
+                    "q.revision_no, q.folder_code, q.title, q.attempts, "
                     "q.body_enc, q.wrapped_key",
                     {"lease": lease, "idle": idle_seconds, "limit": limit},
                 )
@@ -121,7 +117,6 @@ class SummaryStore:
                 row["revision_no"],
                 row["folder_code"],
                 row["title"],
-                row["body"] or "",
                 row["attempts"],
                 row["body_enc"],
                 row["wrapped_key"],
@@ -133,25 +128,19 @@ class SummaryStore:
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
-                    "select revision_no, fingerprint, prompt_version, summary "
+                    "select revision_no, fingerprint, prompt_version "
                     "from document_summaries where document_id = %s",
                     (document_id,),
                 )
             ).fetchone()
         if row is None:
             return None
-        return Previous(
-            row["revision_no"],
-            row["fingerprint"],
-            row["prompt_version"],
-            row["summary"],
-        )
+        return Previous(row["revision_no"], row["fingerprint"], row["prompt_version"])
 
     async def save(
         self,
         job: Job,
-        summary: str | None,
-        summary_enc: bytes | None,
+        summary_enc: bytes,
         fingerprint: list[list[str | int]],
         model: str,
         prompt_version: str,
@@ -159,12 +148,12 @@ class SummaryStore:
         async with self.pool.connection() as conn, conn.transaction():
             await conn.execute(
                 "insert into document_summaries (document_id, project_id, event_seq, "
-                "revision_no, summary, summary_enc, wrapped_key, fingerprint, model, "
+                "revision_no, summary_enc, wrapped_key, fingerprint, model, "
                 "prompt_version) "
-                "values (%s, %s, %s, %s, %s, %s::bytea, %s::bytea, %s, %s, %s) "
+                "values (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
                 "on conflict (document_id) do update set "
                 "project_id = excluded.project_id, event_seq = excluded.event_seq, "
-                "revision_no = excluded.revision_no, summary = excluded.summary, "
+                "revision_no = excluded.revision_no, "
                 "summary_enc = excluded.summary_enc, "
                 "wrapped_key = excluded.wrapped_key, "
                 "fingerprint = excluded.fingerprint, "
@@ -176,9 +165,8 @@ class SummaryStore:
                     job.project_id,
                     job.sequence,
                     job.revision_no,
-                    summary,
                     summary_enc,
-                    None if summary_enc is None else job.wrapped_key,
+                    job.wrapped_key,
                     Jsonb(fingerprint),
                     model,
                     prompt_version,
@@ -199,32 +187,12 @@ class SummaryStore:
         # The summary keeps its text, revision and fingerprint, but it now stands
         # for this event too, so an older event that arrives late is not queued.
         async with self.pool.connection() as conn, conn.transaction():
-            await self._stands_for(conn, job)
-            await self._done(conn, job)
-
-    async def reseal(self, job: Job, summary: str, summary_enc: bytes) -> None:
-        async with self.pool.connection() as conn, conn.transaction():
             await conn.execute(
-                "update document_summaries set summary = null, summary_enc = %s, "
-                "wrapped_key = %s where document_id = %s and project_id = %s "
-                "and summary = %s",
-                (
-                    summary_enc,
-                    job.wrapped_key,
-                    job.document_id,
-                    job.project_id,
-                    summary,
-                ),
+                "update document_summaries set event_seq = greatest(event_seq, %s) "
+                "where document_id = %s",
+                (job.sequence, job.document_id),
             )
-            await self._stands_for(conn, job)
             await self._done(conn, job)
-
-    async def _stands_for(self, conn: Any, job: Job) -> None:
-        await conn.execute(
-            "update document_summaries set event_seq = greatest(event_seq, %s) "
-            "where document_id = %s",
-            (job.sequence, job.document_id),
-        )
 
     async def _done(self, conn: Any, job: Job) -> None:
         # A rename during the model call queues a newer event with the same

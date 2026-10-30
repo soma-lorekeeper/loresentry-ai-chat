@@ -925,22 +925,16 @@ class Summaries:
         with psycopg.connect(**database, autocommit=True) as conn:
             conn.execute("truncate document_summaries")
 
-    def insert(self, document: str, summary: str, sealed: bool = True, subject=None):
+    def insert(self, document: str, summary: str, subject: str | None = None):
         summary_enc = seal(
             self.key, self.project, subject or document, "summary", summary
         )
         with psycopg.connect(**self.database, autocommit=True) as conn:
             conn.execute(
                 "insert into document_summaries (document_id, project_id, "
-                "revision_no, summary, summary_enc, wrapped_key, fingerprint, model, "
-                "prompt_version) values (%s, %s, 1, %s, %s, %s, '[]', 'm', 'v')",
-                (
-                    document,
-                    self.project,
-                    None if sealed else summary,
-                    summary_enc if sealed else None,
-                    self.wrapped_key if sealed else None,
-                ),
+                "revision_no, summary_enc, wrapped_key, fingerprint, model, "
+                "prompt_version) values (%s, %s, 1, %s, %s, '[]', 'm', 'v')",
+                (document, self.project, summary_enc, self.wrapped_key),
             )
 
     def read(self, document_ids: list[str]) -> dict[str, str]:
@@ -961,9 +955,9 @@ class Summaries:
         }
 
 
-def test_sealed_summaries_are_opened_next_to_plain_ones(database):
+def test_sealed_summaries_are_opened(database):
     summaries = Summaries(database, str(uuid4()))
-    summaries.insert(CH1, "서윤이 정원을 본다.", sealed=False)
+    summaries.insert(CH1, "서윤이 정원을 본다.")
     summaries.insert(CH2, "레나가 북쪽 문 앞에 선다.")
     summaries.insert(CH3, "서윤이 문을 민다.")
 
@@ -977,7 +971,7 @@ def test_sealed_summaries_are_opened_next_to_plain_ones(database):
 
 def test_summaries_that_do_not_open_are_left_out(database):
     summaries = Summaries(database, str(uuid4()))
-    summaries.insert(CH1, "서윤이 정원을 본다.", sealed=False)
+    summaries.insert(CH1, "서윤이 정원을 본다.")
     summaries.insert(CH2, "레나가 북쪽 문 앞에 선다.", subject=CH3)
     summaries.insert(CH3, "서윤이 문을 민다.")
 
@@ -989,15 +983,16 @@ def test_summaries_that_do_not_open_are_left_out(database):
     summaries.kms.fail_with = "KMSInternalException"
     summaries.keys = ProjectKeys(summaries.kms, summaries.kms.key_id)
     calls = len(summaries.kms.calls)
-    assert summaries.read([CH1, CH2, CH3]) == {CH1: "서윤이 정원을 본다."}
+    assert summaries.read([CH1, CH2, CH3]) == {}
     assert len(summaries.kms.calls) == calls + 1
+    assert summaries.read([]) == {}
 
 
 def test_a_turn_sees_sealed_summaries_and_survives_a_kms_failure(database):
     kms = FakeKms()
     with make_env(database, keys=ProjectKeys(kms, kms.key_id)) as env:
         summaries = Summaries(database, str(env.project), kms)
-        summaries.insert(CH2, "레나가 북쪽 문 앞에 선다.", sealed=False)
+        summaries.insert(CH2, "레나가 북쪽 문 앞에 선다.")
         summaries.insert(CH3, "서윤이 등불을 들고 문을 민다.")
 
         status, events = env.send(env.create()["id"])
@@ -1011,5 +1006,5 @@ def test_a_turn_sees_sealed_summaries_and_survives_a_kms_failure(database):
         status, events = env.send(env.create()["id"])
         assert status == 200 and "done" in names(events)
         prompt = json.dumps(env.model.inputs[0], ensure_ascii=False)
+        assert "<summary>" not in prompt
         assert "서윤이 등불을 들고 문을 민다." not in prompt
-        assert "<summary>레나가 북쪽 문 앞에 선다.</summary>" in prompt
