@@ -297,11 +297,11 @@ class FakeChecker:
     def __init__(
         self,
         whole: list[dict[str, Any]] | None = None,
-        core: list[dict[str, Any]] | None = None,
+        by_setting: list[dict[str, Any]] | None = None,
         verdicts: dict[str, dict[str, str]] | None = None,
     ):
         self.whole = list(whole or [])
-        self.core = list(core or [])
+        self.by_setting = list(by_setting or [])
         self.verdicts = dict(verdicts or {})
         self.finds: dict[str, list[dict[str, Any]]] = {}
         self.judged: list[str] = []
@@ -326,8 +326,8 @@ class FakeChecker:
         await self.wait()
         if self.fail_with:
             raise ModelFailure(self.fail_with)
-        core = name == "setting_check_core_candidates"
-        return {"candidates": self.core if core else self.whole}, self.usage
+        settings = name == "setting_check_setting_candidates"
+        return {"candidates": self.by_setting if settings else self.whole}, self.usage
 
     async def judge(
         self,

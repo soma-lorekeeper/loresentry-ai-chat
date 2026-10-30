@@ -1,0 +1,747 @@
+{
+ "h2-oldest-tree": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "숲 북쪽 끝의 검은 소나무는 천 년 전 숲이 처음 생길 때부터 그 자리에 서 있었다.",
+      "source": "oak",
+      "source_quote": "숲에서 가장 오래된 나무.",
+      "core": false,
+      "group": "expect",
+      "entry": "older-pine"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "숲 북쪽 끝의 검은 소나무는 천 년 전 숲이 처음 생길 때부터 그 자리에 서 있었다.",
+      "source": "oak",
+      "source_quote": "숲에서 가장 오래된 나무.",
+      "core": false,
+      "group": "expect",
+      "entry": "older-pine",
+      "verdict": "INSUFFICIENT",
+      "reason": "‘은잎 참나무’ 설정은 그 나무가 숲에서 가장 오래됐다고만 해요. 2화에서는 검은 소나무가 천 년 전부터 서 있었다고 하지만, 숲이 생긴 시점이나 은잎 참나무의 나이는 제시되지 않아 두 나무의 나이가 서로 맞지 않는다고 단정할 수 없어요."
+     }
+    ],
+    "findings": [],
+    "seconds": 6.3,
+    "usage": {
+     "input_tokens": 2125,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1107,
+     "output_tokens": 408,
+     "reasoning_tokens": 135
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "숲 북쪽 끝의 검은 소나무는 천 년 전 숲이 처음 생길 때부터 그 자리에 서 있었다.",
+      "source": "oak",
+      "source_quote": "숲에서 가장 오래된 나무.",
+      "core": false,
+      "group": "expect",
+      "entry": "older-pine"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "숲 북쪽 끝의 검은 소나무는 천 년 전 숲이 처음 생길 때부터 그 자리에 서 있었다.",
+      "source": "oak",
+      "source_quote": "숲에서 가장 오래된 나무.",
+      "core": false,
+      "group": "expect",
+      "entry": "older-pine",
+      "verdict": "INSUFFICIENT",
+      "reason": "‘은잎 참나무’ 설정은 그 나무가 숲에서 가장 오래됐다고 하지만, 2화는 검은 소나무가 숲이 생길 때부터 있었다고만 해요. 두 나무의 나이를 비교할 정보가 없어 모순이라고 단정할 수 없어요."
+     }
+    ],
+    "findings": [],
+    "seconds": 8.9,
+    "usage": {
+     "input_tokens": 2124,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1106,
+     "output_tokens": 674,
+     "reasoning_tokens": 406
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "숲 북쪽 끝의 검은 소나무는 천 년 전 숲이 처음 생길 때부터 그 자리에 서 있었다.",
+      "source": "oak",
+      "source_quote": "숲에서 가장 오래된 나무.",
+      "core": false,
+      "group": "expect",
+      "entry": "older-pine"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "숲 북쪽 끝의 검은 소나무는 천 년 전 숲이 처음 생길 때부터 그 자리에 서 있었다.",
+      "source": "oak",
+      "source_quote": "숲에서 가장 오래된 나무.",
+      "core": false,
+      "group": "expect",
+      "entry": "older-pine",
+      "verdict": "INSUFFICIENT",
+      "reason": "‘은잎 참나무’ 설정은 그 나무가 숲에서 가장 오래되었다고 하지만, 2화의 검은 소나무도 그만큼 오래되었는지는 두 문장만으로 알 수 없어 모순이라고 단정할 수 없어요."
+     }
+    ],
+    "findings": [],
+    "seconds": 7.9,
+    "usage": {
+     "input_tokens": 2137,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1119,
+     "output_tokens": 558,
+     "reasoning_tokens": 283
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "older-pine": 0
+   },
+   "found_by_finder": {
+    "older-pine": 3
+   },
+   "traps": {},
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "h2-only-bridge": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "같은 봄, 사냥꾼 둘은 흰 강의 돌다리를 걸어서 건너 마을로 돌아왔다.",
+      "source": "c1",
+      "source_quote": "봄 홍수에 흰 강의 돌다리가 무너졌다.",
+      "core": false,
+      "group": "expect",
+      "entry": "broken-bridge"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "같은 봄, 사냥꾼 둘은 흰 강의 돌다리를 걸어서 건너 마을로 돌아왔다.",
+      "source": "c1",
+      "source_quote": "봄 홍수에 흰 강의 돌다리가 무너졌다.",
+      "core": false,
+      "group": "expect",
+      "entry": "broken-bridge",
+      "verdict": "CONFLICT",
+      "reason": "1화 「홍수」에서는 봄 홍수로 흰 강의 돌다리가 무너졌다고 정해요. 그런데 2화에서 ‘같은 봄’에 사냥꾼 둘이 그 돌다리를 걸어서 건너 마을로 돌아와요. 무너진 다리가 걸어서 건널 수 있는 상태일 수는 없는데, 1화 이후 다리가 복구되거나 다시 놓이는 일은 나오지 않아 두 내용이 함께 성립하지 않아요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "같은 봄, 사냥꾼 둘은 흰 강의 돌다리를 걸어서 건너 마을로 돌아왔다.",
+      "source": "c1",
+      "source_quote": "봄 홍수에 흰 강의 돌다리가 무너졌다.",
+      "core": false,
+      "group": "expect",
+      "entry": "broken-bridge",
+      "confidence": "HIGH",
+      "explanation": "1화 「홍수」에서는 봄 홍수로 흰 강의 돌다리가 무너졌다고 정해요. 그런데 2화에서 ‘같은 봄’에 사냥꾼 둘이 그 돌다리를 걸어서 건너 마을로 돌아와요. 무너진 다리가 걸어서 건널 수 있는 상태일 수는 없는데, 1화 이후 다리가 복구되거나 다시 놓이는 일은 나오지 않아 두 내용이 함께 성립하지 않아요.",
+      "quote_focus": "같은 봄",
+      "source_focus": "돌다리가 무너졌다"
+     }
+    ],
+    "seconds": 7.5,
+    "usage": {
+     "input_tokens": 2107,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1130,
+     "output_tokens": 440,
+     "reasoning_tokens": 146
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "같은 봄, 사냥꾼 둘은 흰 강의 돌다리를 걸어서 건너 마을로 돌아왔다.",
+      "source": "c1",
+      "source_quote": "봄 홍수에 흰 강의 돌다리가 무너졌다.",
+      "core": false,
+      "group": "expect",
+      "entry": "broken-bridge"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "같은 봄, 사냥꾼 둘은 흰 강의 돌다리를 걸어서 건너 마을로 돌아왔다.",
+      "source": "c1",
+      "source_quote": "봄 홍수에 흰 강의 돌다리가 무너졌다.",
+      "core": false,
+      "group": "expect",
+      "entry": "broken-bridge",
+      "verdict": "CONFLICT",
+      "reason": "1화 「홍수」에서는 봄 홍수로 흰 강의 돌다리가 무너졌다고 정해요. 그런데 2화에서 사냥꾼 둘은 같은 봄에 그 돌다리를 걸어서 건너 마을로 돌아와요. 무너진 다리는 걸어서 건널 수 없고, 두 장면 사이에 다리가 복구되거나 다시 놓이는 일도 나오지 않아 두 내용은 함께 성립할 수 없어요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "같은 봄, 사냥꾼 둘은 흰 강의 돌다리를 걸어서 건너 마을로 돌아왔다.",
+      "source": "c1",
+      "source_quote": "봄 홍수에 흰 강의 돌다리가 무너졌다.",
+      "core": false,
+      "group": "expect",
+      "entry": "broken-bridge",
+      "confidence": "HIGH",
+      "explanation": "1화 「홍수」에서는 봄 홍수로 흰 강의 돌다리가 무너졌다고 정해요. 그런데 2화에서 사냥꾼 둘은 같은 봄에 그 돌다리를 걸어서 건너 마을로 돌아와요. 무너진 다리는 걸어서 건널 수 없고, 두 장면 사이에 다리가 복구되거나 다시 놓이는 일도 나오지 않아 두 내용은 함께 성립할 수 없어요.",
+      "quote_focus": "돌다리를 걸어서 건너",
+      "source_focus": "돌다리가 무너졌다"
+     }
+    ],
+    "seconds": 13.6,
+    "usage": {
+     "input_tokens": 2105,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1128,
+     "output_tokens": 477,
+     "reasoning_tokens": 188
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "같은 봄, 사냥꾼 둘은 흰 강의 돌다리를 걸어서 건너 마을로 돌아왔다.",
+      "source": "c1",
+      "source_quote": "봄 홍수에 흰 강의 돌다리가 무너졌다.",
+      "core": false,
+      "group": "expect",
+      "entry": "broken-bridge"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "같은 봄, 사냥꾼 둘은 흰 강의 돌다리를 걸어서 건너 마을로 돌아왔다.",
+      "source": "c1",
+      "source_quote": "봄 홍수에 흰 강의 돌다리가 무너졌다.",
+      "core": false,
+      "group": "expect",
+      "entry": "broken-bridge",
+      "verdict": "CONFLICT",
+      "reason": "1화 「홍수」는 봄 홍수로 흰 강의 돌다리가 무너졌다고 정해 두었어요. 그런데 2화에서는 같은 봄에 사냥꾼 둘이 그 돌다리를 걸어서 건너 마을로 돌아와요. 같은 시기에 다리가 무너진 상태와 두 사람이 걸어서 건넜다는 사실은 함께 성립할 수 없어요. 2화까지 다리가 다시 놓이거나 복구된 일은 나오지 않아요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "같은 봄, 사냥꾼 둘은 흰 강의 돌다리를 걸어서 건너 마을로 돌아왔다.",
+      "source": "c1",
+      "source_quote": "봄 홍수에 흰 강의 돌다리가 무너졌다.",
+      "core": false,
+      "group": "expect",
+      "entry": "broken-bridge",
+      "confidence": "HIGH",
+      "explanation": "1화 「홍수」는 봄 홍수로 흰 강의 돌다리가 무너졌다고 정해 두었어요. 그런데 2화에서는 같은 봄에 사냥꾼 둘이 그 돌다리를 걸어서 건너 마을로 돌아와요. 같은 시기에 다리가 무너진 상태와 두 사람이 걸어서 건넜다는 사실은 함께 성립할 수 없어요. 2화까지 다리가 다시 놓이거나 복구된 일은 나오지 않아요.",
+      "quote_focus": "돌다리를 걸어서 건너",
+      "source_focus": "돌다리가 무너졌다"
+     }
+    ],
+    "seconds": 13.9,
+    "usage": {
+     "input_tokens": 2108,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1131,
+     "output_tokens": 371,
+     "reasoning_tokens": 72
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "broken-bridge": 3
+   },
+   "found_by_finder": {
+    "broken-bridge": 3
+   },
+   "traps": {},
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "h2-rumor-then-fact": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "그날 정오, 노을은 광장 한가운데에서 또렷한 목소리로 연설을 했다.",
+      "source": "mute",
+      "source_quote": "태어날 때부터 말을 하지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "speech"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "그날 정오, 노을은 광장 한가운데에서 또렷한 목소리로 연설을 했다.",
+      "source": "mute",
+      "source_quote": "태어날 때부터 말을 하지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "speech",
+      "verdict": "CONFLICT",
+      "reason": "‘노을’ 설정은 노을이 태어날 때부터 말을 하지 못한다고 정해 두었어요. 그런데 2화에서 노을은 광장에서 또렷한 목소리로 연설해요. 두 내용은 같은 시점에 함께 성립할 수 없고, 노을이 말을 할 수 있게 된 계기나 설정이 바뀌었다는 내용도 없어요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "그날 정오, 노을은 광장 한가운데에서 또렷한 목소리로 연설을 했다.",
+      "source": "mute",
+      "source_quote": "태어날 때부터 말을 하지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "speech",
+      "confidence": "HIGH",
+      "explanation": "‘노을’ 설정은 노을이 태어날 때부터 말을 하지 못한다고 정해 두었어요. 그런데 2화에서 노을은 광장에서 또렷한 목소리로 연설해요. 두 내용은 같은 시점에 함께 성립할 수 없고, 노을이 말을 할 수 있게 된 계기나 설정이 바뀌었다는 내용도 없어요.",
+      "quote_focus": "또렷한 목소리로 연설",
+      "source_focus": "태어날 때부터 말을 하지 못한다"
+     }
+    ],
+    "seconds": 13.7,
+    "usage": {
+     "input_tokens": 2082,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1104,
+     "output_tokens": 339,
+     "reasoning_tokens": 75
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "그날 정오, 노을은 광장 한가운데에서 또렷한 목소리로 연설을 했다.",
+      "source": "mute",
+      "source_quote": "태어날 때부터 말을 하지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "speech"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "그날 정오, 노을은 광장 한가운데에서 또렷한 목소리로 연설을 했다.",
+      "source": "mute",
+      "source_quote": "태어날 때부터 말을 하지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "speech",
+      "verdict": "CONFLICT",
+      "reason": "‘노을’ 설정은 노을이 태어날 때부터 말을 하지 못하고 손짓으로 뜻을 전한다고 정해 두었어요. 그런데 2화에서 노을은 정오에 광장 한가운데서 목소리로 연설해요. 태어날 때부터 말을 하지 못한다는 설정과 실제로 목소리를 내어 연설하는 장면은 함께 성립할 수 없고, 노을이 말할 수 있게 된 계기도 나오지 않아요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "그날 정오, 노을은 광장 한가운데에서 또렷한 목소리로 연설을 했다.",
+      "source": "mute",
+      "source_quote": "태어날 때부터 말을 하지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "speech",
+      "confidence": "HIGH",
+      "explanation": "‘노을’ 설정은 노을이 태어날 때부터 말을 하지 못하고 손짓으로 뜻을 전한다고 정해 두었어요. 그런데 2화에서 노을은 정오에 광장 한가운데서 목소리로 연설해요. 태어날 때부터 말을 하지 못한다는 설정과 실제로 목소리를 내어 연설하는 장면은 함께 성립할 수 없고, 노을이 말할 수 있게 된 계기도 나오지 않아요.",
+      "quote_focus": "또렷한 목소리로 연설",
+      "source_focus": "태어날 때부터 말을 하지 못한다"
+     }
+    ],
+    "seconds": 15.3,
+    "usage": {
+     "input_tokens": 2088,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1110,
+     "output_tokens": 379,
+     "reasoning_tokens": 90
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "그날 정오, 노을은 광장 한가운데에서 또렷한 목소리로 연설을 했다.",
+      "source": "mute",
+      "source_quote": "태어날 때부터 말을 하지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "speech"
+     }
+    ],
+    "unverified": 0,
+    "judged": [
+     {
+      "quote": "그날 정오, 노을은 광장 한가운데에서 또렷한 목소리로 연설을 했다.",
+      "source": "mute",
+      "source_quote": "태어날 때부터 말을 하지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "speech",
+      "verdict": "CONFLICT",
+      "reason": "‘노을’ 설정은 노을이 태어날 때부터 말을 하지 못하고 손짓으로 뜻을 전한다고 정해 두었어요. 그런데 2화에서 노을은 광장 한가운데서 또렷한 목소리로 연설해요. 말하지 못하는 노을이 그 시점에 직접 목소리로 연설할 수는 없고, 이를 가능하게 하는 변화나 다른 설명도 원고에 나오지 않아요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "그날 정오, 노을은 광장 한가운데에서 또렷한 목소리로 연설을 했다.",
+      "source": "mute",
+      "source_quote": "태어날 때부터 말을 하지 못한다.",
+      "core": false,
+      "group": "expect",
+      "entry": "speech",
+      "confidence": "HIGH",
+      "explanation": "‘노을’ 설정은 노을이 태어날 때부터 말을 하지 못하고 손짓으로 뜻을 전한다고 정해 두었어요. 그런데 2화에서 노을은 광장 한가운데서 또렷한 목소리로 연설해요. 말하지 못하는 노을이 그 시점에 직접 목소리로 연설할 수는 없고, 이를 가능하게 하는 변화나 다른 설명도 원고에 나오지 않아요.",
+      "quote_focus": "또렷한 목소리로 연설",
+      "source_focus": "태어날 때부터 말을 하지 못한다"
+     }
+    ],
+    "seconds": 19.5,
+    "usage": {
+     "input_tokens": 2077,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1099,
+     "output_tokens": 358,
+     "reasoning_tokens": 85
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "speech": 3
+   },
+   "found_by_finder": {
+    "speech": 3
+   },
+   "traps": {
+    "rumor-sing": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "h2-lie-in-dialogue": {
+  "runs": [
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 15.8,
+    "usage": {
+     "input_tokens": 959,
+     "cached_tokens": 0,
+     "cache_write_tokens": 0,
+     "output_tokens": 50,
+     "reasoning_tokens": 34
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 16.3,
+    "usage": {
+     "input_tokens": 959,
+     "cached_tokens": 0,
+     "cache_write_tokens": 0,
+     "output_tokens": 62,
+     "reasoning_tokens": 46
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 17.1,
+    "usage": {
+     "input_tokens": 959,
+     "cached_tokens": 0,
+     "cache_write_tokens": 0,
+     "output_tokens": 60,
+     "reasoning_tokens": 44
+    }
+   }
+  ],
+  "score": {
+   "expected": {},
+   "found_by_finder": {},
+   "traps": {
+    "lie": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "h2-season-pass": {
+  "runs": [
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 17.3,
+    "usage": {
+     "input_tokens": 965,
+     "cached_tokens": 0,
+     "cache_write_tokens": 0,
+     "output_tokens": 33,
+     "reasoning_tokens": 17
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 17.8,
+    "usage": {
+     "input_tokens": 965,
+     "cached_tokens": 0,
+     "cache_write_tokens": 0,
+     "output_tokens": 43,
+     "reasoning_tokens": 27
+    }
+   },
+   {
+    "found": [],
+    "unverified": 0,
+    "judged": [],
+    "findings": [],
+    "seconds": 18.8,
+    "usage": {
+     "input_tokens": 965,
+     "cached_tokens": 0,
+     "cache_write_tokens": 0,
+     "output_tokens": 51,
+     "reasoning_tokens": 35
+    }
+   }
+  ],
+  "score": {
+   "expected": {},
+   "found_by_finder": {},
+   "traps": {
+    "summer-boats": 0
+   },
+   "extras": {},
+   "agreement": 1.0
+  }
+ },
+ "h2-core-color": {
+  "runs": [
+   {
+    "found": [
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": true,
+      "group": "expect",
+      "entry": "red-lion"
+     },
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "red-lion"
+     },
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "깃발은 왕궁 첨탑에만 건다.",
+      "core": false,
+      "group": "expect",
+      "entry": "red-lion"
+     }
+    ],
+    "unverified": 2,
+    "judged": [
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": true,
+      "group": "expect",
+      "entry": "red-lion",
+      "verdict": "CONFLICT",
+      "reason": "‘왕가의 깃발’ 설정은 깃발이 푸른 바탕에 흰 사슴이라고 정해 두었어요. 그런데 2화 행진 장면에서는 군대가 붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 성문을 나서요. 같은 왕가의 깃발이 두 가지 서로 다른 색과 문양을 가질 수는 없고, 두 깃발이 따로 있거나 설정이 바뀌었다는 설명도 없어요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": true,
+      "group": "expect",
+      "entry": "red-lion",
+      "confidence": "HIGH",
+      "explanation": "‘왕가의 깃발’ 설정은 깃발이 푸른 바탕에 흰 사슴이라고 정해 두었어요. 그런데 2화 행진 장면에서는 군대가 붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 성문을 나서요. 같은 왕가의 깃발이 두 가지 서로 다른 색과 문양을 가질 수는 없고, 두 깃발이 따로 있거나 설정이 바뀌었다는 설명도 없어요.",
+      "quote_focus": "붉은 바탕에 금빛 사자가",
+      "source_focus": "푸른 바탕에 흰 사슴"
+     }
+    ],
+    "seconds": 25.5,
+    "usage": {
+     "input_tokens": 2838,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1175,
+     "output_tokens": 888,
+     "reasoning_tokens": 264
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": true,
+      "group": "expect",
+      "entry": "red-lion"
+     },
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "red-lion"
+     },
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "깃발은 왕궁 첨탑에만 건다.",
+      "core": false,
+      "group": "expect",
+      "entry": "red-lion"
+     }
+    ],
+    "unverified": 2,
+    "judged": [
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": true,
+      "group": "expect",
+      "entry": "red-lion",
+      "verdict": "CONFLICT",
+      "reason": "‘왕가의 깃발’ 설정은 깃발이 푸른 바탕에 흰 사슴이라고 정해 두었어요. 그런데 2화에서 군대가 앞세운 왕가의 깃발은 붉은 바탕에 금빛 사자로 묘사돼요. 같은 왕가의 깃발이 같은 시점에 두 가지 바탕색과 문장을 가질 수 없고, 깃발이 바뀌었거나 별도의 깃발이라는 내용도 없어요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": true,
+      "group": "expect",
+      "entry": "red-lion",
+      "confidence": "HIGH",
+      "explanation": "‘왕가의 깃발’ 설정은 깃발이 푸른 바탕에 흰 사슴이라고 정해 두었어요. 그런데 2화에서 군대가 앞세운 왕가의 깃발은 붉은 바탕에 금빛 사자로 묘사돼요. 같은 왕가의 깃발이 같은 시점에 두 가지 바탕색과 문장을 가질 수 없고, 깃발이 바뀌었거나 별도의 깃발이라는 내용도 없어요.",
+      "quote_focus": "붉은 바탕에 금빛 사자",
+      "source_focus": "푸른 바탕에 흰 사슴"
+     }
+    ],
+    "seconds": 25.9,
+    "usage": {
+     "input_tokens": 2842,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1179,
+     "output_tokens": 948,
+     "reasoning_tokens": 320
+    }
+   },
+   {
+    "found": [
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": true,
+      "group": "expect",
+      "entry": "red-lion"
+     },
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": false,
+      "group": "expect",
+      "entry": "red-lion"
+     },
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "깃발은 왕궁 첨탑에만 건다.",
+      "core": false,
+      "group": "expect",
+      "entry": "red-lion"
+     }
+    ],
+    "unverified": 2,
+    "judged": [
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": true,
+      "group": "expect",
+      "entry": "red-lion",
+      "verdict": "CONFLICT",
+      "reason": "‘왕가의 깃발’ 설정은 왕가의 깃발이 푸른 바탕에 흰 사슴이라고 정해 두었어요. 그런데 2화에서는 군대가 성문을 나설 때 왕가의 깃발에 붉은 바탕과 금빛 사자가 있다고 보여 줘요. 같은 깃발의 바탕색과 문양이 서로 달라 두 내용은 함께 성립할 수 없고, 깃발이 바뀌었다는 사건이나 이유도 원고에 나오지 않아요."
+     }
+    ],
+    "findings": [
+     {
+      "quote": "붉은 바탕에 금빛 사자가 그려진 왕가의 깃발을 앞세우고 군대가 성문을 나섰다.",
+      "source": "banner",
+      "source_quote": "왕가의 깃발은 푸른 바탕에 흰 사슴이다.",
+      "core": true,
+      "group": "expect",
+      "entry": "red-lion",
+      "confidence": "HIGH",
+      "explanation": "‘왕가의 깃발’ 설정은 왕가의 깃발이 푸른 바탕에 흰 사슴이라고 정해 두었어요. 그런데 2화에서는 군대가 성문을 나설 때 왕가의 깃발에 붉은 바탕과 금빛 사자가 있다고 보여 줘요. 같은 깃발의 바탕색과 문양이 서로 달라 두 내용은 함께 성립할 수 없고, 깃발이 바뀌었다는 사건이나 이유도 원고에 나오지 않아요.",
+      "quote_focus": "붉은 바탕에 금빛 사자가",
+      "source_focus": "푸른 바탕에 흰 사슴"
+     }
+    ],
+    "seconds": 27.1,
+    "usage": {
+     "input_tokens": 2835,
+     "cached_tokens": 0,
+     "cache_write_tokens": 1172,
+     "output_tokens": 889,
+     "reasoning_tokens": 261
+    }
+   }
+  ],
+  "score": {
+   "expected": {
+    "red-lion": 3
+   },
+   "found_by_finder": {
+    "red-lion": 3
+   },
+   "traps": {},
+   "extras": {},
+   "agreement": 1.0
+  }
+ }
+}

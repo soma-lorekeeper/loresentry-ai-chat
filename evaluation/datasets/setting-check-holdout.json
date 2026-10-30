@@ -1,0 +1,443 @@
+{
+ "cases": [
+  {
+   "id": "h-sword-hand-explained",
+   "title": "왼손잡이 검객이 오른손을 쓴 까닭이 나온다",
+   "settings": [
+    {
+     "key": "garam",
+     "title": "가람",
+     "folder": "CHARACTER",
+     "body": [
+      "늘 왼손으로 검을 쥐는 검객."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 산길",
+     "body": [
+      "가람은 산적들의 매복을 뚫고 고개를 넘었다. 그 싸움에서 왼팔이 부러졌다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 다시 칼을",
+     "body": [
+      "부러진 왼팔에 붕대를 감은 채, 가람은 처음으로 오른손에 검을 쥐었다.",
+      "칼끝이 낯설게 흔들렸다."
+     ]
+    }
+   ],
+   "expect": [],
+   "may": [],
+   "avoid": [
+    {
+     "id": "right-hand-explained",
+     "quote": [
+      "처음으로 오른손에 검을 쥐었다"
+     ],
+     "note": "앞 회차에서 왼팔이 부러졌다"
+    }
+   ]
+  },
+  {
+   "id": "h-sword-hand",
+   "title": "왼손잡이 검객이 까닭 없이 오른손을 쓴다",
+   "settings": [
+    {
+     "key": "garam",
+     "title": "가람",
+     "folder": "CHARACTER",
+     "body": [
+      "늘 왼손으로 검을 쥐는 검객."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 산길",
+     "body": [
+      "가람은 산적들의 매복을 뚫고 고개를 넘었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 결투",
+     "body": [
+      "가람은 오른손에 검을 쥐고 망설임 없이 적에게 달려들었다.",
+      "결투는 세 합 만에 끝났다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "right-hand",
+     "quote": [
+      "오른손에 검을 쥐고"
+     ],
+     "sources": [
+      "garam"
+     ],
+     "note": "늘 왼손으로 검을 쥔다"
+    }
+   ],
+   "may": [],
+   "avoid": []
+  },
+  {
+   "id": "h-guild-size",
+   "title": "조직의 인원과 허풍",
+   "settings": [
+    {
+     "key": "hawk",
+     "title": "붉은 매 상단",
+     "folder": "ORGANIZATION",
+     "body": [
+      "사막을 오가는 상단. 단원은 모두 열 명이다."
+     ],
+     "core": [],
+     "properties": []
+    },
+    {
+     "key": "boss",
+     "title": "타리크",
+     "folder": "CHARACTER",
+     "body": [
+      "붉은 매 상단의 상단주. 허풍이 심하다."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 오아시스",
+     "body": [
+      "붉은 매 상단은 해 질 녘 오아시스에 도착했다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 습격",
+     "body": [
+      "타리크는 우리 단원이 백 명은 된다고 허풍을 쳤다.",
+      "그 순간 붉은 매 상단의 스무 명 단원이 일제히 칼을 뽑았다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "twenty",
+     "quote": [
+      "스무 명 단원이"
+     ],
+     "sources": [
+      "hawk"
+     ],
+     "note": "단원은 열 명"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "boast",
+     "quote": [
+      "백 명은 된다고 허풍을 쳤다"
+     ],
+     "note": "인물의 허풍"
+    }
+   ]
+  },
+  {
+   "id": "h-fire-year",
+   "title": "사건 연도와 기억",
+   "settings": [
+    {
+     "key": "fire",
+     "title": "대화재",
+     "folder": "EVENT",
+     "body": [
+      "왕국력 312년 겨울, 수도의 절반이 불탔다."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 잿빛 거리",
+     "body": [
+      "수도의 북쪽 거리는 아직도 그을음이 벽에 남아 있었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 그해",
+     "body": [
+      "왕국력 315년 여름, 수도를 삼킨 대화재가 시작되었다.",
+      "시장의 노인들은 대화재가 300년쯤이었다고 기억했다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "year",
+     "quote": [
+      "왕국력 315년 여름"
+     ],
+     "sources": [
+      "fire"
+     ],
+     "note": "312년 겨울"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "old-memory",
+     "quote": [
+      "300년쯤이었다고 기억했다"
+     ],
+     "note": "인물의 기억(믿음)"
+    }
+   ]
+  },
+  {
+   "id": "h-lost-eye",
+   "title": "잃은 눈과 꿈",
+   "settings": [
+    {
+     "key": "ria",
+     "title": "리아",
+     "folder": "CHARACTER",
+     "body": [
+      "국경 수비대의 정찰병."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 매복",
+     "body": [
+      "화살이 스치고 지나간 그날, 리아는 오른쪽 눈을 잃었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 다음 날",
+     "body": [
+      "다음 날 아침, 리아는 두 눈으로 멀리 떨어진 깃발의 글씨까지 또렷이 읽어 냈다.",
+      "그날 밤 리아는 꿈속에서 두 눈으로 별을 세었다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "two-eyes",
+     "quote": [
+      "두 눈으로 멀리 떨어진 깃발의 글씨까지"
+     ],
+     "sources": [
+      "c1"
+     ],
+     "note": "전날 오른쪽 눈을 잃었다"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "dream-eyes",
+     "quote": [
+      "꿈속에서 두 눈으로 별을 세었다"
+     ],
+     "note": "꿈"
+    }
+   ]
+  },
+  {
+   "id": "h-english-wolf",
+   "title": "English: a nickname and a rumour",
+   "locale": "en",
+   "settings": [
+    {
+     "key": "hale",
+     "title": "Captain Hale",
+     "folder": "CHARACTER",
+     "body": [
+      "Lost his left leg at sea years ago and walks on a wooden leg."
+     ],
+     "core": [],
+     "properties": [
+      {
+       "key": "alias",
+       "value": "the Grey Wolf"
+      }
+     ]
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "Ch. 1 · The Harbour",
+     "body": [
+      "The ship came in under a low grey sky."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "Ch. 2 · The Storm",
+     "body": [
+      "Sailors swore the Grey Wolf had grown his leg back by witchcraft.",
+      "When the mast cracked, the Grey Wolf sprinted barefoot across the deck on both legs."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "both-legs",
+     "quote": [
+      "sprinted barefoot across the deck on both legs"
+     ],
+     "sources": [
+      "hale"
+     ],
+     "note": "wooden leg"
+    }
+   ],
+   "may": [],
+   "avoid": [
+    {
+     "id": "witchcraft",
+     "quote": [
+      "grown his leg back by witchcraft"
+     ],
+     "note": "rumour"
+    }
+   ]
+  },
+  {
+   "id": "h-clean-bells",
+   "title": "설정대로 쓴 깨끗한 회차",
+   "settings": [
+    {
+     "key": "bell",
+     "title": "마을의 종",
+     "folder": "LOCATION",
+     "body": [
+      "하루에 세 번 울린다: 아침, 정오, 저녁."
+     ],
+     "core": [
+      0
+     ],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 장날",
+     "body": [
+      "아침 종이 울리자 상인들이 짐을 풀었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 정오",
+     "body": [
+      "정오의 종이 울리자 시장이 가장 붐볐다.",
+      "저녁 종이 울린 뒤에야 미오는 집으로 돌아갔다."
+     ]
+    }
+   ],
+   "expect": [],
+   "may": [],
+   "avoid": [
+    {
+     "id": "noon",
+     "quote": [
+      "정오의 종이 울리자"
+     ],
+     "note": "설정대로"
+    },
+    {
+     "id": "evening",
+     "quote": [
+      "저녁 종이 울린 뒤에야"
+     ],
+     "note": "설정대로"
+    }
+   ]
+  },
+  {
+   "id": "h-youngest-captain",
+   "title": "가장 젊은 단장(두 번 건너는 모순)",
+   "settings": [
+    {
+     "key": "eira",
+     "title": "에이라",
+     "folder": "CHARACTER",
+     "body": [
+      "기사단 역사상 가장 젊은 단장."
+     ],
+     "core": [
+      0
+     ],
+     "properties": []
+    },
+    {
+     "key": "oren",
+     "title": "오렌",
+     "folder": "CHARACTER",
+     "body": [
+      "은퇴한 전설의 기사."
+     ],
+     "core": [],
+     "properties": []
+    }
+   ],
+   "chapters": [
+    {
+     "key": "c1",
+     "title": "1화 · 취임",
+     "body": [
+      "에이라는 스무 살에 기사단장이 되었다."
+     ]
+    },
+    {
+     "key": "c2",
+     "title": "2화 · 손님",
+     "body": [
+      "열다섯 살에 같은 기사단의 단장이 되었던 전설의 기사 오렌이 에이라를 찾아왔다."
+     ]
+    }
+   ],
+   "expect": [
+    {
+     "id": "younger",
+     "quote": [
+      "열다섯 살에 같은 기사단의 단장이 되었던"
+     ],
+     "sources": [
+      "eira",
+      "c1"
+     ],
+     "note": "에이라가 가장 젊은 단장(스무 살)"
+    }
+   ],
+   "may": [],
+   "avoid": []
+  }
+ ]
+}
