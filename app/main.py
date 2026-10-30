@@ -14,8 +14,17 @@ from psycopg_pool import AsyncConnectionPool
 from app import db, logs
 from app.content import ContentClient, ContentSource
 from app.errors import ChatFailure, handle_failure, handle_unexpected, handle_validation
-from app.model import AnswerModel, OpenAIModel, UnconfiguredModel
+from app.model import (
+    AnswerModel,
+    CheckModel,
+    OpenAICheckModel,
+    OpenAIModel,
+    UnconfiguredModel,
+)
 from app.routes import Services, router
+from app.setting_check.routes import router as check_router
+from app.setting_check.runner import CheckRunner
+from app.setting_check.store import CheckStore
 from app.settings import Settings
 from app.store import Store
 from app.turns import TurnRunner
@@ -29,6 +38,7 @@ def create_app(
     settings: Settings | None = None,
     content: ContentSource | None = None,
     model: AnswerModel | None = None,
+    checker: CheckModel | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_environment()
 
@@ -53,39 +63,69 @@ def create_app(
                 )
                 stack.push_async_callback(http.aclose)
                 source = ContentClient(http)
+            client = None
+            if model is None or checker is None:
+                if config.openai_api_key:
+                    client = AsyncOpenAI(api_key=config.openai_api_key, max_retries=2)
+                    stack.push_async_callback(client.close)
+                else:
+                    log.error("OPENAI_API_KEY is not set; answers will fail")
             answers = model
-            if answers is None and not config.openai_api_key:
-                log.error("OPENAI_API_KEY is not set; answers will fail")
-                answers = UnconfiguredModel(config.openai_model)
             if answers is None:
-                client = AsyncOpenAI(api_key=config.openai_api_key, max_retries=2)
-                stack.push_async_callback(client.close)
-                answers = OpenAIModel(
-                    client,
-                    config.openai_model,
-                    config.openai_reasoning_effort,
-                    config.openai_max_output_tokens,
-                    config.openai_timeout_seconds,
-                    config.judge,
-                    config.judge_reasoning_effort,
-                    config.judge_max_output_tokens,
+                answers = (
+                    OpenAIModel(
+                        client,
+                        config.openai_model,
+                        config.openai_reasoning_effort,
+                        config.openai_max_output_tokens,
+                        config.openai_timeout_seconds,
+                        config.judge,
+                        config.judge_reasoning_effort,
+                        config.judge_max_output_tokens,
+                    )
+                    if client
+                    else UnconfiguredModel(config.openai_model)
+                )
+            checks_model = checker
+            if checks_model is None:
+                checks_model = (
+                    OpenAICheckModel(
+                        client,
+                        config.openai_model,
+                        config.setting_check_reasoning_effort,
+                        config.openai_max_output_tokens,
+                        config.judge,
+                        config.setting_check_judge_reasoning_effort,
+                        config.setting_check_judge_max_output_tokens,
+                        config.setting_check_timeout_seconds,
+                    )
+                    if client
+                    else UnconfiguredModel(config.openai_model)
                 )
             store = Store(pool, config.stale_turn_seconds)
             runner = TurnRunner(store, source, answers, config)
-            app.state.services = Services(config, store, source, runner)
+            check_store = CheckStore(pool, config.setting_check_stale_seconds)
+            checks = CheckRunner(check_store, source, checks_model, config)
+            app.state.services = Services(config, store, source, runner, checks)
             try:
                 async with asyncio.timeout(5):
                     await store.expire_stale()
             except Exception:
                 log.warning("could not expire stale turns at startup")
+            try:
+                async with asyncio.timeout(5):
+                    await check_store.expire_stale()
+            except Exception:
+                log.warning("could not expire stale setting checks at startup")
             yield
-            await runner.drain()
+            await asyncio.gather(runner.drain(), checks.drain())
 
     app = FastAPI(title=SERVICE, lifespan=lifespan)
     app.add_exception_handler(ChatFailure, handle_failure)
     app.add_exception_handler(RequestValidationError, handle_validation)
     app.add_exception_handler(Exception, handle_unexpected)
     app.include_router(router)
+    app.include_router(check_router)
 
     @app.get("/")
     def root() -> dict[str, str]:

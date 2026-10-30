@@ -73,7 +73,12 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
                         (change.document_id, change.sequence),
                     )
             elif isinstance(change, RemoveProject):
-                for table in ("summary_queue", "document_summaries"):
+                for table in (
+                    "summary_queue",
+                    "document_summaries",
+                    "setting_check_runs",
+                    "setting_check_verdicts",
+                ):
                     conn.execute(
                         f"delete from {table} where project_id = %s",
                         (change.project_id,),

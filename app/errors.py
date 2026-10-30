@@ -28,6 +28,14 @@ CONTRACTS: dict[str, Contract] = {
     ),
     "CHAT_CONTEXT_TOO_LARGE": Contract(422, "The project is too large to read at once"),
     "CHAT_DAILY_LIMIT_REACHED": Contract(429, "Today's chat usage is used up"),
+    "SETTING_CHECK_NOT_FOUND": Contract(404, "Setting check not found"),
+    "SETTING_CHECK_FINDING_NOT_FOUND": Contract(404, "Setting check finding not found"),
+    "SETTING_CHECK_DOCUMENT_NOT_FOUND": Contract(
+        404, "The chapter to check was not found"
+    ),
+    "SETTING_CHECK_IN_PROGRESS": Contract(
+        409, "A setting check is already running in this project"
+    ),
     "CHAT_MODEL_UNAVAILABLE": Contract(
         503, "The model is temporarily unavailable", "RETRY_LATER"
     ),
