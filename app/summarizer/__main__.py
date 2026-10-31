@@ -83,6 +83,9 @@ async def main() -> None:
         min_size=1,
         max_size=settings.workers + 1,
         kwargs={"row_factory": dict_row, "autocommit": True},
+        # Test each connection before handing it out, so a DB restart
+        # costs a reconnect instead of a failed job.
+        check=AsyncConnectionPool.check_connection,
         open=False,
     )
     await pool.open()
