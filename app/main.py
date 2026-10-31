@@ -53,6 +53,9 @@ def create_app(
                 min_size=1,
                 max_size=config.db_pool_size,
                 kwargs={"row_factory": dict_row, "autocommit": True},
+                # Test each connection before handing it out, so a DB restart
+                # costs a reconnect instead of a failed request.
+                check=AsyncConnectionPool.check_connection,
                 open=False,
             )
             await pool.open(wait=False)
