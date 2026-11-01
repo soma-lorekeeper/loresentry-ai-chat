@@ -4,11 +4,20 @@ import os
 import threading
 from dataclasses import replace
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 from botocore.exceptions import ClientError
 
-from app.content import ChatMap, Document, Fetched, Memo, Node, Property, Relation
+from app.content import (
+    ChatMap,
+    CheckVersion,
+    Document,
+    Fetched,
+    Memo,
+    Node,
+    Property,
+    Relation,
+)
 from app.errors import ChatFailure
 from app.model import ModelFailure, StepResult, ToolCall, Usage
 from app.navigation import AnswerCheck, Sufficiency
@@ -84,6 +93,7 @@ class FakeContent:
         self.relations = (Relation(*sorted((LENA, GREENHOUSE)), "처음 각성한 곳"),)
         self.reads: list[tuple[list[str], list[str]]] = []
         self.maps = 0
+        self.versions: list[tuple[str, int]] = []
 
     def check(self, user_id: UUID, project_id: UUID) -> None:
         if user_id != self.owner or project_id != self.project_id:
@@ -162,6 +172,20 @@ class FakeContent:
         missing = [i for i in (*document_ids, *memo_ids) if i not in self.docs]
         missing = [i for i in missing if i not in self.memos]
         return Fetched(tuple(found), tuple(memos), tuple(missing))
+
+    async def check_version(
+        self, user_id: UUID, project_id: UUID, document_id: str
+    ) -> CheckVersion:
+        self.check(user_id, project_id)
+        doc = self.docs.get(document_id)
+        if doc is None or not doc.is_manuscript:
+            raise ChatFailure("SETTING_CHECK_DOCUMENT_NOT_FOUND")
+        self.versions.append((doc.id, doc.revision_no))
+        return CheckVersion(version_of(doc.id, doc.revision_no), doc)
+
+
+def version_of(document_id: str, revision_no: int) -> str:
+    return str(uuid5(UUID(document_id), str(revision_no)))
 
 
 DEFAULT_ANSWER = (
@@ -305,6 +329,7 @@ class FakeChecker:
         self.verdicts = dict(verdicts or {})
         self.finds: dict[str, list[dict[str, Any]]] = {}
         self.judged: list[str] = []
+        self.schemas: list[list[str]] = []
         self.gate: threading.Event | None = None
         self.fail_with: str | None = None
         self.usage = Usage(1000, 400, 0, 50, 20)
@@ -339,6 +364,7 @@ class FakeChecker:
     ) -> tuple[dict[str, Any], Usage | None]:
         blocks = [block["text"] for block in items[0]["content"]]
         self.judged.append("\n".join(blocks))
+        self.schemas.append(schema["properties"]["verdict"]["enum"])
         verdict = {
             "verdict": "CONFLICT",
             "confidence": "HIGH",

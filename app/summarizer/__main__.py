@@ -37,9 +37,6 @@ async def wait_for_schema(settings: SummarizerSettings, stop: asyncio.Event) -> 
                     "from document_summaries limit 0"
                 )
                 await conn.execute("select project_id from setting_check_runs limit 0")
-                await conn.execute(
-                    "select project_id from setting_check_verdicts limit 0"
-                )
                 plaintext = await (
                     await conn.execute(
                         "select count(*) from information_schema.columns "

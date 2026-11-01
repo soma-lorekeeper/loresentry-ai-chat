@@ -75,10 +75,10 @@ question. Errors are `{code, message, next_action}`.
 | `POST` | `/projects/{id}/setting-checks` | Start a setting error check of one chapter, `202` with the run |
 | `GET` | `/projects/{id}/setting-checks/summary` | `{running, chapters}`: the latest run of each checked chapter |
 | `GET` | `/projects/{id}/setting-checks?document_id=` | `{runs}` of a chapter, newest first |
-| `GET` | `/projects/{id}/setting-checks/verdicts` | `{verdicts}`: every verdict of the project with its latest finding, newest first |
+| `GET` | `/projects/{id}/setting-checks/verdicts` | `{verdicts}`: per chapter, the verdicts the next check of that chapter receives, newest first |
 | `GET` | `/setting-checks/{id}` | One run with its findings |
 | `POST` | `/setting-checks/{id}/cancel` | Stop a running check (`204` also when it is not running) |
-| `PUT`, `DELETE` | `/setting-check-findings/{id}/verdict` | The author's verdict (`INTENDED`, `NOT_CONFLICT`) and reason |
+| `PUT`, `DELETE` | `/setting-check-findings/{id}/verdict` | The author's verdict (`INTENDED`, `NOT_CONFLICT`) and reason on that finding of that run |
 | `DELETE` | `/users/me/data` | Account deletion (called by the gateway); also setting checks |
 | `DELETE` | `/projects/{id}/chat/data` | Project deletion (called by the gateway); also setting checks |
 
@@ -119,10 +119,13 @@ Compares one manuscript chapter with the chapters before it and the setting
 documents, and reports where the chapter contradicts them. It runs as a
 background task in the API process (one replica), one running check per project.
 
-1. `READING`: the chapter must be a manuscript on the chat map. The chapter,
-   every earlier chapter and every setting document are read through
-   `chat-documents` in batches of 100, settings with their `core_facts` (the
-   paragraphs the author marked as core settings). Past `SETTING_CHECK_MAX_CHARS`
+1. `READING`: the chapter must be a manuscript on the chat map. Content saves
+   the chapter as a `SETTING_CHECK` version (`POST /internal/projects/{id}/check-versions`,
+   reusing the version when that revision was already checked) and returns its
+   text; the run keeps `version_id` and `revision_no`, so the report can show the
+   chapter as it was checked. Every earlier chapter and every setting document
+   are read through `chat-documents` in batches of 100, settings with their
+   `core_facts` (the paragraphs the author marked as core settings). Past `SETTING_CHECK_MAX_CHARS`
    the oldest chapters are left out; if the chapter and the settings alone do
    not fit, the run fails with `CHAT_CONTEXT_TOO_LARGE`.
 2. `FINDING`: two passes in parallel with JSON schema output: the whole pass
@@ -138,11 +141,11 @@ background task in the API process (one replica), one running check per project.
    time, with every setting document (for nicknames and facts the candidate
    depends on), the most recent earlier chapters up to 30,000 characters, the
    chapter, the source document, older chapters the finder named in
-   `related_ids`, and the author's earlier verdicts on that source. The judge
+   `related_ids`, and the author's verdicts on this chapter (below). The judge
    keeps a contradiction unless the materials account for it; an explanation
    the story never gives does not count. `evaluation/setting_check.py` measures
    it on known cases (see `evaluation/README.md`). Only `CONFLICT` is kept (not `CHANGED_OVER_TIME`,
-   `CHARACTER_PERSPECTIVE` or `INSUFFICIENT`). The judge writes the
+   `CHARACTER_PERSPECTIVE`, `INSUFFICIENT` or `AUTHOR_EXPLAINED`). The judge writes the
    `explanation` the author reads: three or four sentences on what the source
    establishes, what the chapter shows and why both cannot hold (an empty one
    falls back to the finding pass's summary and direction). It also names the shortest
@@ -152,10 +155,26 @@ background task in the API process (one replica), one running check per project.
 4. Findings are saved in chapter order and the run becomes `DONE`, with tokens
    summed into the run. Checks do not count toward the daily chat usage.
 
-A verdict is stored per project by fingerprint (`sha256` of kind, source,
-normalised source quote and normalised quote), so it applies to the same finding
-in later runs. The verdict ledger lists each verdict with the newest finding of
-that fingerprint, its chapter and when it was decided. A cancelled run keeps no findings. A failed run keeps
+A run is a snapshot: its findings and their verdicts belong to it, and nothing
+written later (an edit of the chapter, a verdict in another run) changes them.
+Each finding has a fingerprint (`sha256` of kind, source, normalised source quote
+and normalised quote). For one chapter, the state of a fingerprint is the one in
+the newest finished run that has it, cleared verdicts included; those with a
+verdict are the chapter's decisions.
+
+- When a run finishes, a finding takes the decision of its fingerprint (verdict,
+  reason, when and on which revision it was made).
+- Every judge call of the next check of that chapter gets all of its decisions
+  in `<verdicts chapter_revision="…">`: what was flagged (both quotes, the source,
+  that run's explanation), the verdict and reason, the revision it answered and
+  whether that is this revision (`version="same|earlier"`), and whether the quote
+  is still in the chapter (`quote_now`). The judge applies a decision only to the
+  same point, answers `AUTHOR_EXPLAINED` when a `NOT_CONFLICT` still holds (the
+  value is offered only when the chapter has decisions), and judges `INTENDED`
+  points as usual so the decision carries over.
+- The verdict ledger lists the decisions of every chapter with their finding.
+
+A cancelled run keeps no findings. A failed run keeps
 `failure_code` (`CHAT_MODEL_UNAVAILABLE`, `CONTENT_UNAVAILABLE`,
 `INTERNAL_ERROR`, …); a run still `RUNNING` after `SETTING_CHECK_STALE_SECONDS`
 or stopped by a shutdown becomes `INTERRUPTED`.
@@ -179,7 +198,7 @@ compares sentence fingerprints with the last summary and summarizes again only
 when at least `min(SUMMARY_MIN_CHANGE_CHARS, length × SUMMARY_MIN_CHANGE_RATIO)`
 characters changed. Bodies up to 500 characters are used as their own summary.
 Trash, delete and project deletion remove summaries; project deletion also
-removes setting checks and verdicts. Liveness is the mtime of
+removes setting checks. Liveness is the mtime of
 `SUMMARY_HEARTBEAT_PATH`.
 
 A FileChanged carries the body only as `file.body_text_enc` (a manuscript
@@ -247,9 +266,8 @@ keeps the pod from becoming ready.
 | `chat_held_documents` | Documents and memos a session has read, in reading order |
 | `document_summaries` | One summary per document with its revision, sentence fingerprint and the `event_seq` it stands for; the summary is sealed in `summary_enc` with `wrapped_key` |
 | `summary_queue` | Latest change per document (by `event_seq`) waiting to be summarized, with its body sealed in `body_enc` with `wrapped_key` |
-| `setting_check_runs` | One row per setting check: chapter and revision, status and stage, what was read, tokens. At most one `RUNNING` per project |
-| `setting_check_findings` | Findings of a finished run in chapter order, with the explanation, both quotes, their focus phrases and the fingerprint |
-| `setting_check_verdicts` | The author's verdict and reason per project and fingerprint, kept across runs |
+| `setting_check_runs` | One row per setting check: chapter, revision and the content version it read, status and stage, what was read, tokens. At most one `RUNNING` per project |
+| `setting_check_findings` | Findings of a finished run in chapter order, with the explanation, both quotes, their focus phrases, the fingerprint and the author's verdict, reason, decision time and the revision it answered |
 
 Project and user ids are plain values; there are no cross-database foreign keys.
 Running uvicorn directly, as below, skips the migration step.
