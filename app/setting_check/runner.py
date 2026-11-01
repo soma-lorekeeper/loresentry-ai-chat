@@ -20,6 +20,7 @@ from app.setting_check.findings import (
 from app.setting_check.prompts import (
     JUDGE_INSTRUCTIONS,
     JUDGE_SCHEMA,
+    NOTED_JUDGE_SCHEMA,
     SETTINGS_INSTRUCTIONS,
     SETTINGS_SCHEMA,
     WHOLE_INSTRUCTIONS,
@@ -49,7 +50,9 @@ class Tally:
     core_facts: int = 0
     found: int = 0
     verified: int = 0
+    notes: int = 0
     judged: int = 0
+    explained: int = 0
     findings: int = 0
 
     def add(self, usage: Usage | None) -> None:
@@ -182,13 +185,19 @@ class CheckRunner:
         outcome = "DONE"
         try:
             async with asyncio.timeout(self.settings.setting_check_deadline_seconds):
-                reading = await self.read(user_id, project_id, document_id, chat_map)
+                version_id, reading = await self.read(
+                    user_id, project_id, document_id, chat_map
+                )
                 read = read_of(reading)
                 tally.manuscripts = read.manuscripts
                 tally.settings = read.settings
                 tally.core_facts = read.core_facts
                 if not await self.store.advance(
-                    run_id, reading.target.title, reading.target.revision_no, read
+                    run_id,
+                    reading.target.title,
+                    reading.target.revision_no,
+                    version_id,
+                    read,
                 ):
                     raise Stopped()
                 findings = await self.check(run_id, project_id, reading, locale, tally)
@@ -223,7 +232,9 @@ class CheckRunner:
                     "core_facts": tally.core_facts,
                     "candidates": tally.found,
                     "verified": tally.verified,
+                    "notes": tally.notes,
                     "judged": tally.judged,
+                    "explained": tally.explained,
                     "findings": tally.findings,
                     "input_tokens": tally.usage.input_tokens,
                     "cached_tokens": tally.usage.cached_tokens,
@@ -235,8 +246,12 @@ class CheckRunner:
 
     async def read(
         self, user_id: UUID, project_id: UUID, document_id: str, chat_map: ChatMap
-    ) -> Reading:
+    ) -> tuple[str, Reading]:
         target = chapter(chat_map, document_id)
+        checked = await self.content.check_version(user_id, project_id, target.id)
+        document = checked.document
+        if document.id != target.id or not document.is_manuscript:
+            raise ChatFailure("SETTING_CHECK_DOCUMENT_NOT_FOUND")
         settings = list(chat_map.settings)
         earlier = sorted(
             (
@@ -249,22 +264,15 @@ class CheckRunner:
             key=lambda node: node.ordinal or 0,
         )
         limit = self.settings.setting_check_max_chars
-        room = limit - target.chars - sum(node.chars for node in settings)
+        room = limit - document.chars - sum(node.chars for node in settings)
         if room < 0:
             raise ChatFailure("CHAT_CONTEXT_TOO_LARGE")
         earlier = newest_fitting(earlier, room, lambda node: node.chars)
         fetched = await self.fetch(
             user_id,
             project_id,
-            [
-                target.id,
-                *(node.id for node in earlier),
-                *(node.id for node in settings),
-            ],
+            [*(node.id for node in earlier), *(node.id for node in settings)],
         )
-        document = fetched.get(target.id)
-        if document is None or not document.is_manuscript:
-            raise ChatFailure("SETTING_CHECK_DOCUMENT_NOT_FOUND")
         sources = [fetched[node.id] for node in settings if node.id in fetched]
         room = limit - document.chars - sum(doc.chars for doc in sources)
         if room < 0:
@@ -274,7 +282,7 @@ class CheckRunner:
             room,
             lambda doc: doc.chars,
         )
-        return Reading(document, tuple(before), tuple(sources))
+        return checked.version_id, Reading(document, tuple(before), tuple(sources))
 
     async def fetch(
         self, user_id: UUID, project_id: UUID, ids: list[str]
@@ -306,16 +314,15 @@ class CheckRunner:
             return []
         if not await self.store.stage(run_id, "JUDGING"):
             raise Stopped()
-        notes = await self.store.notes(
-            project_id, sorted({candidate.source_id for candidate in verified})
-        )
+        notes = await self.store.notes(project_id, reading.target.id, run_id)
+        tally.notes = len(notes)
         gate = asyncio.Semaphore(max(1, self.settings.setting_check_judge_concurrency))
         results = await together(
             [
                 self.judge(
                     reading,
                     candidate,
-                    notes.get(candidate.source_id, []),
+                    notes,
                     locale,
                     tally,
                     gate,
@@ -370,11 +377,13 @@ class CheckRunner:
                 JUDGE_INSTRUCTIONS,
                 judge_input(reading, candidate, notes, locale),
                 "setting_check_judgement",
-                JUDGE_SCHEMA,
+                NOTED_JUDGE_SCHEMA if notes else JUDGE_SCHEMA,
                 cache_key,
             )
         tally.add(usage)
         tally.judged += 1
+        if value.get("verdict") == "AUTHOR_EXPLAINED":
+            tally.explained += 1
         return judged(candidate, value)
 
     async def settle_stop(self, run_id: UUID, tally: Tally) -> str:

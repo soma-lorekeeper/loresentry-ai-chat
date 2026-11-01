@@ -353,8 +353,7 @@ class Rig:
 def rig(database):
     with psycopg.connect(**database, autocommit=True) as conn:
         conn.execute(
-            "truncate summary_queue, document_summaries, setting_check_runs, "
-            "setting_check_verdicts cascade"
+            "truncate summary_queue, document_summaries, setting_check_runs cascade"
         )
     return Rig(database)
 
@@ -433,23 +432,28 @@ def test_trash_and_project_deletion_remove_summaries(rig):
 def test_project_deletion_removes_its_setting_checks(rig):
     kept = str(uuid4())
     for project in (rig.project, kept):
-        rig.query(
+        run = rig.query(
             "insert into setting_check_runs (project_id, user_id, document_id, "
             "document_title, revision_no, status) "
             "values (%s, uuidv7(), uuidv7(), 't', 1, 'DONE') returning id",
             project,
-        )
+        )[0][0]
         rig.query(
-            "insert into setting_check_verdicts (project_id, user_id, fingerprint, "
-            "verdict, source_document_id, source_quote) "
-            "values (%s, uuidv7(), 'f', 'INTENDED', uuidv7(), 'q') returning 1",
-            project,
+            "insert into setting_check_findings (run_id, position, kind, confidence, "
+            "explanation, quote, source_document_id, source_title, source_doc_type, "
+            "source_quote, fingerprint, verdict, decided_at, decided_revision_no) "
+            "values (%s, 0, 'SETTING', 'HIGH', 'e', 'q', uuidv7(), 't', 'place', "
+            "'sq', 'f', 'INTENDED', now(), 1) returning 1",
+            run,
         )
 
     rig.change(RemoveProject(rig.project))
 
-    for table in ("setting_check_runs", "setting_check_verdicts"):
-        assert rig.query(f"select project_id::text from {table}") == [(kept,)]
+    assert rig.query("select project_id::text from setting_check_runs") == [(kept,)]
+    assert rig.query(
+        "select r.project_id::text from setting_check_findings f "
+        "join setting_check_runs r on r.id = f.run_id"
+    ) == [(kept,)]
 
 
 def test_documents_still_being_edited_wait(rig):
