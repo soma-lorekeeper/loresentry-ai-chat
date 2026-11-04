@@ -46,6 +46,7 @@ from app.logs._logger import (
     reset,
 )
 from app.logs._trace import (
+    IDLE_POLLING,
     Headers,
     activate,
     attach_remote,
@@ -299,6 +300,10 @@ class LogFlow:
                 self._end(WARN, SCHEDULE_FAILED, error_type, None)
             elif self._began:
                 self._end(INFO, SCHEDULE_COMPLETED, None, None)
+            elif self._span is not None:
+                # 줄이 하나도 없던 빈 폴링 회차. 로그처럼 trace도 남지 않도록 회차 span에 표시를 달아, collector가 이
+                # trace(회차 안의 대기열 조회 DB span 포함)를 통째로 버리게 한다
+                self._span.set_attribute(IDLE_POLLING, True)
             return False
         if self._kind == "kafka_record":
             processed = f"{self._name} event processed"
