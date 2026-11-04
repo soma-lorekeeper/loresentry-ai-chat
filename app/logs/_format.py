@@ -7,9 +7,13 @@
 - 늘: ``@timestamp``(UTC, 마이크로초, Z), ``log.level``(INFO·WARN·ERROR, DEBUG), ``log.logger``, ``message``,
   ``service.name``, ``service.version``(환경 변수 APP_VERSION, 이미지 태그), ``process.thread.name``, ``ecs.version``
 - trace·사용자·문맥: 우리 줄은 그 줄을 찍은 객체의 값, 프레임워크 줄은 같은 문맥에 바인딩된 객체의 값(Java MDC 문맥 필드와
-  같다). 바인딩이 없으면 지금 열려 있는 span의 trace.id·span.id
+  같다). trace.id·span.id는 줄을 쓰는 순간의 지금 span이 먼저이고, 바인딩된 흐름과 다른 trace이거나 span이 없으면 흐름의 값이다
+  (``AppLogger._ids``). 바인딩이 없으면 지금 span의 값이다. logging은 줄을 찍은 스레드에서 이 formatter를 바로 부르므로 그 순간의
+  지금 span이 그 줄의 span이다
 - 우리 줄: ``log.origin.function``, ``log.layer``, ``log.package``, 그 줄의 필드, 객체의 문맥 필드(줄의 값이 이긴다), ``tags``
-- 프레임워크 줄의 예외: ``error.type``(클래스 이름)과 메시지 없는 ``error.stack_trace``. 예외 메시지는 남기지 않는다
+- 프레임워크 줄의 예외: ``error.type``(클래스 이름)과 메시지 없는 ``error.stack_trace``. 예외 메시지(``error.message``)는 남기지 않는다
+- warn·error 줄에는 언제나 ``error.stack_trace``가 있다. 예외 스택이 없으면(우리 줄의 업무 거절·상대 5xx·흐름 fail, 프레임워크의
+  예외 없는 경고) 줄을 쓰는 순간의 호출 위치 스택을 남긴다(LOG_SCHEMA.md 5절 "warn·error 스택")
 
 점 이름은 중첩 객체로 펼치고 먼저 들어간 값이 이긴다(Java EcsLogFormatter.put과 같다). JSON을 만들다 실패해도 줄을 버리지 않고
 최소 필드만 담은 줄을 쓴다.
@@ -24,7 +28,7 @@ from datetime import UTC, datetime
 from types import TracebackType
 from typing import Any
 
-from app.logs._fields import LogField
+from app.logs._fields import LogField, log_site_stack
 from app.logs._logger import LINE_ATTR, Line, bound_logger
 from app.logs._trace import current_ids
 
@@ -47,6 +51,8 @@ QUIET = (
 HANDLER_NAME = "loresentry-ecs"
 # Kafka client(librdkafka)가 자기 줄을 넘기는 logger 이름. graph-rag도 같은 이름을 쓴다
 KAFKA_CLIENT_LOGGER = "librdkafka"
+# EDOT distro가 프로세스 시작 때 자기 평문 stderr handler를 다는 logger(OpenTelemetry SDK·exporter·계측, distro 자신)
+DISTRO_LOGGERS = ("opentelemetry", "elasticotel")
 
 
 class EcsFormatter(logging.Formatter):
@@ -78,6 +84,12 @@ class EcsFormatter(logging.Formatter):
             self.ours(root, line)
         else:
             self.framework(root, record)
+        # warn·error 줄에는 언제나 스택이 있다. 예외 스택(프레임워크 줄의 예외, 우리 줄이 넘긴 메시지 없는 스택)이 없으면 호출 위치
+        # 스택이다. 첫 줄은 그 줄의 error.type(없으면 logger 이름)이라 예외 스택과 구별된다
+        error = root.get("error")
+        error = error if isinstance(error, dict) else {}
+        if record.levelno >= logging.WARNING and "stack_trace" not in error:
+            put_field(root, log_site_stack(error.get("type") or record.name))
         put(root, "ecs.version", ECS_VERSION)
         return root
 
@@ -143,6 +155,8 @@ def configure_logging(service_name: str) -> None:
       (요청 줄은 RequestLogMiddleware가 남긴다. Dockerfile도 --no-access-log로 띄운다)
     - URL 전체를 INFO로 찍는 라이브러리(httpx 등)는 WARNING부터만 둔다
     - 처리되지 않은 예외(sys.excepthook, threading.excepthook)도 logging으로 보내 평문 traceback이 stderr에 남지 않게 한다
+    - EDOT distro가 단 평문 handler(opentelemetry·elasticotel logger)를 떼고 root로 보낸다. exporter가 collector에 닿지 못할 때의
+      경고 같은 줄도 ECS JSON(호출 위치 스택 포함)으로 나간다. 레벨은 distro가 정한 값(OTEL_LOG_LEVEL, 기본 warn) 그대로다
 
     API는 모듈을 import할 때(uvicorn이 Started server process를 찍기 전), 다른 프로세스는 진입점의 맨 처음에 부른다.
     """
@@ -163,6 +177,10 @@ def configure_logging(service_name: str) -> None:
     access.disabled = True
     for name in QUIET:
         logging.getLogger(name).setLevel(logging.WARNING)
+    for name in DISTRO_LOGGERS:
+        logger = logging.getLogger(name)
+        logger.handlers.clear()
+        logger.propagate = True
     sys.excepthook = _uncaught
     threading.excepthook = _uncaught_in_thread
 

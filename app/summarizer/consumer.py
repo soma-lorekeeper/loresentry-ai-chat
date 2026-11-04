@@ -40,11 +40,12 @@ def consumer_config(settings: SummarizerSettings) -> dict:
     }
 
 
-def handle(conn: psycopg.Connection, message, prompt_version: str) -> None:
-    """레코드 하나를 반영한다. 레코드마다 LogFlow.kafka_record가 흐름 하나를 연다.
+def handle(conn: psycopg.Connection, message, settings: SummarizerSettings) -> None:
+    """레코드 하나를 반영한다. 레코드마다 LogFlow.kafka_record가 흐름 하나(consumer span)를 연다.
 
     헤더의 traceparent를 이은 trace로 시작·종료 줄을 남기고, 그 trace를 summary_queue 행에 저장해 나중에 하는 요약
     작업도 같은 trace로 남게 한다. 처리하지 않는 종류는 SKIPPED, 계약에 맞지 않는 레코드는 SKIPPED와 error.type(warn)이다.
+    consumer group은 span의 messaging 속성이 된다.
     """
     error = message.error()
     if error is not None:
@@ -65,6 +66,7 @@ def handle(conn: psycopg.Connection, message, prompt_version: str) -> None:
         message.headers(),
         TYPES,
         EVENT,
+        settings.group_id,
     ) as flow:
         try:
             change = parse(header_map(message.headers()), message.value())
@@ -81,7 +83,7 @@ def handle(conn: psycopg.Connection, message, prompt_version: str) -> None:
             LogField.document_id(getattr(change, "document_id", None)),
             LogField.project_id(getattr(change, "project_id", None)),
         )
-        apply(conn, [change], prompt_version, traceparent())
+        apply(conn, [change], settings.prompt_version, traceparent())
 
 
 def consume(settings: SummarizerSettings, stop: threading.Event) -> None:
@@ -97,7 +99,7 @@ def consume(settings: SummarizerSettings, stop: threading.Event) -> None:
                 if not messages:
                     continue
                 for message in messages:
-                    handle(conn, message, settings.prompt_version)
+                    handle(conn, message, settings)
                     if message.error() is None:
                         consumer.store_offsets(message)
                 consumer.commit(asynchronous=False)

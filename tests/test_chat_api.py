@@ -1,16 +1,15 @@
 import asyncio
-import functools
 import json
 import os
 import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
-import httpx
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
@@ -1020,46 +1019,63 @@ def test_a_turn_sees_sealed_summaries_and_survives_a_kms_failure(database):
         assert "서윤이 등불을 들고 문을 민다." not in prompt
 
 
-def test_logs_follow_the_gateway_trace_into_the_content_call(
-    database, monkeypatch, capsys
-):
+def test_logs_follow_the_gateway_trace_into_the_content_call(database, capsys, spans):
     trace = "4bf92f3577b34da6a3ce929d0e0e4736"
     user, project = uuid4(), uuid4()
-    seen: list[httpx.Request] = []
+    seen: list[dict[str, str]] = []
 
-    def content(request: httpx.Request) -> httpx.Response:
-        seen.append(request)
-        return httpx.Response(200, json={"size": 42})
+    class Content(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            seen.append({name.lower(): value for name, value in self.headers.items()})
+            body = json.dumps({"size": 42}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
 
-    # The API builds its own content client; give it a transport that answers here
-    monkeypatch.setattr(
-        httpx,
-        "AsyncClient",
-        functools.partial(httpx.AsyncClient, transport=httpx.MockTransport(content)),
-    )
+        def log_message(self, *_: object) -> None:
+            pass
+
+    # The httpx instrumentation (the distro in the image, conftest here) wraps the real
+    # transport, so a local server answers for content
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Content)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    content = f"http://127.0.0.1:{server.server_port}"
     settings = Settings(
         db_host=database["host"],
         db_port=str(database["port"]),
         db_name=database["dbname"],
         db_username=database["user"],
         db_password=database["password"],
-        content_base_url="http://content.dev.svc:8080",
+        content_base_url=content,
     )
-    with TestClient(main.create_app(settings, model=FakeModel())) as client:
-        capsys.readouterr()
-        response = client.get(
-            f"/projects/{project}/chat/availability",
-            headers={
-                "X-User-Id": str(user),
-                "traceparent": f"00-{trace}-00f067aa0ba902b7-01",
-            },
-        )
-        lines = log_lines(capsys.readouterr().out)
+    try:
+        with TestClient(main.create_app(settings, model=FakeModel())) as client:
+            capsys.readouterr()
+            response = client.get(
+                f"/projects/{project}/chat/availability",
+                headers={
+                    "X-User-Id": str(user),
+                    "traceparent": f"00-{trace}-00f067aa0ba902b7-01",
+                },
+            )
+            lines = log_lines(capsys.readouterr().out)
+    finally:
+        server.shutdown()
+        server.server_close()
 
     assert response.json()["size"] == 42
     [request] = seen
-    assert request.headers["traceparent"].startswith(f"00-{trace}-")
-    assert request.headers["X-User-Id"] == str(user)
+    assert request["x-user-id"] == str(user)
+    # gateway span → server span → content call → httpx GET; content gets the GET span
+    found = spans()
+    [call] = [span for span in found if span.name == "content call"]
+    [get] = [span for span in found if span.parent == call.context]
+    [served] = [span for span in found if span.context == call.parent]
+    assert served.parent.span_id == 0x00F067AA0BA902B7
+    assert {span.context.trace_id for span in (served, call, get)} == {int(trace, 16)}
+    assert request["traceparent"].startswith(f"00-{trace}-{get.context.span_id:016x}-")
     flow = [line for line in lines if field(line, "trace.id") == trace]
     assert [line["message"] for line in flow] == [
         "request received",
@@ -1078,9 +1094,11 @@ def test_logs_follow_the_gateway_trace_into_the_content_call(
         "app.content",
         "client",
     )
-    assert field(called, "url.domain") == "content.dev.svc"
+    # The result line is written inside the content call span
+    assert field(called, "span.id") == f"{call.context.span_id:016x}"
+    assert field(called, "url.domain") == "127.0.0.1"
     assert field(called, "url.full") == (
-        f"http://content.dev.svc:8080/internal/projects/{project}/chat-size"
+        f"{content}/internal/projects/{project}/chat-size"
     )
     assert field(called, "http.response.status_code") == 200
     assert field(called, "event.duration") > 0

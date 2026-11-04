@@ -2,6 +2,7 @@ import ast
 import asyncio
 import json
 import logging
+import os
 import re
 import subprocess
 import sys
@@ -14,6 +15,10 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 from openai import RateLimitError
+from opentelemetry import context as otel_context
+from opentelemetry import trace
+from opentelemetry.context import Context
+from opentelemetry.trace import SpanKind, StatusCode
 
 from app.logs import (
     AppLogger,
@@ -22,7 +27,6 @@ from app.logs import (
     LogScope,
     Outcome,
     configure_logging,
-    setup_tracing,
     traceparent,
 )
 from app.logs._format import EcsFormatter
@@ -37,8 +41,11 @@ from app.summarizer.settings import SummarizerSettings
 from tests.support import FakeKms, field, lines_with, log_lines
 
 APP = Path(__file__).parent.parent / "app"
+ENTRYPOINT = APP.parent / "docker-entrypoint.sh"
 TRACE = "0af7651916cd43dd8448eb211c80319c"
 TRACEPARENT = f"00-{TRACE}-b7ad6b7169203331-01"
+# A span of the tests' own, standing in for what an instrumentation opens (DB query, HTTP call)
+TRACER = trace.get_tracer("tests")
 # Layers whose public functions must leave an entry line (LOG_SCHEMA.md section 5)
 LAYERS = {
     "controller",
@@ -55,11 +62,26 @@ LEVELS = {"info", "warn", "error"}
 
 @pytest.fixture
 def lines(capsys):
-    """Reads the lines written so far; logging and tracing are set up as in the service."""
+    """Reads the lines written so far; logging is set up as in the service, tracing by conftest."""
     configure_logging("ai-chat-test")
-    setup_tracing("ai-chat-test")
     capsys.readouterr()
     return lambda: log_lines(capsys.readouterr().out)
+
+
+def ids(span) -> tuple[str, str]:
+    """(trace.id, span.id) of a span as the log lines write them."""
+    context = span.get_span_context()
+    return f"{context.trace_id:032x}", f"{context.span_id:016x}"
+
+
+def line_ids(line: dict) -> tuple[str, str]:
+    return field(line, "trace.id"), field(line, "span.id")
+
+
+def named(found, name: str):
+    """The one finished span with this name."""
+    [span] = [span for span in found if span.name == name]
+    return span
 
 
 class Color(Enum):
@@ -167,6 +189,7 @@ def test_lines_are_nested_ecs_json_and_framework_errors_lose_their_message():
     assert line["error"]["type"] == "ValueError"
     assert line["error"]["stack_trace"].startswith("ValueError\n\tat ")
     assert "hunter2" not in json.dumps(line)
+    assert "message" not in line["error"]
     assert not any("." in key for key in line if key != "@timestamp")
 
 
@@ -194,10 +217,50 @@ def test_the_layer_comes_from_log_layer_or_the_module_name():
     assert layer_of("app.main", {}) == "other"
 
 
+def test_warn_and_error_lines_without_an_exception_carry_the_call_site_stack(lines):
+    def reject():
+        logger = AppLogger.current()
+        logger.warn("session conflict", LogField.error_type("CHAT_TURN_RUNNING"))
+
+    reject()
+    logging.getLogger("uvicorn.error").warning("Invalid HTTP request received.")
+    logging.getLogger("opentelemetry.exporter").error("Failed to export span batch")
+    AppLogger.current().info("chat session get")
+
+    ours, uvicorn, exporter, info = lines()
+    stack = field(ours, "error.stack_trace").splitlines()
+    assert stack[0] == "log site: CHAT_TURN_RUNNING"
+    # The newest frame is where the line was logged; the logging frames are left out
+    logged_at = reject.__code__.co_firstlineno + 2
+    assert (
+        stack[1] == f"\tat {__name__}.{reject.__qualname__}(test_logs.py:{logged_at})"
+    )
+    assert stack[2].startswith(
+        f"\tat {__name__}.test_warn_and_error_lines_without_an_exception_carry_"
+    )
+    assert 2 < len(stack) <= 31
+    for frame in stack[1:]:
+        # module.function(file:line) only: no source text, no message
+        assert re.fullmatch(r"\tat \S+\([^/()]+:\d+\)", frame)
+        assert not frame.startswith(("\tat app.logs.", "\tat logging."))
+    # Framework lines (uvicorn, the OTLP exporter) are labelled with their logger
+    for line, logger in (
+        (uvicorn, "uvicorn.error"),
+        (exporter, "opentelemetry.exporter"),
+    ):
+        framework = field(line, "error.stack_trace").splitlines()
+        assert framework[0] == f"log site: {logger}"
+        assert framework[1].startswith(f"\tat {__name__}.")
+    assert "Invalid HTTP" not in json.dumps(field(uvicorn, "error"))
+    assert field(info, "error.stack_trace") is None
+    for line in (ours, uvicorn, exporter):
+        assert "message" not in line["error"]
+
+
 # ---------------------------------------------------------------- flows
 
 
-def test_a_task_leaves_start_and_end_lines_even_when_it_raises(lines):
+def test_a_task_leaves_start_and_end_lines_even_when_it_raises(lines, spans):
     with LogFlow.task("chat turn", LogField.param("step", 1)) as task:
         task.result(LogField.result("steps", 2))
     with pytest.raises(ValueError), LogFlow.task("chat turn"):
@@ -220,7 +283,74 @@ def test_a_task_leaves_start_and_end_lines_even_when_it_raises(lines):
     assert field(found[3], "error.stack_trace").startswith("ValueError")
     assert "본문" not in json.dumps(found, ensure_ascii=False)
     assert field(found[5], "error.type") == "MODEL_DEADLINE"
-    assert field(found[5], "error.stack_trace") is None
+    # A failure without an exception carries where it was logged
+    assert field(found[5], "error.stack_trace").startswith("log site: MODEL_DEADLINE\n")
+    # One span per task; its lines are inside it and a failure marks it ERROR
+    done, raised, failed = spans()
+    assert [span.name for span in (done, raised, failed)] == ["chat turn"] * 3
+    for (start, end), span in zip(
+        ((0, 1), (2, 3), (4, 5)), (done, raised, failed), strict=True
+    ):
+        assert line_ids(found[start]) == line_ids(found[end]) == ids(span)
+        assert span.kind is SpanKind.INTERNAL
+        # A task started outside any flow is a root
+        assert span.parent is None
+    assert done.status.status_code is StatusCode.UNSET
+    assert (raised.status.status_code, raised.status.description) == (
+        StatusCode.ERROR,
+        "ValueError",
+    )
+    # The exception event names the class only: no message, no stack
+    assert [dict(event.attributes) for event in raised.events] == [
+        {"exception.type": "ValueError"}
+    ]
+    assert (failed.status.status_code, failed.status.description) == (
+        StatusCode.ERROR,
+        "MODEL_DEADLINE",
+    )
+    assert list(failed.events) == []
+
+
+def test_a_line_carries_the_span_current_when_it_is_written(lines, spans):
+    with LogFlow.task("chat turn"):
+        AppLogger.current().info("chat turn step")
+        # What an instrumentation opens inside the task (a DB query)
+        with TRACER.start_as_current_span("SELECT ai_chat"):
+            AppLogger.current().info("chat turn held get")
+            logging.getLogger("psycopg").warning("framework line")
+    with TRACER.start_as_current_span("outside"):
+        AppLogger.current().info("chat turn outside")
+    AppLogger.current().info("chat turn detached")
+
+    start, step, held, framework, end, outside, detached = lines()
+    found = spans()
+    task, query = named(found, "chat turn"), named(found, "SELECT ai_chat")
+    assert line_ids(start) == line_ids(step) == line_ids(end) == ids(task)
+    assert line_ids(held) == line_ids(framework) == ids(query)
+    assert query.parent.span_id == task.context.span_id
+    assert line_ids(outside) == ids(named(found, "outside"))
+    assert line_ids(detached) == (None, None)
+
+
+def test_a_line_keeps_the_flow_ids_when_the_current_span_is_missing_or_elsewhere(
+    lines, spans
+):
+    with LogScope.stored(TRACEPARENT, "summary job"):
+        # A span of another trace, or no span at all (a thread the context did not reach)
+        with TRACER.start_as_current_span("elsewhere", context=Context()):
+            AppLogger.current().info("document summary other trace")
+        token = otel_context.attach(Context())
+        try:
+            AppLogger.current().info("document summary no span")
+            logging.getLogger("psycopg").warning("framework line")
+        finally:
+            otel_context.detach(token)
+
+    job = named(spans(), "summary job")
+    found = lines()
+    assert len(found) == 3
+    for line in found:
+        assert line_ids(line) == ids(job)
 
 
 def test_a_polling_round_without_lines_leaves_nothing(lines):
@@ -250,45 +380,32 @@ def test_a_polling_round_without_lines_leaves_nothing(lines):
     assert field(found[4], "error.type") == "RuntimeError"
 
 
-def test_only_an_idle_polling_round_marks_its_span_for_the_collector_to_drop(lines):
-    # 빈 회차의 span에만 표시가 붙어 collector가 그 trace를 버린다. 일이 있던 회차와 실패한 회차는 남는다
-    with LogFlow.polling("summary-tick") as idle:
-        pass
-    with LogFlow.polling("summary-tick") as busy:
+def test_a_round_span_opens_with_the_round_and_only_an_idle_one_is_marked(lines, spans):
+    with LogFlow.polling("summary-tick"):
+        # The queue claim query of the round
+        with TRACER.start_as_current_span("SELECT ai_chat"):
+            pass
+    with LogFlow.polling("summary-tick"):
         AppLogger.current().info("summary jobs claimed")
     with LogFlow.polling("summary-tick") as failed:
         failed.fail("SUMMARY_FAILED")
 
-    assert idle._span.attributes.get("loresentry.polling.idle") is True
-    assert "loresentry.polling.idle" not in busy._span.attributes
-    assert "loresentry.polling.idle" not in failed._span.attributes
+    claim, idle, busy, failing = spans()
+    start, claimed, completed, failed_start, failed_end = lines()
+    # Every round is a new root, open before its first query
+    assert {span.name for span in (idle, busy, failing)} == {"summary-tick"}
+    assert [span.parent for span in (idle, busy, failing)] == [None] * 3
+    assert claim.parent.span_id == idle.context.span_id
+    # Only the round that left no line is marked; the collector drops that trace
+    assert idle.attributes.get("loresentry.polling.idle") is True
+    assert "loresentry.polling.idle" not in busy.attributes
+    assert "loresentry.polling.idle" not in failing.attributes
+    assert failing.status.status_code is StatusCode.ERROR
+    assert line_ids(start) == line_ids(claimed) == line_ids(completed) == ids(busy)
+    assert line_ids(failed_start) == line_ids(failed_end) == ids(failing)
 
 
-def test_spans_are_sent_only_when_the_collector_address_is_set(monkeypatch):
-    # setup_tracing이 provider를 새로 만들게 하고(이미 SDK provider가 있으면 건너뛴다), 만든 provider를 받아 본다
-    from opentelemetry import trace as otel_trace
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-    made = []
-    monkeypatch.setattr(otel_trace, "get_tracer_provider", lambda: None)
-    monkeypatch.setattr(otel_trace, "set_tracer_provider", made.append)
-    monkeypatch.setenv("APP_VERSION", "build-1-1")
-    monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
-    setup_tracing("ai-chat-test")
-    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
-    setup_tracing("ai-chat-test")
-
-    local, dev = made
-    assert local._active_span_processor._span_processors == ()
-    assert [type(p) for p in dev._active_span_processor._span_processors] == [
-        BatchSpanProcessor
-    ]
-    assert dev.resource.attributes["service.version"] == "build-1-1"
-    for provider in made:
-        provider.shutdown()
-
-
-def test_a_kafka_record_continues_the_header_trace(lines):
+def test_a_kafka_record_continues_the_header_trace(lines, spans):
     event = uuid4()
     headers = [
         ("ce_type", b"FileChanged"),
@@ -296,25 +413,40 @@ def test_a_kafka_record_continues_the_header_trace(lines):
         ("ce_subject", b"not-a-uuid"),
         ("traceparent", TRACEPARENT.encode()),
     ]
-    with LogFlow.kafka_record(
-        "content.project.changed.v2", 2, 41, headers, {"FileChanged"}, "project changed"
-    ) as flow:
-        stored = traceparent()
-        logging.getLogger("psycopg").warning("framework line")
-        flow.outcome(Outcome.SKIPPED)
-    with (
-        pytest.raises(KeyError),
-        LogFlow.kafka_record(
-            "t", 0, 1, [("ce_type", b"Other")], {"FileChanged"}, "project changed"
-        ),
-    ):
-        raise KeyError("x")
+    # Another flow's span is current; a record's parent is its header alone
+    with TRACER.start_as_current_span("other flow"):
+        with LogFlow.kafka_record(
+            "content.project.changed.v2",
+            2,
+            41,
+            headers,
+            {"FileChanged"},
+            "project changed",
+            "ai-chat-summarizer",
+        ) as flow:
+            stored = traceparent()
+            logging.getLogger("psycopg").warning("framework line")
+            flow.outcome(Outcome.SKIPPED)
+        with (
+            pytest.raises(KeyError),
+            LogFlow.kafka_record(
+                "t",
+                0,
+                1,
+                [("ce_type", b"Other")],
+                {"FileChanged"},
+                "project changed",
+                "ai-chat-summarizer",
+            ),
+        ):
+            raise KeyError("x")
 
     found = lines()
     received, framework, processed, _, failed = found
-    assert stored.startswith(f"00-{TRACE}-") and len(stored) == 55
+    consumer, unheaded, _other = spans()
+    assert stored.startswith(f"00-{TRACE}-{ids(consumer)[1]}-") and len(stored) == 55
     for line in (received, framework, processed):
-        assert field(line, "trace.id") == TRACE
+        assert line_ids(line) == ids(consumer)
         assert field(line, "loresentry.kafka") == {
             "topic": "content.project.changed.v2",
             "partition": 2,
@@ -330,20 +462,70 @@ def test_a_kafka_record_continues_the_header_trace(lines):
     assert field(failed, "loresentry.cloudevent.type") == "other"
     assert (failed["log"]["level"], field(failed, "error.type")) == ("WARN", "KeyError")
     assert field(failed, "loresentry.result.outcome") == "FAILED"
+    # The failed record's end line keeps the message-free stack
+    assert field(failed, "error.stack_trace").startswith("KeyError\n")
+    # A CONSUMER span under the header's span, with the messaging attributes
+    assert (consumer.name, consumer.kind) == (
+        "content.project.changed.v2 process",
+        SpanKind.CONSUMER,
+    )
+    assert ids(consumer)[0] == TRACE
+    assert consumer.parent.span_id == 0xB7AD6B7169203331 and consumer.parent.is_remote
+    assert dict(consumer.attributes) == {
+        "messaging.system": "kafka",
+        "messaging.destination.name": "content.project.changed.v2",
+        "messaging.consumer.group.name": "ai-chat-summarizer",
+        "messaging.destination.partition.id": "2",
+        "messaging.kafka.offset": 41,
+        "messaging.operation.type": "process",
+    }
+    assert consumer.status.status_code is StatusCode.UNSET
+    # Without a traceparent the record starts a new trace, not a child of the current span
+    assert unheaded.parent is None
+    assert ids(unheaded)[0] != ids(_other)[0]
+    assert line_ids(failed) == ids(unheaded)
+    assert (unheaded.status.status_code, unheaded.status.description) == (
+        StatusCode.ERROR,
+        "KeyError",
+    )
 
 
-def test_a_stored_scope_logs_under_the_stored_trace(lines):
+def test_a_stored_scope_opens_a_span_under_the_stored_trace(lines, spans):
     document = uuid4()
-    with LogScope.stored(TRACEPARENT, LogField.document_id(document)):
-        AppLogger.current().info("document summary previous get")
-    with LogScope.stored(None):
-        AppLogger.current().info("document summary previous get")
+    with LogFlow.polling("summary-tick"):
+        AppLogger.current().info("summary jobs claimed")
+        with LogScope.stored(
+            TRACEPARENT, "summary job", LogField.document_id(document)
+        ):
+            AppLogger.current().info("document summary previous get")
+            # What psycopg opens for the job's query
+            with TRACER.start_as_current_span("SELECT ai_chat"):
+                pass
+        with LogScope.stored(None, "summary job"):
+            AppLogger.current().info("document summary previous get")
+        with pytest.raises(RuntimeError), LogScope.stored("00-wrong", "summary job"):
+            raise RuntimeError("x")
 
-    stored, unstored = lines()
-    assert field(stored, "trace.id") == TRACE
-    assert field(stored, "span.id") == "b7ad6b7169203331"
+    query, job, fresh, broken, tick = spans()
+    _start, _claimed, stored, unstored, completed = lines()
+    # Parented on the stored traceparent, linked to the round of another trace
+    assert (job.name, job.kind) == ("summary job", SpanKind.INTERNAL)
+    assert ids(job)[0] == TRACE
+    assert job.parent.span_id == 0xB7AD6B7169203331
+    assert [link.context.span_id for link in job.links] == [tick.context.span_id]
+    # The job's own spans attach to it, and its lines carry it
+    assert query.parent.span_id == job.context.span_id
+    assert line_ids(stored) == ids(job)
     assert field(stored, "loresentry.document_id") == str(document)
-    assert field(unstored, "trace.id") is None
+    # No stored value, or a wrong one: that job alone starts a new trace
+    for span in (fresh, broken):
+        assert span.parent is None
+        assert ids(span)[0] not in (TRACE, ids(tick)[0])
+        assert [link.context.span_id for link in span.links] == [tick.context.span_id]
+    assert line_ids(unstored) == ids(fresh)
+    assert broken.status.status_code is StatusCode.ERROR
+    # Closing the scope goes back to the round
+    assert line_ids(completed) == ids(tick)
 
 
 # ---------------------------------------------------------------- outgoing calls
@@ -361,10 +543,76 @@ class FakeResponses:
 
 
 def openai(response=None, error=None):
-    return SimpleNamespace(responses=FakeResponses(response, error))
+    return SimpleNamespace(
+        responses=FakeResponses(response, error),
+        base_url=httpx2.URL("https://api.openai.com/v1/"),
+    )
 
 
-def test_openai_call_lines_carry_model_effort_and_tokens(lines):
+def test_a_call_writes_its_result_line_inside_its_span(lines, spans):
+    with LogFlow.task("chat turn"):
+        with LogFlow.call("content", "http://content-api/internal/x?q=1") as call:
+            # What httpx opens for the request
+            with TRACER.start_as_current_span("GET", kind=SpanKind.CLIENT):
+                pass
+            call.status(200)
+        with LogFlow.call("content") as call:
+            call.status(503)
+        with LogFlow.call("kms") as call:
+            call.fail("AccessDeniedException")
+        with pytest.raises(OSError), LogFlow.call("kms"):
+            raise OSError("secret path")
+        with LogFlow.call("openai", server="api.openai.com", model="gpt-6-luna"):
+            pass
+
+    http, content, upstream, denied, raised, answered, task = spans()
+    _start, completed, unavailable, refused, failed, replied, _end = lines()
+    assert [span.name for span in (content, upstream, denied, raised, answered)] == [
+        "content call",
+        "content call",
+        "kms call",
+        "kms call",
+        "openai call",
+    ]
+    # Each result line is written inside its call span, a child of the current span
+    for span, line in zip(
+        (content, upstream, denied, raised, answered),
+        (completed, unavailable, refused, failed, replied),
+        strict=True,
+    ):
+        assert span.parent.span_id == task.context.span_id
+        assert line_ids(line) == ids(span)
+    # The instrumentation's CLIENT span is the call span's child
+    assert http.parent.span_id == content.context.span_id
+    assert content.kind is SpanKind.INTERNAL
+    assert content.status.status_code is StatusCode.UNSET
+    assert (upstream.status.status_code, upstream.status.description) == (
+        StatusCode.ERROR,
+        "UPSTREAM_SERVER_ERROR",
+    )
+    assert (denied.status.status_code, denied.status.description) == (
+        StatusCode.ERROR,
+        "AccessDeniedException",
+    )
+    assert (raised.status.status_code, raised.status.description) == (
+        StatusCode.ERROR,
+        "OSError",
+    )
+    # A target without an instrumentation: our span is its CLIENT span, a GenAI one here
+    assert answered.kind is SpanKind.CLIENT
+    assert dict(answered.attributes) == {
+        "server.address": "api.openai.com",
+        "gen_ai.provider.name": "openai",
+        "gen_ai.request.model": "gpt-6-luna",
+    }
+    assert field(unavailable, "error.stack_trace").startswith(
+        "log site: UPSTREAM_SERVER_ERROR\n"
+    )
+    assert field(failed, "error.stack_trace").startswith("OSError\n")
+    assert "secret" not in json.dumps([unavailable, failed])
+
+
+def test_openai_call_lines_carry_model_effort_and_tokens(lines, spans):
     usage = SimpleNamespace(
         input_tokens=1200,
         output_tokens=90,
@@ -407,9 +655,20 @@ def test_openai_call_lines_carry_model_effort_and_tokens(lines):
     assert field(failed, "error.type") == "MODEL_RATE_LIMITED"
     assert field(failed, "http.response.status_code") == 429
     assert "레나" not in json.dumps([completed, failed], ensure_ascii=False)
+    # The Responses API has no instrumentation; the call span is the OpenAI CLIENT span
+    done_span, failed_span = spans()
+    for span, line in ((done_span, completed), (failed_span, failed)):
+        assert (span.name, span.kind) == ("openai call", SpanKind.CLIENT)
+        assert span.attributes["server.address"] == "api.openai.com"
+        assert span.attributes["gen_ai.request.model"] == "gpt-6-luna"
+        assert line_ids(line) == ids(span)
+    assert (failed_span.status.status_code, failed_span.status.description) == (
+        StatusCode.ERROR,
+        "MODEL_RATE_LIMITED",
+    )
 
 
-def test_kms_call_lines_carry_the_kms_code_on_failure(lines):
+def test_kms_call_lines_carry_the_kms_code_on_failure(lines, spans):
     kms = FakeKms()
     project = str(uuid4())
     wrapped = kms.wrap(project, b"k" * 32)
@@ -436,12 +695,18 @@ def test_kms_call_lines_carry_the_kms_code_on_failure(lines):
         "ClientError",
     )
     assert field(found[4], "error.code") == "AccessDeniedException"
+    # Only the calls that reach KMS (not the cached key) have a span
+    unwrapped, refused = spans()
+    assert (unwrapped.name, refused.name) == ("kms call", "kms call")
+    assert line_ids(found[1]) == ids(unwrapped)
+    assert line_ids(found[4]) == ids(refused)
+    assert refused.status.status_code is StatusCode.ERROR
 
 
 # ---------------------------------------------------------------- requests
 
 
-def test_request_lines_carry_the_route_user_and_outcome(lines):
+def test_request_lines_carry_the_route_user_and_outcome(lines, spans):
     app = create_app(Settings())
 
     @app.get("/boom/{item_id}")
@@ -496,6 +761,24 @@ def test_request_lines_carry_the_route_user_and_outcome(lines):
     assert field(completed[3], "http.route") is None
     assert field(completed[3], "url.path") == "/nope"
     assert lines_with(found, "health check requested")[0]["tags"] == ["health"]
+    # One server span per request, with the stable HTTP names and no inner ASGI spans
+    servers = [span for span in spans() if span.kind is SpanKind.SERVER]
+    assert len(servers) == len(spans()) == 4
+    crashed = next(
+        s for s in servers if s.attributes.get("http.route") == "/boom/{item_id}"
+    )
+    assert crashed.name == "GET /boom/{item_id}"
+    assert {
+        name: crashed.attributes.get(name)
+        for name in ("http.request.method", "url.path", "http.response.status_code")
+    } == {
+        "http.request.method": "GET",
+        "url.path": "/boom/7",
+        "http.response.status_code": 500,
+    }
+    assert "http.method" not in crashed.attributes
+    assert crashed.status.status_code is StatusCode.ERROR
+    assert line_ids(received[1]) == line_ids(completed[1]) == ids(crashed)
 
 
 # ---------------------------------------------------------------- other processes
@@ -508,6 +791,7 @@ def test_kafka_client_lines_go_through_the_json_handler(lines):
     [line] = lines()
     assert line["log"] == {"level": "ERROR", "logger": "librdkafka"}
     assert line["message"] == "FAIL [rdkafka#consumer-1] Connect failed"
+    assert field(line, "error.stack_trace").startswith("log site: librdkafka\n")
 
 
 def test_piped_lines_become_json_lines_with_their_level(lines):
@@ -549,6 +833,196 @@ def test_the_pipe_module_runs_as_a_command():
     assert line["service"]["name"] == "ai-chat-api"
     assert line["log"] == {"level": "INFO", "logger": "flyway"}
     assert line["message"].startswith("Database: jdbc:postgresql://db:5432/")
+    assert done.stderr == ""
+
+
+# ---------------------------------------------------------------- tracing engine (image entrypoint)
+
+# Run under the image's entrypoint and the real distro: which calls carry a traceparent, what is on
+DISTRO_CHECK = """
+import asyncio, json, threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import httpx
+from openai import AsyncOpenAI
+from opentelemetry import trace
+from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import (
+    HTTPX2ClientInstrumentor,
+    HTTPXClientInstrumentor,
+)
+from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
+
+seen = {}
+
+
+class Handler(BaseHTTPRequestHandler):
+    def answer(self):
+        seen[self.path] = [name.lower() for name in self.headers]
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", "2")
+        self.end_headers()
+        self.wfile.write(b"{}")
+
+    do_GET = do_POST = answer
+
+    def log_message(self, *args):
+        pass
+
+
+server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+threading.Thread(target=server.serve_forever, daemon=True).start()
+base = f"http://127.0.0.1:{server.server_port}"
+
+
+async def calls():
+    with trace.get_tracer("check").start_as_current_span("request"):
+        async with httpx.AsyncClient(base_url=base) as content:
+            await content.get("/internal/projects")
+        client = AsyncOpenAI(api_key="test", base_url=base + "/v1", max_retries=0)
+        try:
+            await client.responses.create(model="test", input="test")
+        except Exception:
+            pass
+        await client.close()
+
+
+asyncio.run(calls())
+provider = trace.get_tracer_provider()
+instrumentors = {
+    "httpx": HTTPXClientInstrumentor,
+    "httpx2": HTTPX2ClientInstrumentor,
+    "psycopg": PsycopgInstrumentor,
+    "botocore": BotocoreInstrumentor,
+    "fastapi": FastAPIInstrumentor,
+}
+print(json.dumps({
+    "content": seen["/internal/projects"],
+    "openai": seen["/v1/responses"],
+    "sampler": provider.sampler.get_description(),
+    "resource": {
+        name: provider.resource.attributes.get(name)
+        for name in ("service.name", "service.version", "deployment.environment.name")
+    },
+    "instrumented": {
+        name: instrumentor().is_instrumented_by_opentelemetry
+        for name, instrumentor in instrumentors.items()
+    },
+}))
+"""
+
+
+def entrypoint_env(path: str, **values: str) -> dict[str, str]:
+    """The image's environment: no OTEL_* from this shell, the image tag as APP_VERSION."""
+    env = {
+        name: value
+        for name, value in os.environ.items()
+        if not name.startswith(("OTEL_", "ELASTIC_OTEL_"))
+    }
+    env.update(PATH=path, APP_VERSION="build-9-1", **values)
+    return env
+
+
+def test_the_entrypoint_sets_safe_defaults_and_the_process_name(tmp_path):
+    # Stand-ins for flyway and opentelemetry-instrument; the latter prints what the process would get
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    (stubs / "flyway").write_text("#!/bin/sh\necho 'Flyway OSS Edition stub'\n")
+    (stubs / "opentelemetry-instrument").write_text(
+        '#!/bin/sh\nenv | grep "^OTEL_"\necho "COMMAND=$*"\n'
+    )
+    for stub in stubs.iterdir():
+        stub.chmod(0o755)
+    path = f"{stubs}:{Path(sys.executable).parent}:{os.environ['PATH']}"
+
+    def run(*command: str, **values: str) -> list[str]:
+        done = subprocess.run(
+            ["bash", str(ENTRYPOINT), *command],
+            env=entrypoint_env(path, **values),
+            cwd=APP.parent,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return done.stdout.splitlines()
+
+    api = run("uvicorn", "app.main:app", "--no-access-log")
+    summarizer = run("python", "-m", "app.summarizer")
+    dev = run(
+        "python",
+        "-m",
+        "app.summarizer",
+        OTEL_TRACES_EXPORTER="otlp",
+        OTEL_RESOURCE_ATTRIBUTES="deployment.environment.name=dev",
+    )
+
+    # The API migrates first (its output as an ECS JSON line), then runs under the distro
+    [flyway] = log_lines("\n".join(api))
+    assert (flyway["log"]["logger"], flyway["service"]["name"]) == (
+        "flyway",
+        "ai-chat-api",
+    )
+    assert "COMMAND=uvicorn app.main:app --no-access-log" in api
+    assert {
+        "OTEL_SERVICE_NAME=ai-chat-api",
+        "OTEL_TRACES_EXPORTER=none",
+        "OTEL_METRICS_EXPORTER=none",
+        "OTEL_LOGS_EXPORTER=none",
+        "OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf",
+        "OTEL_TRACES_SAMPLER=parentbased_always_on",
+        "OTEL_PROPAGATORS=tracecontext",
+        "OTEL_SEMCONV_STABILITY_OPT_IN=http,database",
+        "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false",
+        "OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="
+        "fastapi,httpx2,logging,system_metrics,confluent_kafka",
+        "OTEL_RESOURCE_ATTRIBUTES=service.version=build-9-1",
+    } <= set(api)
+    # The summarizer does not migrate and keeps its own name
+    assert log_lines("\n".join(summarizer)) == []
+    assert "OTEL_SERVICE_NAME=ai-chat-summarizer" in summarizer
+    assert "COMMAND=python -m app.summarizer" in summarizer
+    # What the overlay sets wins; the image tag goes in front of its resource attributes
+    assert "OTEL_TRACES_EXPORTER=otlp" in dev
+    assert (
+        "OTEL_RESOURCE_ATTRIBUTES="
+        "service.version=build-9-1,deployment.environment.name=dev"
+    ) in dev
+
+
+def test_under_the_distro_only_content_calls_carry_a_traceparent():
+    done = subprocess.run(
+        ["bash", str(ENTRYPOINT), sys.executable, "-c", DISTRO_CHECK],
+        env=entrypoint_env(
+            f"{Path(sys.executable).parent}:{os.environ['PATH']}",
+            OTEL_RESOURCE_ATTRIBUTES="deployment.environment.name=dev",
+        ),
+        cwd=APP.parent,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=120,
+    )
+
+    found = json.loads(done.stdout.splitlines()[-1])
+    # content gets the traceparent and nothing else of ours; OpenAI (httpx2) gets neither
+    assert "traceparent" in found["content"]
+    assert not {"traceparent", "tracestate", "baggage"} & set(found["openai"])
+    assert "tracestate" not in found["content"]
+    assert found["sampler"].startswith("ParentBased{root:AlwaysOnSampler")
+    assert found["resource"] == {
+        "service.name": "ai-chat-api",
+        "service.version": "build-9-1",
+        "deployment.environment.name": "dev",
+    }
+    assert found["instrumented"] == {
+        "httpx": True,
+        "httpx2": False,
+        "psycopg": True,
+        "botocore": True,
+        "fastapi": False,
+    }
+    # The distro itself writes no plain lines
     assert done.stderr == ""
 
 
