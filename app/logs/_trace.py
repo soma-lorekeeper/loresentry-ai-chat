@@ -2,7 +2,7 @@
 
 추적 엔진은 EDOT Python distro(``elastic-opentelemetry``)다. 이미지의 시작 스크립트(docker-entrypoint.sh)가 두 프로세스(API,
 summarizer)를 ``opentelemetry-instrument``로 띄우면, distro가 프로세스가 시작할 때 SDK TracerProvider·exporter·전파기를 만들고
-설치된 계측(httpx, psycopg, botocore, OpenAI)을 켠다. 그래서 이 모듈은 SDK를 설정하지 않고 OpenTelemetry API만 쓴다. distro 없이
+설치된 계측(httpx, psycopg, botocore)을 켠다. OpenAI 호출은 계측이 없어 ``LogFlow.call``의 CLIENT span이 맡는다. 그래서 이 모듈은 SDK를 설정하지 않고 OpenTelemetry API만 쓴다. distro 없이
 띄운 곳(로컬 실행)에서는 API가 아무것도 하지 않아 trace ID도 없고, 테스트는 tests/conftest.py가 꽂은 SDK를 쓴다.
 
 - ``setup_tracing``: API 앱 하나에 FastAPI 계측을 단다. distro의 FastAPI 자동 계측은 끄고(OTEL_PYTHON_DISABLED_INSTRUMENTATIONS)

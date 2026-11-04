@@ -47,7 +47,7 @@ the only CORS boundary.
 | confluent-kafka | 2.16.0 | Summarizer consumer. Same version as `loresentry-graph-rag`. |
 | boto3 / botocore | 1.43.108 | KMS `Decrypt` of project keys in the summarizer. Same version as `loresentry-graph-rag`. |
 | cryptography | 50.0.2 | AES-256-GCM for manuscript envelopes. |
-| elastic-opentelemetry | 1.19.0 | EDOT Python distro (OpenTelemetry SDK 1.45.2). Only the instrumentations in `requirements.txt` are installed: FastAPI (attached by `app.logs.setup_tracing`), httpx (content), psycopg, botocore (KMS), Elastic OpenAI. |
+| elastic-opentelemetry | 1.19.0 | EDOT Python distro (OpenTelemetry SDK 1.45.2). Only the instrumentations in `requirements.txt` are installed: FastAPI (attached by `app.logs.setup_tracing`), httpx (content), psycopg, botocore (KMS). OpenAI has no library instrumentation for the Responses API, so `app.logs` opens the `openai call` CLIENT span; the SDK's HTTP client (httpx2) is left uninstrumented so no `traceparent` goes to OpenAI. |
 | ruff | 0.17.0 | Lint and format, run in CI. |
 | Flyway | 12.11 (CLI) | Copied into the image from `flyway/flyway`; only the PostgreSQL plugin and driver are kept. |
 | Port | 8000 | Platform convention, shared with every other service. |

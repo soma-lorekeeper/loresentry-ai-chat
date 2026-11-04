@@ -152,8 +152,8 @@ def usage_of(usage: Any) -> Usage | None:
 async def create(client: AsyncOpenAI, **options: Any) -> Any:
     # 결과 줄(openai call completed·failed): 걸린 시간, 모델·reasoning effort·호출 종류, 성공이면 토큰 수.
     # 실패면 우리 분류(MODEL_TIMEOUT 등)가 error.type이고, 상대가 답한 실패면 응답 상태도 남는다.
-    # Responses API에는 계측이 없어(EDOT OpenAI 계측은 chat completions·embeddings만 감싸고, SDK의 httpx2는 traceparent를
-    # 싣지 않도록 계측을 끈다) 호출 span을 OpenAI 호스트의 CLIENT span(모델 이름 포함)으로 연다
+    # Responses API를 감싸는 라이브러리 계측이 없고(SDK의 HTTP client인 httpx2는 OpenAI에 traceparent를 싣지 않도록 계측을
+    # 끈다), 그래서 호출 span을 OpenAI 호스트의 CLIENT span(모델 이름 포함)으로 연다
     model = options.get("model")
     with LogFlow.call("openai", server=client.base_url.host, model=model) as call:
         # 모델 이름은 사용자 입력이 아니라 설정 값이라 그대로 남긴다

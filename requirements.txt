@@ -13,4 +13,3 @@ opentelemetry-instrumentation-fastapi==0.66b2
 opentelemetry-instrumentation-httpx==0.66b2
 opentelemetry-instrumentation-psycopg==0.66b2
 opentelemetry-instrumentation-botocore==0.66b2
-elastic-opentelemetry-instrumentation-openai==1.2.0
