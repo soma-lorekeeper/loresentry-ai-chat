@@ -1,8 +1,12 @@
+import asyncio
 from pathlib import Path
+from types import SimpleNamespace
 
 import psycopg
 import pytest
 from testcontainers.community.postgres import PostgresContainer
+
+from app.summarizer.__main__ import wait_for_schema
 
 
 def version(path: Path) -> int:
@@ -253,3 +257,38 @@ def test_findings_go_with_their_run_and_verdicts_are_checked(conn):
         with pytest.raises(psycopg.errors.CheckViolation):
             conn.execute(verdict, (value, reason))
     conn.execute(verdict, ("INTENDED", "가" * 500))
+
+
+def test_summarizer_waits_until_the_queue_traceparent_column_exists():
+    # summarizer 파드는 flyway를 돌리지 않는다. API 파드가 V12를 적용하기 전에는 기다리고, 적용되면 시작한다
+    with PostgresContainer("postgres:18", driver=None) as postgres:
+        params = {
+            "host": postgres.get_container_host_ip(),
+            "port": postgres.get_exposed_port(5432),
+            "dbname": postgres.dbname,
+            "user": postgres.username,
+            "password": postgres.password,
+        }
+        settings = SimpleNamespace(
+            base=SimpleNamespace(
+                conninfo=" ".join(f"{key}={value}" for key, value in params.items())
+            )
+        )
+        with psycopg.connect(**params, autocommit=True) as connection:
+            for migration in MIGRATIONS:
+                if version(migration) < 12:
+                    connection.execute(migration.read_text())
+
+            async def wait(timeout: float) -> None:
+                await asyncio.wait_for(
+                    wait_for_schema(settings, asyncio.Event()), timeout
+                )
+
+            # V11까지는 summary_queue.traceparent가 없어 돌아오지 않는다
+            with pytest.raises(TimeoutError):
+                asyncio.run(wait(1))
+            for migration in MIGRATIONS:
+                if version(migration) >= 12:
+                    connection.execute(migration.read_text())
+            # V12를 적용하면 곧바로 돌아온다
+            asyncio.run(wait(10))

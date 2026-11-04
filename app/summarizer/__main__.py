@@ -28,8 +28,11 @@ async def wait_for_schema(settings: SummarizerSettings, stop: asyncio.Event) -> 
             ) as conn:
                 # This pod does not run flyway; the API pod does. Wait until the
                 # columns this code writes exist, not just the tables.
+                # traceparent(V12)도 기다린다. API 파드의 flyway보다 먼저 첫 회차를 돌면
+                # 그 칼럼이 없어 회차가 실패하기 때문이다(배포 때 같이 뜬다)
                 await conn.execute(
-                    "select event_seq, body_enc, wrapped_key from summary_queue limit 0"
+                    "select event_seq, body_enc, wrapped_key, traceparent "
+                    "from summary_queue limit 0"
                 )
                 await conn.execute(
                     "select event_seq, summary_enc, wrapped_key "
