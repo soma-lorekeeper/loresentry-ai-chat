@@ -1,11 +1,11 @@
 import asyncio
-import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 from app.content import ContentSource
+from app.logs import AppLogger, LogField, skip_entry_log
 from app.model import AnswerModel, ModelFailure, Usage
 from app.navigation import (
     ANSWER_CHECK_INSTRUCTIONS,
@@ -22,7 +22,8 @@ from app.navigation import (
 from app.prompt import text_block
 from app.settings import Settings
 
-log = logging.getLogger("ai_chat.agent")
+# 답변 하나를 쓰는 탐색·검토 반복(service). 모듈 이름으로 레이어를 정할 수 없어 직접 둔다
+LOG_LAYER = "service"
 
 Notify = Callable[[dict[str, Any]], None]
 
@@ -58,6 +59,7 @@ class Picked:
     held: list[str]
 
 
+@skip_entry_log("Only picks targets from a ranking")
 def pack(
     ranking: list[str],
     by_short: dict[str, str],
@@ -105,6 +107,7 @@ class Outcome:
     usage: Usage | None = None
 
 
+@skip_entry_log("Only adds token counts")
 def add(total: Usage | None, usage: Usage | None) -> Usage | None:
     if total is None:
         return usage
@@ -120,6 +123,11 @@ class Agent:
     async def read(
         self, turn: Turn, step: int, ranking: list[str], notify: Notify
     ) -> str:
+        AppLogger.current().info(
+            "chat documents read",
+            LogField.param("step", step),
+            LogField.param("ranking", ranking),
+        )
         picked = pack(
             ranking,
             turn.by_short,
@@ -154,6 +162,7 @@ class Agent:
     async def judge(
         self, turn: Turn, answer: str, last: Sufficiency | None
     ) -> tuple[Sufficiency, AnswerCheck, Usage | None, int]:
+        AppLogger.current().info("chat answer judge")
         checks: list[Any] = [
             self.model.check_answer(
                 ANSWER_CHECK_INSTRUCTIONS, turn.answer_input(answer)
@@ -183,6 +192,9 @@ class Agent:
         outcome: Outcome | None = None,
         notify: Notify | None = None,
     ) -> Outcome:
+        AppLogger.current().info(
+            "chat agent run", LogField.param("max_steps", self.settings.max_steps)
+        )
         items = turn.base_input()
         cache_key = str(turn.project_id)
         outcome = outcome or Outcome("NOT_ENOUGH", "")
@@ -226,7 +238,12 @@ class Agent:
                     turn, out.text, sufficiency
                 )
             except (ModelFailure, KeyError, TypeError) as error:
-                log.warning("review failed", extra={"error": str(error)})
+                # 검토 없이 그 답을 쓴다. 모델 실패는 우리 분류 코드, 응답 모양이 틀리면 예외 클래스가 error.type이다
+                code = error.code if isinstance(error, ModelFailure) else None
+                AppLogger.current().warn(
+                    "chat answer review failed",
+                    LogField.error_type(code or type(error).__name__),
+                )
                 outcome.text = out.text
                 return outcome
             outcome.judge_calls += calls

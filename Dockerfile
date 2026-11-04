@@ -9,6 +9,10 @@ RUN cd /flyway/lib/flyway \
 
 FROM python:3.12-slim
 
+# Image tag (build-<run>-<attempt>); logs carry it as service.version
+ARG APP_VERSION=unknown
+ENV APP_VERSION=${APP_VERSION}
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     JAVA_HOME=/opt/java/openjdk \
@@ -36,4 +40,4 @@ USER appuser
 EXPOSE 8000
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "170"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "170", "--no-access-log"]

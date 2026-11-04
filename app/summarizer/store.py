@@ -5,6 +5,7 @@ from psycopg import Connection
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
+from app.logs import AppLogger, LogField, skip_entry_log
 from app.summarizer.events import Change, Remove, RemoveProject, Upsert
 
 BACKOFF_SECONDS = (60, 300, 1800)
@@ -21,6 +22,8 @@ class Job:
     attempts: int
     body_enc: bytes
     wrapped_key: bytes
+    # 이 변경을 가져온 이벤트의 traceparent. 요약 작업의 줄이 그 trace로 남는다. 없으면 None
+    traceparent: str | None = None
 
 
 @dataclass(frozen=True)
@@ -33,16 +36,26 @@ class Previous:
 # event_seq is the ce_sequence of the event a row came from and orders everything
 # here. revision_no is only recorded, so the map can say which revision a summary
 # was written from.
-def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
+def apply(
+    conn: Connection,
+    changes: list[Change],
+    prompt_version: str,
+    traceparent: str | None = None,
+) -> None:
+    """변경을 summary_queue·document_summaries에 반영한다. traceparent는 그 변경을 가져온 이벤트의 trace다."""
+    AppLogger.current().info(
+        "summary queue changes apply", LogField.param("changes", changes)
+    )
     with conn.transaction():
         for change in changes:
             if isinstance(change, Upsert):
                 conn.execute(
                     "insert into summary_queue (document_id, project_id, event_seq, "
                     "revision_no, folder_code, title, body_enc, wrapped_key, "
-                    "changed_at, attempts, next_attempt_at) "
+                    "changed_at, attempts, next_attempt_at, traceparent) "
                     "select %(id)s, %(project)s, %(seq)s, %(revision)s, %(folder)s, "
-                    "%(title)s, %(body_enc)s, %(wrapped_key)s, now(), 0, now() "
+                    "%(title)s, %(body_enc)s, %(wrapped_key)s, now(), 0, now(), "
+                    "%(traceparent)s "
                     "where not exists (select 1 from document_summaries s "
                     "where s.document_id = %(id)s and s.event_seq >= %(seq)s "
                     "and s.prompt_version = %(version)s) "
@@ -54,7 +67,8 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
                     "body_enc = excluded.body_enc, "
                     "wrapped_key = excluded.wrapped_key, "
                     "changed_at = excluded.changed_at, "
-                    "attempts = 0, next_attempt_at = excluded.next_attempt_at "
+                    "attempts = 0, next_attempt_at = excluded.next_attempt_at, "
+                    "traceparent = excluded.traceparent "
                     "where summary_queue.event_seq < excluded.event_seq",
                     {
                         "id": change.document_id,
@@ -66,6 +80,7 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
                         "body_enc": change.body_enc,
                         "wrapped_key": change.wrapped_key,
                         "version": prompt_version,
+                        "traceparent": traceparent,
                     },
                 )
             elif isinstance(change, Remove):
@@ -93,6 +108,9 @@ class SummaryStore:
     def __init__(self, pool: AsyncConnectionPool):
         self.pool = pool
 
+    @skip_entry_log(
+        "Called on every summary tick; the worker logs only when it claims jobs"
+    )
     async def claim(self, idle_seconds: float, limit: int, lease: int) -> list[Job]:
         async with self.pool.connection() as conn:
             rows = await (
@@ -105,7 +123,7 @@ class SummaryStore:
                     "order by changed_at desc limit %(limit)s for update skip locked) "
                     "returning q.document_id, q.project_id, q.event_seq, "
                     "q.revision_no, q.folder_code, q.title, q.attempts, "
-                    "q.body_enc, q.wrapped_key",
+                    "q.body_enc, q.wrapped_key, q.traceparent",
                     {"lease": lease, "idle": idle_seconds, "limit": limit},
                 )
             ).fetchall()
@@ -120,11 +138,15 @@ class SummaryStore:
                 row["attempts"],
                 row["body_enc"],
                 row["wrapped_key"],
+                row["traceparent"],
             )
             for row in rows
         ]
 
     async def previous(self, document_id: str) -> Previous | None:
+        AppLogger.current().info(
+            "document summary previous get", LogField.document_id(document_id)
+        )
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
@@ -145,6 +167,12 @@ class SummaryStore:
         model: str,
         prompt_version: str,
     ) -> None:
+        AppLogger.current().info(
+            "document summary save",
+            LogField.document_id(job.document_id),
+            LogField.project_id(job.project_id),
+            LogField.param("summary_enc", summary_enc),
+        )
         async with self.pool.connection() as conn, conn.transaction():
             await conn.execute(
                 "insert into document_summaries (document_id, project_id, event_seq, "
@@ -175,6 +203,11 @@ class SummaryStore:
             await self._done(conn, job)
 
     async def drop_summary(self, job: Job) -> None:
+        AppLogger.current().info(
+            "document summary drop",
+            LogField.document_id(job.document_id),
+            LogField.project_id(job.project_id),
+        )
         async with self.pool.connection() as conn, conn.transaction():
             await conn.execute(
                 "delete from document_summaries where document_id = %s "
@@ -184,6 +217,11 @@ class SummaryStore:
             await self._done(conn, job)
 
     async def skip(self, job: Job) -> None:
+        AppLogger.current().info(
+            "document summary skip",
+            LogField.document_id(job.document_id),
+            LogField.project_id(job.project_id),
+        )
         # The summary keeps its text, revision and fingerprint, but it now stands
         # for this event too, so an older event that arrives late is not queued.
         async with self.pool.connection() as conn, conn.transaction():
@@ -203,10 +241,21 @@ class SummaryStore:
         )
 
     async def discard(self, job: Job) -> None:
+        AppLogger.current().info(
+            "summary job discard",
+            LogField.document_id(job.document_id),
+            LogField.project_id(job.project_id),
+        )
         async with self.pool.connection() as conn:
             await self._done(conn, job)
 
     async def postpone(self, job: Job, seconds: int) -> None:
+        AppLogger.current().info(
+            "summary job postpone",
+            LogField.document_id(job.document_id),
+            LogField.project_id(job.project_id),
+            LogField.param("seconds", seconds),
+        )
         async with self.pool.connection() as conn:
             await conn.execute(
                 "update summary_queue "
@@ -217,6 +266,12 @@ class SummaryStore:
 
     async def retry(self, job: Job, max_attempts: int) -> bool:
         attempts = job.attempts + 1
+        AppLogger.current().info(
+            "summary job retry",
+            LogField.document_id(job.document_id),
+            LogField.project_id(job.project_id),
+            LogField.param("attempts", attempts),
+        )
         async with self.pool.connection() as conn:
             if attempts >= max_attempts:
                 await self._done(conn, job)

@@ -6,11 +6,14 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.errors import NO_STORE
+from app.logs import AppLogger, LogField
 from app.prompt import Profile
-from app.routes import Deps, User, no_store, profile, uuid_or
+from app.routes import LOCALES, Deps, User, no_store, profile, uuid_or
 from app.setting_check.runner import chapter
 
 REASON_LIMIT = 500
+# 로그에 그대로 남겨도 되는 판정 값(목록 밖은 other)
+VERDICTS = {"INTENDED", "NOT_CONFLICT"}
 
 router = APIRouter()
 
@@ -36,6 +39,12 @@ async def start_check(
     deps: Deps,
     who: Annotated[Profile, Depends(profile)],
 ) -> JSONResponse:
+    AppLogger.current().info(
+        "setting check start requested",
+        LogField.project_id(project_id),
+        LogField.document_id(body.document_id),
+        LogField.code("locale", who.locale, LOCALES),
+    )
     project = uuid_or(project_id, "PROJECT_NOT_FOUND")
     chat_map = await deps.content.map(user, project)
     node = chapter(chat_map, str(body.document_id))
@@ -55,12 +64,18 @@ async def start_check(
 
 @router.get("/projects/{project_id}/setting-checks/summary")
 async def check_summary(project_id: str, user: User, deps: Deps) -> JSONResponse:
+    AppLogger.current().info(
+        "setting check summary get requested", LogField.project_id(project_id)
+    )
     project = uuid_or(project_id, "PROJECT_NOT_FOUND")
     return no_store(await deps.checks.store.summary(user, project))
 
 
 @router.get("/projects/{project_id}/setting-checks/verdicts")
 async def list_verdicts(project_id: str, user: User, deps: Deps) -> JSONResponse:
+    AppLogger.current().info(
+        "setting check verdicts list requested", LogField.project_id(project_id)
+    )
     project = uuid_or(project_id, "PROJECT_NOT_FOUND")
     return no_store({"verdicts": await deps.checks.store.decisions(user, project)})
 
@@ -72,18 +87,29 @@ async def list_checks(
     deps: Deps,
     document_id: Annotated[UUID | None, Query()] = None,
 ) -> JSONResponse:
+    AppLogger.current().info(
+        "setting checks list requested",
+        LogField.project_id(project_id),
+        LogField.document_id(document_id),
+    )
     project = uuid_or(project_id, "PROJECT_NOT_FOUND")
     return no_store({"runs": await deps.checks.store.runs(user, project, document_id)})
 
 
 @router.get("/setting-checks/{run_id}")
 async def get_check(run_id: str, user: User, deps: Deps) -> JSONResponse:
+    AppLogger.current().info(
+        "setting check get requested", LogField.setting_check_run_id(run_id)
+    )
     run = uuid_or(run_id, "SETTING_CHECK_NOT_FOUND")
     return no_store(await deps.checks.store.run(user, run))
 
 
 @router.post("/setting-checks/{run_id}/cancel", status_code=204)
 async def cancel_check(run_id: str, user: User, deps: Deps) -> Response:
+    AppLogger.current().info(
+        "setting check cancel requested", LogField.setting_check_run_id(run_id)
+    )
     run = uuid_or(run_id, "SETTING_CHECK_NOT_FOUND")
     if await deps.checks.store.cancel(user, run):
         deps.checks.stop(run)
@@ -94,6 +120,13 @@ async def cancel_check(run_id: str, user: User, deps: Deps) -> Response:
 async def set_verdict(
     finding_id: str, body: VerdictIn, user: User, deps: Deps
 ) -> JSONResponse:
+    # 판정 이유는 내용 대신 길이만 남는다
+    AppLogger.current().info(
+        "setting check verdict set requested",
+        LogField.setting_check_finding_id(finding_id),
+        LogField.code("verdict", body.verdict, VERDICTS),
+        LogField.param("reason", body.reason),
+    )
     finding = uuid_or(finding_id, "SETTING_CHECK_FINDING_NOT_FOUND")
     reason = (body.reason or "").strip() or None
     return no_store(
@@ -103,5 +136,9 @@ async def set_verdict(
 
 @router.delete("/setting-check-findings/{finding_id}/verdict")
 async def clear_verdict(finding_id: str, user: User, deps: Deps) -> JSONResponse:
+    AppLogger.current().info(
+        "setting check verdict clear requested",
+        LogField.setting_check_finding_id(finding_id),
+    )
     finding = uuid_or(finding_id, "SETTING_CHECK_FINDING_NOT_FOUND")
     return no_store(await deps.checks.store.clear_verdict(user, finding))

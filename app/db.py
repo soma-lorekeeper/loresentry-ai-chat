@@ -15,7 +15,8 @@ def connection_info() -> dict[str, str]:
     }
 
 
-def check() -> dict[str, str]:
+def check() -> str:
+    """헬스체크용 접속 확인. 접속한 데이터베이스 이름을 돌려준다."""
     info = connection_info()
     with psycopg.connect(
         host=info["host"],
@@ -26,7 +27,7 @@ def check() -> dict[str, str]:
         connect_timeout=CONNECT_TIMEOUT_SECONDS,
     ) as conn:
         with conn.cursor() as cur:
-            cur.execute("select current_database(), current_user, version()")
-            database, username, version = cur.fetchone()
+            cur.execute("select current_database()")
+            (database,) = cur.fetchone()
 
-    return {"database": database, "username": username, "version": version}
+    return database

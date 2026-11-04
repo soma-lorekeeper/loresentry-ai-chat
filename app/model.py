@@ -1,11 +1,10 @@
 import json
-import logging
-import time
 from dataclasses import dataclass
 from typing import Any, Protocol
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
+from app.logs import AppLogger, LogField, LogFlow, skip_entry_log
 from app.navigation import (
     ANSWER_CHECK_SCHEMA,
     SUFFICIENCY_SCHEMA,
@@ -13,13 +12,15 @@ from app.navigation import (
     Sufficiency,
 )
 
-log = logging.getLogger("ai_chat.model")
-
 QUOTA_CODES = {
     "insufficient_quota",
     "billing_hard_limit_reached",
     "usage_limit_reached",
 }
+# OpenAI 호출 결과 줄에 그대로 남겨도 되는 코드 값(목록 밖은 other)
+EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh"}
+KINDS = {"tool", "text"}
+INCOMPLETE_REASONS = {"max_output_tokens", "content_filter"}
 
 
 @dataclass(frozen=True)
@@ -114,6 +115,7 @@ class CheckModel(Protocol):
     ) -> tuple[dict[str, Any], Usage | None]: ...
 
 
+@skip_entry_log("Only classifies an OpenAI error")
 def status_code(error: APIStatusError) -> str:
     body = error.body if isinstance(error.body, dict) else {}
     body = body.get("error", body)
@@ -129,6 +131,7 @@ def status_code(error: APIStatusError) -> str:
     return "MODEL_REQUEST_INVALID"
 
 
+@skip_entry_log("Only converts the usage of a response")
 def usage_of(usage: Any) -> Usage | None:
     if usage is None:
         return None
@@ -143,43 +146,68 @@ def usage_of(usage: Any) -> Usage | None:
     )
 
 
+@skip_entry_log(
+    "Shared by the OpenAI client methods, whose entry lines come right before"
+)
 async def create(client: AsyncOpenAI, **options: Any) -> Any:
-    begun = time.monotonic()
-    try:
-        response = await client.responses.create(
-            store=False, truncation="disabled", **options
+    # 결과 줄(openai call completed·failed): 걸린 시간, 모델·reasoning effort·호출 종류, 성공이면 토큰 수.
+    # 실패면 우리 분류(MODEL_TIMEOUT 등)가 error.type이고, 상대가 답한 실패면 응답 상태도 남는다
+    model = options.get("model")
+    with LogFlow.call("openai") as call:
+        # 모델 이름은 사용자 입력이 아니라 설정 값이라 그대로 남긴다
+        call.result(
+            LogField.result_code("model", model, {model}),
+            LogField.result_code(
+                "effort", (options.get("reasoning") or {}).get("effort"), EFFORTS
+            ),
+            LogField.result_code(
+                "kind", "tool" if options.get("tools") else "text", KINDS
+            ),
         )
-    except APITimeoutError:
-        raise ModelFailure("MODEL_TIMEOUT") from None
-    except APIConnectionError:
-        raise ModelFailure("MODEL_CONNECTION_FAILED") from None
-    except APIStatusError as error:
-        raise ModelFailure(status_code(error)) from None
-    if response.status == "incomplete":
-        raise ModelFailure("MODEL_INCOMPLETE")
-    if response.status == "failed":
-        raise ModelFailure("MODEL_FAILED")
-    usage = usage_of(response.usage)
-    log.info(
-        "model call",
-        extra={
-            "model": options.get("model"),
-            "kind": "tool" if options.get("tools") else "text",
-            "effort": (options.get("reasoning") or {}).get("effort"),
-            "ms": int((time.monotonic() - begun) * 1000),
-            "input_tokens": usage.input_tokens if usage else None,
-            "cached_tokens": usage.cached_tokens if usage else None,
-            "output_tokens": usage.output_tokens if usage else None,
-            "reasoning_tokens": usage.reasoning_tokens if usage else None,
-        },
-    )
+        try:
+            response = await client.responses.create(
+                store=False, truncation="disabled", **options
+            )
+        except APITimeoutError:
+            call.fail("MODEL_TIMEOUT")
+            raise ModelFailure("MODEL_TIMEOUT") from None
+        except APIConnectionError:
+            call.fail("MODEL_CONNECTION_FAILED")
+            raise ModelFailure("MODEL_CONNECTION_FAILED") from None
+        except APIStatusError as error:
+            code = status_code(error)
+            call.status(error.status_code).fail(code)
+            raise ModelFailure(code) from None
+        usage = usage_of(response.usage)
+        if usage is not None:
+            call.result(
+                LogField.result("input_tokens", usage.input_tokens),
+                LogField.result("cached_tokens", usage.cached_tokens),
+                LogField.result("output_tokens", usage.output_tokens),
+                LogField.result("reasoning_tokens", usage.reasoning_tokens),
+            )
+        if response.status == "incomplete":
+            details = getattr(response, "incomplete_details", None)
+            call.fail("MODEL_INCOMPLETE").result(
+                LogField.result_code(
+                    "incomplete_reason",
+                    getattr(details, "reason", None),
+                    INCOMPLETE_REASONS,
+                )
+            )
+            raise ModelFailure("MODEL_INCOMPLETE")
+        if response.status == "failed":
+            call.fail("MODEL_FAILED")
+            raise ModelFailure("MODEL_FAILED")
     return response
 
 
+@skip_entry_log("Only builds request options")
 def effort(value: str) -> dict[str, Any]:
     return {"reasoning": {"effort": value}} if value else {}
 
 
+@skip_entry_log("Only parses model output")
 def parse_json(text: str) -> dict[str, Any]:
     try:
         value = json.loads(text)
@@ -190,6 +218,9 @@ def parse_json(text: str) -> dict[str, Any]:
     return value
 
 
+@skip_entry_log(
+    "Shared by the OpenAI client methods, whose entry lines come right before"
+)
 async def structured(
     client: AsyncOpenAI,
     instructions: str,
@@ -215,6 +246,7 @@ async def structured(
     return parse_json(response.output_text or ""), usage_of(response.usage)
 
 
+@skip_entry_log("Only parses model output")
 def tool_call(item: Any) -> ToolCall:
     if item.name != "request_documents":
         raise ModelFailure("MODEL_INVALID_TOOL_CALL")
@@ -254,6 +286,11 @@ class OpenAIModel:
         tool_choice: str,
         cache_key: str,
     ) -> StepResult:
+        AppLogger.current().info(
+            "openai answer step call",
+            LogField.code("tool_choice", tool_choice, {"auto", "none"}),
+            LogField.param("items", items),
+        )
         response = await create(
             self.client,
             model=self.name,
@@ -295,6 +332,7 @@ class OpenAIModel:
     async def sufficiency(
         self, instructions: str, text: str
     ) -> tuple[Sufficiency, Usage | None]:
+        AppLogger.current().info("openai sufficiency check call")
         value, usage = await self._judge(
             instructions, text, "sufficiency", SUFFICIENCY_SCHEMA
         )
@@ -306,6 +344,7 @@ class OpenAIModel:
     async def check_answer(
         self, instructions: str, text: str
     ) -> tuple[AnswerCheck, Usage | None]:
+        AppLogger.current().info("openai answer check call")
         value, usage = await self._judge(
             instructions, text, "answer_check", ANSWER_CHECK_SCHEMA
         )
@@ -331,6 +370,7 @@ class OpenAISummaryModel:
         self.timeout_seconds = timeout_seconds
 
     async def summarize(self, instructions: str, text: str) -> tuple[str, Usage | None]:
+        AppLogger.current().info("openai summary call", LogField.param("text", text))
         response = await create(
             self.client,
             model=self.name,
@@ -375,6 +415,9 @@ class OpenAICheckModel:
         schema: dict[str, Any],
         cache_key: str,
     ) -> tuple[dict[str, Any], Usage | None]:
+        AppLogger.current().info(
+            "openai setting check find call", LogField.param("items", items)
+        )
         return await structured(
             self.client,
             instructions,
@@ -396,6 +439,7 @@ class OpenAICheckModel:
         schema: dict[str, Any],
         cache_key: str,
     ) -> tuple[dict[str, Any], Usage | None]:
+        AppLogger.current().info("openai setting check judge call")
         return await structured(
             self.client,
             instructions,
@@ -411,20 +455,37 @@ class OpenAICheckModel:
 
 
 class UnconfiguredModel:
+    """OPENAI_API_KEY 없이 띄운 서비스의 모델. 부를 때마다 실패 원인 줄을 남기고 MODEL_NOT_CONFIGURED로 실패한다."""
+
     def __init__(self, name: str):
         self.name = name
 
     async def find(self, *_: Any) -> tuple[dict[str, Any], Usage | None]:
+        AppLogger.current().warn(
+            "openai model not configured", LogField.error_type("MODEL_NOT_CONFIGURED")
+        )
         raise ModelFailure("MODEL_NOT_CONFIGURED")
 
     async def judge(self, *_: Any) -> tuple[dict[str, Any], Usage | None]:
+        AppLogger.current().warn(
+            "openai model not configured", LogField.error_type("MODEL_NOT_CONFIGURED")
+        )
         raise ModelFailure("MODEL_NOT_CONFIGURED")
 
     async def step(self, *_: Any, **__: Any) -> StepResult:
+        AppLogger.current().warn(
+            "openai model not configured", LogField.error_type("MODEL_NOT_CONFIGURED")
+        )
         raise ModelFailure("MODEL_NOT_CONFIGURED")
 
     async def sufficiency(self, *_: Any) -> tuple[Sufficiency, Usage | None]:
+        AppLogger.current().warn(
+            "openai model not configured", LogField.error_type("MODEL_NOT_CONFIGURED")
+        )
         raise ModelFailure("MODEL_NOT_CONFIGURED")
 
     async def check_answer(self, *_: Any) -> tuple[AnswerCheck, Usage | None]:
+        AppLogger.current().warn(
+            "openai model not configured", LogField.error_type("MODEL_NOT_CONFIGURED")
+        )
         raise ModelFailure("MODEL_NOT_CONFIGURED")
