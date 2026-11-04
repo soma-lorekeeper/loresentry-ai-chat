@@ -250,6 +250,44 @@ def test_a_polling_round_without_lines_leaves_nothing(lines):
     assert field(found[4], "error.type") == "RuntimeError"
 
 
+def test_only_an_idle_polling_round_marks_its_span_for_the_collector_to_drop(lines):
+    # 빈 회차의 span에만 표시가 붙어 collector가 그 trace를 버린다. 일이 있던 회차와 실패한 회차는 남는다
+    with LogFlow.polling("summary-tick") as idle:
+        pass
+    with LogFlow.polling("summary-tick") as busy:
+        AppLogger.current().info("summary jobs claimed")
+    with LogFlow.polling("summary-tick") as failed:
+        failed.fail("SUMMARY_FAILED")
+
+    assert idle._span.attributes.get("loresentry.polling.idle") is True
+    assert "loresentry.polling.idle" not in busy._span.attributes
+    assert "loresentry.polling.idle" not in failed._span.attributes
+
+
+def test_spans_are_sent_only_when_the_collector_address_is_set(monkeypatch):
+    # setup_tracing이 provider를 새로 만들게 하고(이미 SDK provider가 있으면 건너뛴다), 만든 provider를 받아 본다
+    from opentelemetry import trace as otel_trace
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+    made = []
+    monkeypatch.setattr(otel_trace, "get_tracer_provider", lambda: None)
+    monkeypatch.setattr(otel_trace, "set_tracer_provider", made.append)
+    monkeypatch.setenv("APP_VERSION", "build-1-1")
+    monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+    setup_tracing("ai-chat-test")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
+    setup_tracing("ai-chat-test")
+
+    local, dev = made
+    assert local._active_span_processor._span_processors == ()
+    assert [type(p) for p in dev._active_span_processor._span_processors] == [
+        BatchSpanProcessor
+    ]
+    assert dev.resource.attributes["service.version"] == "build-1-1"
+    for provider in made:
+        provider.shutdown()
+
+
 def test_a_kafka_record_continues_the_header_trace(lines):
     event = uuid4()
     headers = [
