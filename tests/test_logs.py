@@ -976,6 +976,9 @@ def test_the_entrypoint_sets_safe_defaults_and_the_process_name(tmp_path):
         "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false",
         "OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="
         "fastapi,httpx2,logging,system_metrics,confluent_kafka",
+        # No cloud detectors: aws_eks prints a plain 403 line on EKS
+        "OTEL_EXPERIMENTAL_RESOURCE_DETECTORS="
+        "process_runtime,os,telemetry_distro,service_instance,containerid,otel",
         "OTEL_RESOURCE_ATTRIBUTES=service.version=build-9-1",
     } <= set(api)
     # The summarizer does not migrate and keeps its own name
