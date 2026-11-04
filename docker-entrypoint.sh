@@ -20,6 +20,10 @@
 #     fastapi(로깅 팩토리의 setup_tracing이 앱에 직접 단다), httpx2(OpenAI SDK의 HTTP client. OpenAI 호출에는 traceparent를
 #     싣지 않는다), logging(로그 줄의 ID는 로깅 팩토리가 넣는다), system_metrics(distro가 함께 설치하는 지표 계측),
 #     confluent_kafka(설치하지 않는다. traceparent를 바꾸지 않고 하나 더 붙여, Kafka는 로깅 팩토리가 맡는다)
+#   - resource detector는 네트워크를 쓰지 않는 기본 목록만 쓴다(distro의 기본 목록에서 클라우드 detector를 뺀 것). Kubernetes에서
+#     distro가 더 켜는 aws_eks는 파드 서비스 계정으로 클러스터 정보를 읽다가 403을 받아 stderr에 평문 줄(log.level unknown)을
+#     남기고, gcp_resource_detector는 이 클러스터와 상관없다. 파드·namespace·인스턴스·환경은 overlay가 OTEL_RESOURCE_ATTRIBUTES로
+#     넣는다. otel(OTEL_RESOURCE_ATTRIBUTES·OTEL_SERVICE_NAME)을 맨 뒤에 두어 그 값이 다른 detector의 값보다 먼저다
 # - service.version: 이미지 태그(APP_VERSION, Dockerfile의 ENV)를 span resource 앞에 더한다. 로그의 service.version과 같은 값이다.
 #   overlay가 준 OTEL_RESOURCE_ATTRIBUTES가 있으면 그 뒤에 이어 붙인다.
 # - exec: opentelemetry-instrument가 distro를 붙인 뒤 명령을 exec하므로 그 프로세스(uvicorn, python)가 PID 1이 되어
@@ -50,6 +54,7 @@ export OTEL_PROPAGATORS="${OTEL_PROPAGATORS:-tracecontext}"
 export OTEL_SEMCONV_STABILITY_OPT_IN="${OTEL_SEMCONV_STABILITY_OPT_IN:-http,database}"
 export OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="${OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT:-false}"
 export OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="${OTEL_PYTHON_DISABLED_INSTRUMENTATIONS:-fastapi,httpx2,logging,system_metrics,confluent_kafka}"
+export OTEL_EXPERIMENTAL_RESOURCE_DETECTORS="${OTEL_EXPERIMENTAL_RESOURCE_DETECTORS:-process_runtime,os,telemetry_distro,service_instance,containerid,otel}"
 export OTEL_RESOURCE_ATTRIBUTES="service.version=${APP_VERSION:-unknown}${OTEL_RESOURCE_ATTRIBUTES:+,${OTEL_RESOURCE_ATTRIBUTES}}"
 
 exec opentelemetry-instrument "$@"
