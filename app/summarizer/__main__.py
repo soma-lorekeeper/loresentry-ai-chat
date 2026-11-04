@@ -4,11 +4,10 @@ import threading
 
 import psycopg
 from openai import AsyncOpenAI
-from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from app.logs import AppLogger, LogField, configure_logging, setup_tracing
+from app.logs import AppLogger, LogField, LogFlow, configure_logging
 from app.manuscript import ProjectKeys, kms_client
 from app.model import OpenAISummaryModel
 from app.summarizer.consumer import consume
@@ -67,10 +66,9 @@ async def wait_for_schema(settings: SummarizerSettings, stop: asyncio.Event) -> 
 
 
 async def main() -> None:
-    # 다른 줄보다 먼저 로그(ECS JSON)와 trace를 설정한다. DB 쿼리마다 client span을 만든다(로그 줄은 남기지 않는다)
+    # 다른 줄보다 먼저 로그(ECS JSON)를 설정한다. 추적 엔진과 계측(DB 쿼리의 psycopg, KMS의 botocore)은 EDOT distro가
+    # 프로세스 시작 때 켠다
     configure_logging(SERVICE)
-    setup_tracing(SERVICE)
-    PsycopgInstrumentor().instrument()
     settings = SummarizerSettings.from_environment()
     stop = asyncio.Event()
     halt = threading.Event()
@@ -91,7 +89,10 @@ async def main() -> None:
             LogField.error_type("MANUSCRIPT_KEY_ID_MISSING"),
         )
     client = AsyncOpenAI(api_key=settings.openai_api_key, max_retries=2)
-    await wait_for_schema(settings, stop)
+    # 시작할 때 한 번 도는 대기라 작업 하나로 남긴다(database schema wait start·completed). 대기 중의 조회 span이
+    # 그 작업 span의 자식이 되어, 흐름 밖의 부모 없는 DB span이 남지 않는다
+    with LogFlow.task("database schema wait"):
+        await wait_for_schema(settings, stop)
     if stop.is_set():
         await client.close()
         return

@@ -7,6 +7,7 @@
 
 흐름
 1. 시작점(HTTP 요청, Kafka 레코드, 스케줄 회차, 저장해 둔 작업)이 그때 아는 값(trace.id, span.id, user.id)으로 객체를 만든다.
+   줄마다 남는 trace.id·span.id는 그 줄을 찍는 순간의 지금 span이고, 시작점의 값은 지금 span이 없거나 다른 trace일 때 쓴다.
 2. ``bind``로 요청 범위 저장소(contextvars)에 넣는다. 같은 흐름의 어느 계층이든 ``AppLogger.current()``로 꺼낸다.
    asyncio task와 ``asyncio.to_thread``는 만들 때의 contextvars를 복사하므로 객체가 함께 옮겨 간다.
 3. 줄마다 그 줄을 찍은 위치(모듈·함수·레이어·패키지)를 호출 프레임에서 읽어, 표준 ``logging`` 레코드에 실어 넘긴다.
@@ -131,7 +132,8 @@ class AppLogger:
         shared: _Shared | None,
         tags: tuple[str, ...],
     ) -> None:
-        # 시작점이 받은 trace(32 hex)·span(16 hex). 없으면 None이고, 그때는 줄을 찍을 때 열려 있는 span 값을 쓴다
+        # 시작점이 받은 trace(32 hex)·span(16 hex). 줄에는 찍는 순간의 지금 span이 먼저 남고(_ids), 이 값은 지금 span이 없거나
+        # 다른 trace일 때 쓴다. 시작점에 span이 없었으면 None이다
         self._trace_id = trace_id
         self._span_id = span_id
         # 시작점이 아는 사용자(auth users.id). identify로 알게 된 사용자는 공유 칸에 있다
@@ -279,9 +281,18 @@ class AppLogger:
         logger.handle(record)
 
     def _ids(self) -> tuple[str | None, str | None]:
+        """이 줄의 (trace.id, span.id)(LOG_SCHEMA.md 7절 "로그 필드").
+
+        줄을 찍는 순간의 지금 span이 먼저다. 그래서 줄의 span.id로 APM에서 그 줄을 찍은 span(호출, 작업, DB 쿼리의 부모)을 바로 찾는다.
+        흐름이 바인딩돼 있는데 지금 span이 없거나 다른 trace면(계측이 문맥을 넘기지 않은 스레드 등) 흐름 시작점의 값을 쓴다. 흐름 밖
+        (DETACHED, 시작점에 span이 없던 흐름)은 지금 span이 있으면 그 값이고, 없으면 비운다.
+        """
+        trace_id, span_id = current_ids()
+        if trace_id is not None and self._trace_id in (None, trace_id):
+            return trace_id, span_id
         if self._trace_id is not None:
             return self._trace_id, self._span_id
-        return current_ids()
+        return None, None
 
     def _effective_user(self) -> str | None:
         """이 줄에 남길 사용자. 흐름 중간에 알린 사용자(identify)가 있으면 그 값이다."""
@@ -290,7 +301,7 @@ class AppLogger:
         return self._user_id
 
 
-# 바인딩이 없을 때(기동, 프레임워크 콜백) 쓰는 객체. trace는 줄을 찍을 때 열려 있는 span이 있으면 그 값을 쓴다
+# 바인딩이 없을 때(기동, 프레임워크 콜백) 쓰는 객체. trace는 줄을 찍는 순간의 지금 span이고, span이 없으면 비운다
 DETACHED = AppLogger(None, None, None, (), None, ())
 _CURRENT: ContextVar[AppLogger | None] = ContextVar("app_logger", default=None)
 # 모듈 이름별 (log.layer, log.package). 줄마다 모듈 속성을 다시 보지 않게 한 번만 계산한다

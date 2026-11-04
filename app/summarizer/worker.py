@@ -21,6 +21,8 @@ from app.summarizer.store import Job, SummaryStore
 KEY_RETRY_SECONDS = 60
 # 회차 하나의 loresentry.schedule.name. 요약 작업 하나의 줄에도 붙여, 회차와 작업을 함께 찾는다
 SCHEDULE = "summary-tick"
+# 요약 작업 하나가 저장된 trace를 잇는 span 이름(LogScope.stored). APM에서 그 이벤트 trace의 transaction으로 보인다
+JOB = "summary job"
 # 작업 하나의 결과. 작업 종료 줄의 loresentry.result.outcome이고, 회차 종료 줄에는 결과마다 건수가 남는다
 OUTCOMES = (
     "summarized",
@@ -114,7 +116,8 @@ class Worker:
         return "summarized"
 
     async def guarded(self, job: Job) -> str:
-        """작업 하나. 행에 저장한 traceparent(그 변경을 가져온 이벤트의 trace)로 바인딩하고, document summary 흐름 하나로 남긴다.
+        """작업 하나. 행에 저장한 traceparent(그 변경을 가져온 이벤트의 trace)를 부모로 span(summary job)을 열어 바인딩하고,
+        document summary 흐름 하나로 남긴다. 작업의 DB 쿼리·KMS·OpenAI span이 그 span 아래에 붙고, 회차 span과는 link로 이어진다.
 
         실패는 우리 분류가 error.type인 document summary failed(warn)다. 모델 실패는 다시 할지, 키 실패는 KMS가 준 코드,
         열지 못한 본문은 이유 코드를 함께 남긴다. 예상하지 못한 예외는 실패 줄(error, 메시지 없는 스택)을 남기고 회차로 올라간다.
@@ -123,6 +126,7 @@ class Worker:
             with (
                 LogScope.stored(
                     job.traceparent,
+                    JOB,
                     LogField.document_id(job.document_id),
                     LogField.project_id(job.project_id),
                     LogField.schedule_name(SCHEDULE),

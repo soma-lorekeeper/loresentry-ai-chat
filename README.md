@@ -47,6 +47,7 @@ the only CORS boundary.
 | confluent-kafka | 2.16.0 | Summarizer consumer. Same version as `loresentry-graph-rag`. |
 | boto3 / botocore | 1.43.108 | KMS `Decrypt` of project keys in the summarizer. Same version as `loresentry-graph-rag`. |
 | cryptography | 50.0.2 | AES-256-GCM for manuscript envelopes. |
+| elastic-opentelemetry | 1.19.0 | EDOT Python distro (OpenTelemetry SDK 1.45.2). Only the instrumentations in `requirements.txt` are installed: FastAPI (attached by `app.logs.setup_tracing`), httpx (content), psycopg, botocore (KMS), Elastic OpenAI. |
 | ruff | 0.17.0 | Lint and format, run in CI. |
 | Flyway | 12.11 (CLI) | Copied into the image from `flyway/flyway`; only the PostgreSQL plugin and driver are kept. |
 | Port | 8000 | Platform convention, shared with every other service. |
@@ -229,7 +230,11 @@ text, so it runs only after a replay of FileChanged v2 has sealed every summary.
 Migrations live in [`db/migration`](db/migration). The container entrypoint
 runs `flyway migrate` against `DB_HOST`/`DB_PORT`/`DB_NAME` with
 `DB_USERNAME`/`DB_PASSWORD` and only then starts uvicorn, so a failed migration
-keeps the pod from becoming ready.
+keeps the pod from becoming ready. The summarizer goes through the same
+entrypoint (`args: ["python", "-m", "app.summarizer"]`, no `command`) without
+the migration. Both processes start under `opentelemetry-instrument`; the
+entrypoint's `OTEL_*` defaults export nothing until an overlay sets
+`OTEL_TRACES_EXPORTER=otlp`.
 
 | Table | Purpose |
 | --- | --- |
@@ -244,7 +249,7 @@ keeps the pod from becoming ready.
 | `setting_check_verdicts` | The author's verdict and reason per project and fingerprint, kept across runs |
 
 Project and user ids are plain values; there are no cross-database foreign keys.
-Running uvicorn directly, as below, skips the migration step.
+Running uvicorn directly, as below, skips the migration step and tracing.
 
 ## Run locally
 

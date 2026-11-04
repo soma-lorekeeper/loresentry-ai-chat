@@ -8,11 +8,12 @@ from uuid import uuid4
 import psycopg
 import pytest
 from confluent_kafka import KafkaError
+from opentelemetry.trace import SpanKind
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 from testcontainers.community.postgres import PostgresContainer
 
-from app.logs import configure_logging, setup_tracing
+from app.logs import configure_logging
 from app.manuscript import ProjectKeys, seal, unseal
 from app.model import ModelFailure, Usage
 from app.settings import Settings
@@ -333,7 +334,7 @@ def rig(database):
 def consume(rig, *messages) -> None:
     with psycopg.connect(rig.settings.base.conninfo) as conn:
         for message in messages:
-            handle(conn, message, rig.settings.prompt_version)
+            handle(conn, message, rig.settings)
 
 
 def test_events_off_the_contract_are_skipped_and_the_rest_applied(rig):
@@ -365,9 +366,8 @@ def test_a_topic_that_does_not_exist_yet_is_passed_over(rig):
     assert rig.query("select document_id::text from summary_queue") == [(file,)]
 
 
-def test_a_change_keeps_its_event_trace_into_the_summary_job(rig, capsys):
+def test_a_change_keeps_its_event_trace_into_the_summary_job(rig, capsys, spans):
     configure_logging("ai-chat-summarizer")
-    setup_tracing("ai-chat-summarizer")
     trace = "4bf92f3577b34da6a3ce929d0e0e4736"
     file = str(uuid4())
     headers, value = event("FileChanged", file_changed(rig.project, file, "UPDATED"))
@@ -417,11 +417,37 @@ def test_a_change_keeps_its_event_trace_into_the_summary_job(rig, capsys):
         assert field(line, "loresentry.document_id") == file
         assert field(line, "loresentry.schedule.name") == "summary-tick"
     assert field(job[-1], "loresentry.result.outcome") == "summarized"
+    # The record's consumer span is what the row stored; the job's span continues it
+    found = spans()
+    [consumer] = [
+        span
+        for span in found
+        if span.kind is SpanKind.CONSUMER
+        and span.attributes["messaging.kafka.offset"] == 5
+    ]
+    assert consumer.parent.span_id == 0x00F067AA0BA902B7
+    assert stored.startswith(f"00-{trace}-{consumer.context.span_id:016x}-")
+    [scope] = [span for span in found if span.name == "summary job"]
+    [task] = [span for span in found if span.name == "document summary"]
+    assert scope.parent.span_id == consumer.context.span_id
+    assert task.parent.span_id == scope.context.span_id
+    # The DB queries of the record and of the job hang under their spans, in that trace
+    for parent in (consumer, task):
+        queries = [
+            span
+            for span in found
+            if span.kind is SpanKind.CLIENT
+            and span.parent is not None
+            and span.parent.span_id == parent.context.span_id
+        ]
+        assert queries
+        assert {span.attributes["db.system.name"] for span in queries} == {"postgresql"}
+        assert {span.context.trace_id for span in queries} == {int(trace, 16)}
+    assert {field(line, "span.id") for line in job} == {f"{task.context.span_id:016x}"}
 
 
 def test_a_tick_logs_only_when_it_claims_jobs(rig, capsys):
     configure_logging("ai-chat-summarizer")
-    setup_tracing("ai-chat-summarizer")
 
     async def rounds(worker: Worker, stop: asyncio.Event) -> None:
         task = asyncio.create_task(worker.run(stop))

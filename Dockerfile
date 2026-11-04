@@ -39,5 +39,7 @@ USER appuser
 
 EXPOSE 8000
 
+# 두 프로세스 모두 시작 스크립트가 EDOT distro(opentelemetry-instrument)로 띄운다. 기본 명령은 API(uvicorn, flyway migrate 먼저)이고,
+# summarizer Deployment는 command 없이 args로 python -m app.summarizer를 넘긴다(command를 주면 이 스크립트를 건너뛴다)
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "170", "--no-access-log"]

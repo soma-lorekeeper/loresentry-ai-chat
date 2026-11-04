@@ -7,9 +7,6 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from openai import AsyncOpenAI
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 from starlette.exceptions import HTTPException
@@ -51,11 +48,9 @@ from app.turns import TurnRunner
 
 SERVICE = "ai-chat-api"
 
-# uvicorn이 "Started server process"를 찍기 전, 이 모듈을 import할 때 로그(ECS JSON)와 trace를 설정한다
+# uvicorn이 "Started server process"를 찍기 전, 이 모듈을 import할 때 로그(ECS JSON)를 설정한다.
+# 추적 엔진과 계측(content 호출의 httpx, DB 쿼리의 psycopg, KMS의 botocore)은 EDOT distro가 프로세스 시작 때 켠다
 configure_logging(SERVICE)
-setup_tracing(SERVICE)
-# DB 쿼리마다 client span을 만든다(로그 줄은 남기지 않는다). AsyncConnectionPool이 여는 연결에도 적용된다
-PsycopgInstrumentor().instrument()
 
 
 def create_app(
@@ -84,12 +79,12 @@ def create_app(
             stack.push_async_callback(pool.close)
             source = content
             if source is None:
+                # content 호출에는 httpx 계측이 traceparent를 싣는다. OpenAI SDK가 쓰는 httpx2는 계측하지 않아
+                # OpenAI 호출에는 싣지 않는다(docker-entrypoint.sh의 OTEL_PYTHON_DISABLED_INSTRUMENTATIONS)
                 http = httpx.AsyncClient(
                     base_url=config.content_base_url,
                     timeout=config.content_timeout_seconds,
                 )
-                # content 호출에만 traceparent를 싣는다(OpenAI 같은 외부 호출에는 싣지 않는다)
-                HTTPXClientInstrumentor.instrument_client(http)
                 stack.push_async_callback(http.aclose)
                 source = ContentClient(http)
             client = None
@@ -220,7 +215,7 @@ def create_app(
 
     # 요청마다 서버 span을 연다. gateway가 보낸 traceparent가 있으면 그 trace를 잇는다.
     # SSE 응답의 조각마다 생기는 send·receive span은 만들지 않는다
-    FastAPIInstrumentor.instrument_app(app, exclude_spans=["receive", "send"])
+    setup_tracing(app)
     return app
 
 
