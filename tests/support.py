@@ -258,6 +258,25 @@ class FakeModel:
         return verdict, Usage(100, 0, 0, 10, 5)
 
 
+def log_lines(output: str) -> list[dict[str, Any]]:
+    """Every ECS JSON line the service wrote to stdout (captured by capsys)."""
+    return [json.loads(line) for line in output.splitlines() if line.startswith("{")]
+
+
+def field(line: dict[str, Any], name: str) -> Any:
+    """The value of a dotted ECS name in a nested line, or None."""
+    value: Any = line
+    for part in name.split("."):
+        if not isinstance(value, dict) or part not in value:
+            return None
+        value = value[part]
+    return value
+
+
+def lines_with(lines: list[dict[str, Any]], message: str) -> list[dict[str, Any]]:
+    return [line for line in lines if line["message"] == message]
+
+
 def read_events(response) -> list[tuple[str, dict | None]]:
     events: list[tuple[str, dict | None]] = []
     name = None

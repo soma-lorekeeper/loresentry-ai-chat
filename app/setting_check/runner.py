@@ -1,13 +1,13 @@
 import asyncio
-import logging
-import time
 from collections.abc import Callable, Coroutine
+from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
 from app.content import ChatMap, ContentSource, Document, Node
 from app.errors import ChatFailure
+from app.logs import AppLogger, LogField, LogFlow, skip_entry_log
 from app.model import CheckModel, ModelFailure, Usage
 from app.setting_check.findings import (
     Candidate,
@@ -32,9 +32,12 @@ from app.setting_check.prompts import (
 from app.setting_check.store import CheckStore, Finding, Read
 from app.settings import Settings
 
-log = logging.getLogger("ai_chat.setting_check")
+# 설정 오류 검사 1회를 백그라운드 task로 돌리는 service. 모듈 이름으로 레이어를 정할 수 없어 직접 둔다
+LOG_LAYER = "service"
 
 BATCH = 100
+# setting check 종료 줄의 loresentry.result.outcome 값(목록 밖은 other)
+RUN_OUTCOMES = {"DONE", "CANCELLED", "INTERRUPTED", "FAILED"}
 
 
 class Stopped(Exception):
@@ -52,10 +55,12 @@ class Tally:
     judged: int = 0
     findings: int = 0
 
+    @skip_entry_log("Only adds token counts")
     def add(self, usage: Usage | None) -> None:
         self.usage = self.usage + usage
 
 
+@skip_entry_log("Only finds a chapter on the map")
 def chapter(chat_map: ChatMap, document_id: str) -> Node:
     for node in chat_map.manuscripts:
         if node.id == document_id:
@@ -63,6 +68,7 @@ def chapter(chat_map: ChatMap, document_id: str) -> Node:
     raise ChatFailure("SETTING_CHECK_DOCUMENT_NOT_FOUND")
 
 
+@skip_entry_log("Only picks what fits the size limit")
 def newest_fitting[T](items: list[T], room: int, size: Callable[[T], int]) -> list[T]:
     kept: list[T] = []
     for item in reversed(items):
@@ -74,6 +80,7 @@ def newest_fitting[T](items: list[T], room: int, size: Callable[[T], int]) -> li
     return kept
 
 
+@skip_entry_log("Only runs calls in a task group")
 async def together[T](calls: list[Coroutine[Any, Any, T]]) -> list[T]:
     try:
         async with asyncio.TaskGroup() as group:
@@ -83,6 +90,7 @@ async def together[T](calls: list[Coroutine[Any, Any, T]]) -> list[T]:
     return [task.result() for task in tasks]
 
 
+@skip_entry_log("Only builds a finding")
 def finding_of(reading: Reading, candidate: Candidate) -> Finding:
     source = reading.documents[candidate.source_id]
     return Finding(
@@ -104,6 +112,7 @@ def finding_of(reading: Reading, candidate: Candidate) -> Finding:
     )
 
 
+@skip_entry_log("Only counts what was read")
 def read_of(reading: Reading) -> Read:
     ordinals = [doc.ordinal for doc in reading.earlier if doc.ordinal is not None]
     return Read(
@@ -130,6 +139,7 @@ class CheckRunner:
         self.tasks: dict[UUID, tuple[asyncio.Task[None], UUID, UUID]] = {}
         self.stopping = False
 
+    @skip_entry_log("Creates the run task, whose setting check start line comes next")
     def start(
         self,
         run_id: UUID,
@@ -146,11 +156,17 @@ class CheckRunner:
         task.add_done_callback(lambda _: self.tasks.pop(run_id, None))
 
     def stop(self, run_id: UUID) -> None:
+        AppLogger.current().info(
+            "setting check stop", LogField.setting_check_run_id(run_id)
+        )
         running = self.tasks.get(run_id)
         if running:
             running[0].cancel()
 
     def stop_for(self, user_id: UUID, project_id: UUID | None = None) -> None:
+        AppLogger.current().info(
+            "setting checks stop for owner", LogField.project_id(project_id)
+        )
         for task, owner, project in list(self.tasks.values()):
             if owner == user_id and project_id in (None, project):
                 task.cancel()
@@ -158,6 +174,9 @@ class CheckRunner:
     async def drain(self) -> None:
         self.stopping = True
         running = [task for task, _, _ in self.tasks.values()]
+        AppLogger.current().info(
+            "setting checks drain", LogField.param("running", running)
+        )
         if not running:
             return
         _, pending = await asyncio.wait(
@@ -177,65 +196,78 @@ class CheckRunner:
         locale: str,
         chat_map: ChatMap,
     ) -> None:
-        begun = time.monotonic()
-        tally = Tally()
-        outcome = "DONE"
-        try:
-            async with asyncio.timeout(self.settings.setting_check_deadline_seconds):
-                reading = await self.read(user_id, project_id, document_id, chat_map)
-                read = read_of(reading)
-                tally.manuscripts = read.manuscripts
-                tally.settings = read.settings
-                tally.core_facts = read.core_facts
-                if not await self.store.advance(
-                    run_id, reading.target.title, reading.target.revision_no, read
+        ids = (
+            LogField.setting_check_run_id(run_id),
+            LogField.project_id(project_id),
+            LogField.document_id(document_id),
+        )
+        # 검사 1회가 흐름 하나다: setting check start, setting check completed 또는 setting check failed(우리 실패
+        # 코드가 error.type). 이 task의 모든 줄에 run·프로젝트·문서 ID가 붙는다. 예상하지 못한 예외는 LogFlow.task가
+        # 실패 줄(error, 메시지 없는 스택)로 남기고, task 밖으로는 내보내지 않는다(내보내면 asyncio가 한 번 더 찍는다)
+        with suppress(Exception), LogFlow.task("setting check", *ids) as task:
+            task.add(*ids)
+            tally = Tally()
+            outcome = "DONE"
+            try:
+                async with asyncio.timeout(
+                    self.settings.setting_check_deadline_seconds
                 ):
+                    reading = await self.read(
+                        user_id, project_id, document_id, chat_map
+                    )
+                    read = read_of(reading)
+                    tally.manuscripts = read.manuscripts
+                    tally.settings = read.settings
+                    tally.core_facts = read.core_facts
+                    if not await self.store.advance(
+                        run_id, reading.target.title, reading.target.revision_no, read
+                    ):
+                        raise Stopped()
+                    findings = await self.check(
+                        run_id, project_id, reading, locale, tally
+                    )
+                if not await self.store.finish(run_id, findings, tally.usage):
                     raise Stopped()
-                findings = await self.check(run_id, project_id, reading, locale, tally)
-            if not await self.store.finish(run_id, findings, tally.usage):
-                raise Stopped()
-            tally.findings = len(findings)
-        except (asyncio.CancelledError, Stopped):
-            outcome = await self.settle_stop(run_id, tally)
-        except ChatFailure as failure:
-            outcome = failure.code
-            await self.settle_failure(run_id, failure.code, tally)
-        except ModelFailure as failure:
-            outcome = failure.code
-            await self.settle_failure(run_id, "CHAT_MODEL_UNAVAILABLE", tally)
-        except TimeoutError:
-            outcome = "DEADLINE"
-            await self.settle_failure(run_id, "CHAT_MODEL_UNAVAILABLE", tally)
-        except Exception:
-            outcome = "INTERNAL"
-            log.exception("setting check failed", extra={"run_id": str(run_id)})
-            await self.settle_failure(run_id, "INTERNAL_ERROR", tally)
-        finally:
-            log.info(
-                "setting check finished",
-                extra={
-                    "run_id": str(run_id),
-                    "project_id": str(project_id),
-                    "outcome": outcome,
-                    "model": self.model.name,
-                    "manuscripts": tally.manuscripts,
-                    "settings": tally.settings,
-                    "core_facts": tally.core_facts,
-                    "candidates": tally.found,
-                    "verified": tally.verified,
-                    "judged": tally.judged,
-                    "findings": tally.findings,
-                    "input_tokens": tally.usage.input_tokens,
-                    "cached_tokens": tally.usage.cached_tokens,
-                    "output_tokens": tally.usage.output_tokens,
-                    "reasoning_tokens": tally.usage.reasoning_tokens,
-                    "total_ms": int((time.monotonic() - begun) * 1000),
-                },
-            )
+                tally.findings = len(findings)
+            except (asyncio.CancelledError, Stopped):
+                outcome = await self.settle_stop(run_id, tally)
+            except ChatFailure as failure:
+                outcome = "FAILED"
+                task.fail(failure.code)
+                await self.settle_failure(run_id, failure.code, tally)
+            except ModelFailure as failure:
+                outcome = "FAILED"
+                task.fail(failure.code)
+                await self.settle_failure(run_id, "CHAT_MODEL_UNAVAILABLE", tally)
+            except TimeoutError:
+                outcome = "FAILED"
+                task.fail("DEADLINE")
+                await self.settle_failure(run_id, "CHAT_MODEL_UNAVAILABLE", tally)
+            except Exception:
+                outcome = "FAILED"
+                await self.settle_failure(run_id, "INTERNAL_ERROR", tally)
+                raise
+            finally:
+                # 종료 줄의 결과 값. 걸린 시간은 event.duration, 토큰은 호출마다 openai 결과 줄에도 있다
+                task.result(
+                    LogField.result_code("outcome", outcome, RUN_OUTCOMES),
+                    LogField.result("manuscripts", tally.manuscripts),
+                    LogField.result("settings", tally.settings),
+                    LogField.result("core_facts", tally.core_facts),
+                    LogField.result("candidates", tally.found),
+                    LogField.result("verified", tally.verified),
+                    LogField.result("judged", tally.judged),
+                    LogField.result("findings", tally.findings),
+                    LogField.result("input_tokens", tally.usage.input_tokens),
+                    LogField.result("cached_tokens", tally.usage.cached_tokens),
+                    LogField.result("output_tokens", tally.usage.output_tokens),
+                    LogField.result("reasoning_tokens", tally.usage.reasoning_tokens),
+                )
 
     async def read(
         self, user_id: UUID, project_id: UUID, document_id: str, chat_map: ChatMap
     ) -> Reading:
+        AppLogger.current().info("setting check documents read")
         target = chapter(chat_map, document_id)
         settings = list(chat_map.settings)
         earlier = sorted(
@@ -279,6 +311,9 @@ class CheckRunner:
     async def fetch(
         self, user_id: UUID, project_id: UUID, ids: list[str]
     ) -> dict[str, Document]:
+        AppLogger.current().info(
+            "setting check documents fetch", LogField.param("document_ids", ids)
+        )
         found: dict[str, Document] = {}
         for start in range(0, len(ids), BATCH):
             fetched = await self.content.documents(
@@ -295,6 +330,7 @@ class CheckRunner:
         locale: str,
         tally: Tally,
     ) -> list[Finding]:
+        AppLogger.current().info("setting check candidates check")
         cache_key = f"setting-check:{project_id}"
         found = await self.find(reading, locale, tally, cache_key)
         tally.found = len(found)
@@ -330,6 +366,11 @@ class CheckRunner:
     async def find(
         self, reading: Reading, locale: str, tally: Tally, cache_key: str
     ) -> list[Candidate]:
+        AppLogger.current().info(
+            "setting check candidates find",
+            LogField.param("core_pass", bool(reading.core_facts)),
+        )
+
         async def whole() -> list[Candidate]:
             value, usage = await self.model.find(
                 WHOLE_INSTRUCTIONS,
@@ -365,6 +406,7 @@ class CheckRunner:
         gate: asyncio.Semaphore,
         cache_key: str,
     ) -> Candidate | None:
+        AppLogger.current().info("setting check candidate judge")
         async with gate:
             value, usage = await self.model.judge(
                 JUDGE_INSTRUCTIONS,
@@ -378,21 +420,29 @@ class CheckRunner:
         return judged(candidate, value)
 
     async def settle_stop(self, run_id: UUID, tally: Tally) -> str:
+        AppLogger.current().info(
+            "setting check stop record", LogField.param("shutdown", self.stopping)
+        )
         try:
             if self.stopping:
                 await self.store.fail(run_id, "INTERRUPTED", tally.usage)
                 return "INTERRUPTED"
             await self.store.record_usage(run_id, tally.usage)
-        except Exception:
-            log.warning(
-                "could not record stopped setting check", extra={"run_id": str(run_id)}
+        except Exception as error:
+            AppLogger.current().warn(
+                "setting check stop record failed",
+                LogField.error_type(type(error).__name__),
+                LogField.safe_stack_trace(error),
             )
         return "CANCELLED"
 
     async def settle_failure(self, run_id: UUID, code: str, tally: Tally) -> None:
+        AppLogger.current().info("setting check failure record")
         try:
             await self.store.fail(run_id, code, tally.usage)
-        except Exception:
-            log.warning(
-                "could not record failed setting check", extra={"run_id": str(run_id)}
+        except Exception as error:
+            AppLogger.current().warn(
+                "setting check failure record failed",
+                LogField.error_type(type(error).__name__),
+                LogField.safe_stack_trace(error),
             )

@@ -7,6 +7,7 @@ from psycopg.errors import UniqueViolation
 from psycopg_pool import AsyncConnectionPool
 
 from app.errors import ChatFailure
+from app.logs import AppLogger, LogField, skip_entry_log
 from app.model import Usage
 from app.setting_check.prompts import Note
 from app.store import iso
@@ -43,8 +44,12 @@ FINDING_OWNER = (
     "from setting_check_findings f join setting_check_runs r on r.id = f.run_id "
     "where f.id = %s and r.user_id = %s"
 )
+# 로그에 그대로 남겨도 되는 단계·판정 값(목록 밖은 other)
+STAGES = {"READING", "FINDING", "JUDGING"}
+VERDICTS = {"INTENDED", "NOT_CONFLICT"}
 
 
+@skip_entry_log("Only builds the response body from a row")
 def run_json(
     row: dict[str, Any], findings: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:
@@ -77,6 +82,7 @@ def run_json(
     return body
 
 
+@skip_entry_log("Only builds the response body from a row")
 def finding_json(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": str(row["id"]),
@@ -144,6 +150,7 @@ class CheckStore:
         return result.rowcount
 
     async def expire_stale(self) -> int:
+        AppLogger.current().info("stale setting checks expire")
         async with self.pool.connection() as conn:
             return await self._expire(conn, "true", ())
 
@@ -162,6 +169,14 @@ class CheckStore:
         revision_no: int,
         model: str,
     ) -> dict[str, Any]:
+        # 장 제목은 내용 대신 길이만 남는다
+        AppLogger.current().info(
+            "setting check begin",
+            LogField.project_id(project_id),
+            LogField.document_id(document_id),
+            LogField.param("title", title),
+            LogField.param("revision_no", revision_no),
+        )
         try:
             async with self.pool.connection() as conn, conn.transaction():
                 await self._expire(conn, "project_id = %s", (project_id,))
@@ -181,6 +196,11 @@ class CheckStore:
     async def advance(
         self, run_id: UUID, title: str, revision_no: int, read: Read
     ) -> bool:
+        AppLogger.current().info(
+            "setting check advance",
+            LogField.setting_check_run_id(run_id),
+            LogField.param("revision_no", revision_no),
+        )
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
@@ -204,6 +224,11 @@ class CheckStore:
         return row is not None
 
     async def stage(self, run_id: UUID, stage: str) -> bool:
+        AppLogger.current().info(
+            "setting check stage set",
+            LogField.setting_check_run_id(run_id),
+            LogField.code("stage", stage, STAGES),
+        )
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
@@ -215,6 +240,11 @@ class CheckStore:
         return row is not None
 
     async def finish(self, run_id: UUID, findings: list[Finding], usage: Usage) -> bool:
+        AppLogger.current().info(
+            "setting check finish",
+            LogField.setting_check_run_id(run_id),
+            LogField.param("findings", findings),
+        )
         async with self.pool.connection() as conn, conn.transaction():
             row = await (
                 await conn.execute(
@@ -258,6 +288,9 @@ class CheckStore:
         return True
 
     async def fail(self, run_id: UUID, code: str, usage: Usage) -> None:
+        AppLogger.current().info(
+            "setting check fail", LogField.setting_check_run_id(run_id)
+        )
         async with self.pool.connection() as conn:
             await self._close(conn, run_id, "FAILED", code, usage)
 
@@ -285,6 +318,9 @@ class CheckStore:
         )
 
     async def record_usage(self, run_id: UUID, usage: Usage) -> None:
+        AppLogger.current().info(
+            "setting check usage record", LogField.setting_check_run_id(run_id)
+        )
         async with self.pool.connection() as conn:
             await conn.execute(
                 "update setting_check_runs set input_tokens = %s, cached_tokens = %s, "
@@ -293,6 +329,9 @@ class CheckStore:
             )
 
     async def cancel(self, user_id: UUID, run_id: UUID) -> bool:
+        AppLogger.current().info(
+            "setting check cancel", LogField.setting_check_run_id(run_id)
+        )
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
@@ -315,6 +354,9 @@ class CheckStore:
         return False
 
     async def summary(self, user_id: UUID, project_id: UUID) -> dict[str, Any]:
+        AppLogger.current().info(
+            "setting check summary get", LogField.project_id(project_id)
+        )
         async with self.pool.connection() as conn:
             await self._expire(conn, "project_id = %s", (project_id,))
             rows = await (
@@ -338,6 +380,11 @@ class CheckStore:
     async def runs(
         self, user_id: UUID, project_id: UUID, document_id: UUID | None
     ) -> list[dict[str, Any]]:
+        AppLogger.current().info(
+            "setting checks list",
+            LogField.project_id(project_id),
+            LogField.document_id(document_id),
+        )
         where = "r.user_id = %s and r.project_id = %s"
         params: tuple[Any, ...] = (user_id, project_id)
         if document_id is not None:
@@ -354,6 +401,9 @@ class CheckStore:
         return [run_json(row) for row in rows]
 
     async def run(self, user_id: UUID, run_id: UUID) -> dict[str, Any]:
+        AppLogger.current().info(
+            "setting check get", LogField.setting_check_run_id(run_id)
+        )
         async with self.pool.connection() as conn:
             await self._expire(conn, "id = %s", (run_id,))
             row = await (
@@ -373,6 +423,9 @@ class CheckStore:
         return run_json(row, [finding_json(finding) for finding in findings])
 
     async def decisions(self, user_id: UUID, project_id: UUID) -> list[dict[str, Any]]:
+        AppLogger.current().info(
+            "setting check verdicts list", LogField.project_id(project_id)
+        )
         async with self.pool.connection() as conn:
             rows = await (
                 await conn.execute(
@@ -401,6 +454,11 @@ class CheckStore:
     async def notes(
         self, project_id: UUID, source_ids: list[str]
     ) -> dict[str, list[Note]]:
+        AppLogger.current().info(
+            "setting check notes get",
+            LogField.project_id(project_id),
+            LogField.param("source_ids", source_ids),
+        )
         if not source_ids:
             return {}
         async with self.pool.connection() as conn:
@@ -439,6 +497,11 @@ class CheckStore:
     async def set_verdict(
         self, user_id: UUID, finding_id: UUID, verdict: str, reason: str | None
     ) -> dict[str, Any]:
+        AppLogger.current().info(
+            "setting check verdict set",
+            LogField.setting_check_finding_id(finding_id),
+            LogField.code("verdict", verdict, VERDICTS),
+        )
         async with self.pool.connection() as conn, conn.transaction():
             owned = await self._owned(conn, user_id, finding_id)
             await conn.execute(
@@ -461,6 +524,9 @@ class CheckStore:
             return await self._finding(conn, finding_id)
 
     async def clear_verdict(self, user_id: UUID, finding_id: UUID) -> dict[str, Any]:
+        AppLogger.current().info(
+            "setting check verdict clear", LogField.setting_check_finding_id(finding_id)
+        )
         async with self.pool.connection() as conn, conn.transaction():
             owned = await self._owned(conn, user_id, finding_id)
             await conn.execute(

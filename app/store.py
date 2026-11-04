@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -12,7 +11,14 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
 from app.errors import ChatFailure
-from app.manuscript import KeyUnavailable, ProjectKeys, Unreadable, unseal
+from app.logs import AppLogger, LogField, skip_entry_log
+from app.manuscript import (
+    UNREADABLE_REASONS,
+    KeyUnavailable,
+    ProjectKeys,
+    Unreadable,
+    unseal,
+)
 from app.navigation import Summary
 from app.prompt import Exchange, Question
 from app.text import chat_preview, chat_title, search_text, snippet
@@ -24,15 +30,15 @@ MESSAGE_COLUMNS = (
 )
 SEARCH_LIMIT = 50
 
-log = logging.getLogger("ai_chat.store")
 
-
+@skip_entry_log("Only formats a timestamp")
 def iso(value: datetime) -> str:
     return (
         value.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
     )
 
 
+@skip_entry_log("Only builds the response body from a row")
 def session_json(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": str(row["id"]),
@@ -43,6 +49,7 @@ def session_json(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+@skip_entry_log("Only builds the response body from a row")
 def message_json(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": str(row["id"]),
@@ -90,6 +97,7 @@ class Metrics:
     reviews: list[dict[str, Any]] | None = None
 
 
+@skip_entry_log("Only escapes a search term")
 def like(term: str) -> str:
     return "%" + re.sub(r"([\\%_])", r"\\\1", term) + "%"
 
@@ -105,6 +113,11 @@ class Store:
     async def create_session(
         self, user_id: UUID, project_id: UUID, title: str
     ) -> dict[str, Any]:
+        AppLogger.current().info(
+            "chat session create",
+            LogField.project_id(project_id),
+            LogField.param("title", title),
+        )
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
@@ -116,6 +129,7 @@ class Store:
         return session_json(row)
 
     async def sessions(self, user_id: UUID, project_id: UUID) -> list[dict[str, Any]]:
+        AppLogger.current().info("chat sessions list", LogField.project_id(project_id))
         async with self.pool.connection() as conn:
             rows = await (
                 await conn.execute(
@@ -128,6 +142,9 @@ class Store:
         return [session_json(row) for row in rows]
 
     async def session(self, user_id: UUID, session_id: UUID) -> dict[str, Any]:
+        AppLogger.current().info(
+            "chat session get", LogField.chat_session_id(session_id)
+        )
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
@@ -143,6 +160,11 @@ class Store:
     async def rename(
         self, user_id: UUID, session_id: UUID, title: str
     ) -> dict[str, Any]:
+        AppLogger.current().info(
+            "chat session rename",
+            LogField.chat_session_id(session_id),
+            LogField.param("title", title),
+        )
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
@@ -157,6 +179,9 @@ class Store:
         return session_json(row)
 
     async def delete_session(self, user_id: UUID, session_id: UUID) -> list[UUID]:
+        AppLogger.current().info(
+            "chat session delete", LogField.chat_session_id(session_id)
+        )
         async with self.pool.connection() as conn:
             turns = await self._generating_turns(
                 conn, "s.id = %s and s.user_id = %s", (session_id, user_id)
@@ -173,6 +198,7 @@ class Store:
         return turns
 
     async def delete_user_data(self, user_id: UUID) -> list[UUID]:
+        AppLogger.current().info("user chat data delete")
         async with self.pool.connection() as conn:
             turns = await self._generating_turns(conn, "s.user_id = %s", (user_id,))
             await conn.execute(
@@ -186,6 +212,9 @@ class Store:
         return turns
 
     async def delete_project_data(self, user_id: UUID, project_id: UUID) -> list[UUID]:
+        AppLogger.current().info(
+            "project chat data delete", LogField.project_id(project_id)
+        )
         async with self.pool.connection() as conn:
             turns = await self._generating_turns(
                 conn, "s.user_id = %s and s.project_id = %s", (user_id, project_id)
@@ -214,6 +243,9 @@ class Store:
         return [row["id"] for row in rows]
 
     async def messages(self, session_id: UUID) -> list[dict[str, Any]]:
+        AppLogger.current().info(
+            "chat messages list", LogField.chat_session_id(session_id)
+        )
         async with self.pool.connection() as conn:
             rows = await (
                 await conn.execute(
@@ -226,6 +258,9 @@ class Store:
         return [message_json(row) for row in rows]
 
     async def generating(self, session_id: UUID) -> bool:
+        AppLogger.current().info(
+            "chat answer progress get", LogField.chat_session_id(session_id)
+        )
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
@@ -238,6 +273,7 @@ class Store:
         return row["busy"]
 
     async def expire_stale(self) -> int:
+        AppLogger.current().info("stale chat turns expire")
         async with self.pool.connection() as conn:
             result = await conn.execute(
                 "update chat_turns set status = 'FAILED', failure_code = 'STALE', "
@@ -257,6 +293,12 @@ class Store:
         replaces: UUID | None,
         client_message_id: UUID,
     ) -> Started | Replayed:
+        AppLogger.current().info(
+            "chat turn begin",
+            LogField.chat_session_id(session_id),
+            LogField.param("replaced_message_id", replaces),
+            LogField.param("client_message_id", client_message_id),
+        )
         async with self.pool.connection() as conn, conn.transaction():
             session = await (
                 await conn.execute(
@@ -421,6 +463,9 @@ class Store:
         return row["id"]
 
     async def history(self, session_id: UUID, question_id: UUID) -> list[Exchange]:
+        AppLogger.current().info(
+            "chat history get", LogField.chat_session_id(session_id)
+        )
         async with self.pool.connection() as conn:
             rows = await (
                 await conn.execute(
@@ -453,6 +498,9 @@ class Store:
         return exchanges
 
     async def held(self, session_id: UUID) -> list[tuple[str, str]]:
+        AppLogger.current().info(
+            "chat held documents get", LogField.chat_session_id(session_id)
+        )
         async with self.pool.connection() as conn:
             rows = await (
                 await conn.execute(
@@ -464,6 +512,11 @@ class Store:
         return [(str(row["target_id"]), row["kind"]) for row in rows]
 
     async def drop_held(self, session_id: UUID, target_ids: list[str]) -> None:
+        AppLogger.current().info(
+            "chat held documents drop",
+            LogField.chat_session_id(session_id),
+            LogField.param("target_ids", target_ids),
+        )
         if not target_ids:
             return
         async with self.pool.connection() as conn:
@@ -474,6 +527,9 @@ class Store:
             )
 
     async def summaries(self, document_ids: list[str]) -> dict[str, Summary]:
+        AppLogger.current().info(
+            "chat summaries get", LogField.param("document_ids", document_ids)
+        )
         if not document_ids:
             return {}
         async with self.pool.connection() as conn:
@@ -489,6 +545,9 @@ class Store:
             return {}
         return await asyncio.to_thread(self.open_summaries, rows)
 
+    @skip_entry_log(
+        "Opens the rows summaries just read, in a worker thread; KMS calls log their own lines"
+    )
     def open_summaries(self, rows: list[dict[str, Any]]) -> dict[str, Summary]:
         keys: dict[tuple[str, bytes], bytes | None] = {}
         summaries: dict[str, Summary] = {}
@@ -500,9 +559,12 @@ class Store:
                     keys[entry] = self.keys.unwrap(*entry)
                 except KeyUnavailable as failure:
                     keys[entry] = None
-                    log.warning(
+                    # 이 프로젝트의 요약은 지도에서 빠진다. KMS가 준 코드(또는 키 설정 없음)는 error.code
+                    AppLogger.current().warn(
                         "summary key unavailable",
-                        extra={"project_id": project, "code": failure.code},
+                        LogField.project_id(project),
+                        LogField.error_type("KeyUnavailable"),
+                        LogField.error_code(failure.code),
                     )
             key = keys[entry]
             if key is None:
@@ -510,14 +572,18 @@ class Store:
             try:
                 text = unseal(key, row["summary_enc"], project, document, "summary")
             except Unreadable as failure:
-                log.warning(
+                # 이 문서의 요약은 지도에서 빠진다. 열지 못한 이유는 정해 둔 코드(format, tag 등)다
+                AppLogger.current().warn(
                     "summary unreadable",
-                    extra={"document_id": document, "reason": str(failure)},
+                    LogField.document_id(document),
+                    LogField.error_type("Unreadable"),
+                    LogField.result_code("reason", str(failure), UNREADABLE_REASONS),
                 )
                 continue
             summaries[document] = Summary(row["revision_no"], text)
         return summaries
 
+    @skip_entry_log("Called by the cancel watcher on every poll of a running turn")
     async def turn_status(self, turn_id: UUID) -> str | None:
         async with self.pool.connection() as conn:
             row = await (
@@ -537,6 +603,14 @@ class Store:
         grounding: dict[str, Any] | None = None,
         held: list[tuple[str, str]] | None = None,
     ) -> dict[str, Any] | None:
+        # 답변은 내용 대신 길이만 남는다
+        AppLogger.current().info(
+            "chat turn complete",
+            LogField.chat_turn_id(turn_id),
+            LogField.chat_session_id(session_id),
+            LogField.param("answer", content),
+            LogField.param("citations", citations),
+        )
         async with self.pool.connection() as conn, conn.transaction():
             turn = await (
                 await conn.execute(
@@ -584,10 +658,12 @@ class Store:
         return answer
 
     async def fail_turn(self, turn_id: UUID, code: str, metrics: Metrics) -> None:
+        AppLogger.current().info("chat turn fail", LogField.chat_turn_id(turn_id))
         async with self.pool.connection() as conn, conn.transaction():
             await self._finish(conn, turn_id, "FAILED", code, metrics, None)
 
     async def stop_turn(self, turn_id: UUID, metrics: Metrics) -> None:
+        AppLogger.current().info("chat turn stop", LogField.chat_turn_id(turn_id))
         async with self.pool.connection() as conn, conn.transaction():
             await self._finish(conn, turn_id, "CANCELLED", None, metrics, None)
 
@@ -647,6 +723,7 @@ class Store:
             )
 
     async def used_today(self, user_id: UUID) -> int:
+        AppLogger.current().info("chat usage today get")
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
@@ -658,6 +735,9 @@ class Store:
         return int(row["used"])
 
     async def cancel(self, user_id: UUID, session_id: UUID) -> list[UUID]:
+        AppLogger.current().info(
+            "chat turn cancel", LogField.chat_session_id(session_id)
+        )
         async with self.pool.connection() as conn:
             rows = await (
                 await conn.execute(
@@ -672,6 +752,9 @@ class Store:
     async def search(
         self, user_id: UUID, project_id: UUID, term: str
     ) -> list[dict[str, Any]]:
+        AppLogger.current().info(
+            "chat search", LogField.project_id(project_id), LogField.param("term", term)
+        )
         pattern = like(term)
         async with self.pool.connection() as conn:
             sessions = await (

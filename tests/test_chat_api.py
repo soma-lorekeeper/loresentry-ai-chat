@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import json
 import os
 import threading
@@ -9,6 +10,7 @@ from pathlib import Path
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
+import httpx
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
@@ -16,6 +18,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 from testcontainers.community.postgres import PostgresContainer
 
+from app import main
 from app.main import create_app
 from app.manuscript import ProjectKeys, seal
 from app.model import ModelFailure
@@ -26,13 +29,18 @@ from tests.support import (
     CH1,
     CH2,
     CH3,
+    DEFAULT_ANSWER,
     GREENHOUSE,
     LENA,
+    NOTE,
     FakeContent,
     FakeKms,
     FakeModel,
     answer,
     documents,
+    field,
+    lines_with,
+    log_lines,
     read,
     read_events,
     short,
@@ -161,7 +169,9 @@ def test_requests_need_a_user(env):
     response = env.client.get(f"/projects/{env.project}/chat/sessions")
 
     assert response.status_code == 401
-    assert response.json() == {
+    body = response.json()
+    assert len(body.pop("trace_id")) == 32
+    assert body == {
         "code": "USER_CONTEXT_REQUIRED",
         "message": "User context is required",
         "next_action": "RELOGIN",
@@ -1008,3 +1018,102 @@ def test_a_turn_sees_sealed_summaries_and_survives_a_kms_failure(database):
         prompt = json.dumps(env.model.inputs[0], ensure_ascii=False)
         assert "<summary>" not in prompt
         assert "서윤이 등불을 들고 문을 민다." not in prompt
+
+
+def test_logs_follow_the_gateway_trace_into_the_content_call(
+    database, monkeypatch, capsys
+):
+    trace = "4bf92f3577b34da6a3ce929d0e0e4736"
+    user, project = uuid4(), uuid4()
+    seen: list[httpx.Request] = []
+
+    def content(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"size": 42})
+
+    # The API builds its own content client; give it a transport that answers here
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        functools.partial(httpx.AsyncClient, transport=httpx.MockTransport(content)),
+    )
+    settings = Settings(
+        db_host=database["host"],
+        db_port=str(database["port"]),
+        db_name=database["dbname"],
+        db_username=database["user"],
+        db_password=database["password"],
+        content_base_url="http://content.dev.svc:8080",
+    )
+    with TestClient(main.create_app(settings, model=FakeModel())) as client:
+        capsys.readouterr()
+        response = client.get(
+            f"/projects/{project}/chat/availability",
+            headers={
+                "X-User-Id": str(user),
+                "traceparent": f"00-{trace}-00f067aa0ba902b7-01",
+            },
+        )
+        lines = log_lines(capsys.readouterr().out)
+
+    assert response.json()["size"] == 42
+    [request] = seen
+    assert request.headers["traceparent"].startswith(f"00-{trace}-")
+    assert request.headers["X-User-Id"] == str(user)
+    flow = [line for line in lines if field(line, "trace.id") == trace]
+    assert [line["message"] for line in flow] == [
+        "request received",
+        "chat availability get requested",
+        "content chat size get call",
+        "content call completed",
+        "request completed",
+    ]
+    for line in flow:
+        assert field(line, "user.id") == str(user)
+        assert field(line, "url.path") == f"/projects/{project}/chat/availability"
+        assert field(line, "http.route") == "/projects/{project_id}/chat/availability"
+        assert field(line, "http.request.method") == "GET"
+    called = lines_with(flow, "content call completed")[0]
+    assert (called["log"]["logger"], called["log"]["layer"]) == (
+        "app.content",
+        "client",
+    )
+    assert field(called, "url.domain") == "content.dev.svc"
+    assert field(called, "url.full") == (
+        f"http://content.dev.svc:8080/internal/projects/{project}/chat-size"
+    )
+    assert field(called, "http.response.status_code") == 200
+    assert field(called, "event.duration") > 0
+    completed = lines_with(flow, "request completed")[0]
+    assert field(completed, "http.response.status_code") == 200
+    assert field(completed, "event.duration") > 0
+
+
+def test_logs_never_carry_story_or_chat_text(env, capsys):
+    capsys.readouterr()
+    question = "북쪽 문은 누가 열었어? 레나의 비밀"
+    session = env.create(**{"X-User-Display-Name": quote("서윤주")})
+    env.client.patch(
+        f"/chat/sessions/{session['id']}",
+        json={"title": "비밀 제목 서윤"},
+        headers=env.headers,
+    )
+    env.send(session["id"], question)
+    env.client.get(
+        f"/projects/{env.project}/chat/search",
+        params={"q": "유리 지붕"},
+        headers=env.headers,
+    )
+    output = capsys.readouterr().out
+    lines = log_lines(output)
+
+    assert lines_with(lines, "chat turn completed")
+    texts = {question, "서윤주", "비밀 제목", "유리 지붕", env.content.memos[NOTE].body}
+    texts |= {doc.title for doc in env.content.docs.values()}
+    texts |= {doc.body_text for doc in env.content.docs.values()}
+    texts |= {line for line in DEFAULT_ANSWER.splitlines() if line}
+    for text in texts:
+        assert text not in output, text
+    for line in lines_with(lines, "chat message send requested"):
+        assert field(line, "loresentry.param.content") == "[redacted]"
+        assert field(line, "loresentry.param.content_length") == len(question)

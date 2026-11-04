@@ -58,7 +58,7 @@ CI run and a production image built a month apart resolve to the same tree.
 
 Every chat route needs `X-User-Id`. The gateway adds `X-User-Locale` and
 `X-User-Display-Name` (percent-encoded) when creating a session and sending a
-question. Errors are `{code, message, next_action}`.
+question. Errors are `{code, message, next_action, trace_id}`.
 
 | Method | Path | Behaviour |
 | --- | --- | --- |

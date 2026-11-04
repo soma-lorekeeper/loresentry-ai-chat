@@ -12,10 +12,11 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 from testcontainers.community.postgres import PostgresContainer
 
+from app.logs import configure_logging, setup_tracing
 from app.manuscript import ProjectKeys, seal, unseal
 from app.model import ModelFailure, Usage
 from app.settings import Settings
-from app.summarizer.consumer import changes_of
+from app.summarizer.consumer import handle
 from app.summarizer.events import (
     Malformed,
     Remove,
@@ -28,7 +29,7 @@ from app.summarizer.fingerprint import changed, fingerprint, threshold
 from app.summarizer.settings import SummarizerSettings
 from app.summarizer.store import SummaryStore, apply
 from app.summarizer.worker import Worker
-from tests.support import FakeKms
+from tests.support import FakeKms, field, lines_with, log_lines
 
 MIGRATIONS = sorted(
     (Path(__file__).parent.parent / "db" / "migration").glob("V*__*.sql"),
@@ -193,36 +194,6 @@ class Message:
         return self._offset
 
 
-def test_events_off_the_contract_are_skipped_and_the_rest_applied():
-    project, file = str(uuid4()), str(uuid4())
-    current = event("FileChanged", file_changed(project, file, "UPDATED"))
-    before = event(
-        "FileChanged", {**file_changed(project, file, "UPDATED"), "file": {}}
-    )
-
-    changes, skipped = changes_of(
-        [
-            Message(1, *before),
-            Message(2, current[0], b"not json"),
-            Message(3, *current),
-        ]
-    )
-
-    assert changes == [upsert_of(project, file)]
-    assert skipped == 2
-
-
-def test_a_topic_that_does_not_exist_yet_is_passed_over():
-    project, file = str(uuid4()), str(uuid4())
-    current = event("FileChanged", file_changed(project, file, "UPDATED"))
-    missing = KafkaError(KafkaError.UNKNOWN_TOPIC_OR_PART)
-
-    changes, skipped = changes_of([Message(0, {}, b"", missing), Message(1, *current)])
-
-    assert changes == [upsert_of(project, file)]
-    assert skipped == 0
-
-
 def test_only_the_v2_topic_is_consumed_by_default(monkeypatch):
     for name in ("SUMMARY_TOPICS", "SUMMARY_TOPIC"):
         monkeypatch.delenv(name, raising=False)
@@ -357,6 +328,152 @@ def rig(database):
             "setting_check_verdicts cascade"
         )
     return Rig(database)
+
+
+def consume(rig, *messages) -> None:
+    with psycopg.connect(rig.settings.base.conninfo) as conn:
+        for message in messages:
+            handle(conn, message, rig.settings.prompt_version)
+
+
+def test_events_off_the_contract_are_skipped_and_the_rest_applied(rig):
+    file = str(uuid4())
+    current = event("FileChanged", file_changed(rig.project, file, "UPDATED"))
+    before = event(
+        "FileChanged", {**file_changed(rig.project, file, "UPDATED"), "file": {}}
+    )
+
+    consume(
+        rig,
+        Message(1, *before),
+        Message(2, current[0], b"not json"),
+        Message(3, *current),
+    )
+
+    assert rig.query("select document_id::text, event_seq from summary_queue") == [
+        (file, 7)
+    ]
+
+
+def test_a_topic_that_does_not_exist_yet_is_passed_over(rig):
+    file = str(uuid4())
+    current = event("FileChanged", file_changed(rig.project, file, "UPDATED"))
+    missing = KafkaError(KafkaError.UNKNOWN_TOPIC_OR_PART)
+
+    consume(rig, Message(0, {}, b"", missing), Message(1, *current))
+
+    assert rig.query("select document_id::text from summary_queue") == [(file,)]
+
+
+def test_a_change_keeps_its_event_trace_into_the_summary_job(rig, capsys):
+    configure_logging("ai-chat-summarizer")
+    setup_tracing("ai-chat-summarizer")
+    trace = "4bf92f3577b34da6a3ce929d0e0e4736"
+    file = str(uuid4())
+    headers, value = event("FileChanged", file_changed(rig.project, file, "UPDATED"))
+    traced = {**headers, "traceparent": f"00-{trace}-00f067aa0ba902b7-01"}
+    unhandled = {**traced, "ce_type": "GraphRefreshRequested"}
+    capsys.readouterr()
+
+    consume(
+        rig,
+        Message(5, traced, value),
+        Message(6, unhandled, value),
+        Message(7, *before_contract()),
+    )
+    [(stored,)] = rig.query("select traceparent from summary_queue")
+    # Seal the queued body with the rig's key so the job can open it
+    rig.query(
+        "update summary_queue set body_enc = %s, wrapped_key = %s returning 1",
+        seal(rig.key, rig.project, file, "body_text", CHAPTER),
+        rig.wrapped_key,
+    )
+    assert rig.tick() == ["summarized"]
+    lines = log_lines(capsys.readouterr().out)
+
+    assert stored.startswith(f"00-{trace}-") and len(stored) == 55
+    received = lines_with(lines, "project changed event received")
+    processed = lines_with(lines, "project changed event processed")
+    assert [field(line, "loresentry.kafka.offset") for line in received] == [5, 6, 7]
+    assert [field(line, "loresentry.result.outcome") for line in processed] == [
+        "PROCESSED",
+        "SKIPPED",
+        "SKIPPED",
+    ]
+    assert field(processed[0], "trace.id") == trace
+    assert field(processed[0], "loresentry.document_id") == file
+    assert field(processed[0], "loresentry.project_id") == rig.project
+    assert field(processed[1], "loresentry.cloudevent.type") == "other"
+    assert processed[1]["log"]["level"] == "INFO"
+    assert (processed[2]["log"]["level"], field(processed[2], "error.type")) == (
+        "WARN",
+        "Malformed",
+    )
+    job = [line for line in lines if line["message"].startswith("document summary")]
+    assert [line["message"] for line in job][0] == "document summary start"
+    assert job[-1]["message"] == "document summary completed"
+    for line in job:
+        assert field(line, "trace.id") == trace
+        assert field(line, "loresentry.document_id") == file
+        assert field(line, "loresentry.schedule.name") == "summary-tick"
+    assert field(job[-1], "loresentry.result.outcome") == "summarized"
+
+
+def test_a_tick_logs_only_when_it_claims_jobs(rig, capsys):
+    configure_logging("ai-chat-summarizer")
+    setup_tracing("ai-chat-summarizer")
+
+    async def rounds(worker: Worker, stop: asyncio.Event) -> None:
+        task = asyncio.create_task(worker.run(stop))
+        await asyncio.sleep(0.3)
+        stop.set()
+        await task
+
+    async def run() -> None:
+        pool = AsyncConnectionPool(
+            rig.settings.base.conninfo,
+            kwargs={"row_factory": dict_row, "autocommit": True},
+            open=False,
+        )
+        await pool.open()
+        try:
+            keys = ProjectKeys(rig.kms, rig.kms.key_id)
+            worker = Worker(SummaryStore(pool), rig.model, rig.settings, keys)
+            await rounds(worker, asyncio.Event())
+            capsys.readouterr()
+            await rounds(worker, asyncio.Event())
+            empty.extend(log_lines(capsys.readouterr().out))
+            rig.change(rig.upsert(str(uuid4()), 1))
+            await rounds(worker, asyncio.Event())
+            busy.extend(log_lines(capsys.readouterr().out))
+        finally:
+            await pool.close()
+
+    empty: list[dict] = []
+    busy: list[dict] = []
+    rig.settings = SummarizerSettings(
+        base=rig.settings.base,
+        idle_seconds=0,
+        tick_seconds=0.05,
+        heartbeat_path="/dev/null",
+    )
+    asyncio.run(run())
+
+    assert [line["message"] for line in empty] == ["summary worker start"]
+    messages = [line["message"] for line in busy]
+    assert messages[messages.index("summary worker start") + 1] == "schedule run start"
+    completed = lines_with(busy, "schedule run completed")[0]
+    assert field(completed, "loresentry.schedule.name") == "summary-tick"
+    assert field(completed, "loresentry.result.summarized") == 1
+    assert field(completed, "loresentry.result.failed") == 0
+    assert field(completed, "event.duration") > 0
+
+
+def before_contract() -> tuple[dict[str, str], bytes]:
+    return event(
+        "FileChanged",
+        {**file_changed(str(uuid4()), str(uuid4()), "UPDATED"), "file": {}},
+    )
 
 
 def test_a_new_document_is_summarized_and_leaves_the_queue(rig):

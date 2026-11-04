@@ -1,19 +1,38 @@
 import asyncio
-import logging
 from collections.abc import AsyncIterator
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, suppress
 
 import httpx
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from openai import AsyncOpenAI
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
+from starlette.exceptions import HTTPException
 
-from app import db, logs
+from app import db
 from app.content import ContentClient, ContentSource
-from app.errors import ChatFailure, handle_failure, handle_unexpected, handle_validation
+from app.errors import (
+    NO_STORE,
+    ChatFailure,
+    UnexpectedErrorMiddleware,
+    handle_failure,
+    handle_http,
+    handle_unexpected,
+    handle_validation,
+)
+from app.logs import (
+    AppLogger,
+    LogField,
+    LogFlow,
+    RequestLogMiddleware,
+    configure_logging,
+    setup_tracing,
+)
 from app.manuscript import ProjectKeys, kms_client
 from app.model import (
     AnswerModel,
@@ -32,7 +51,11 @@ from app.turns import TurnRunner
 
 SERVICE = "ai-chat-api"
 
-log = logging.getLogger("ai_chat")
+# uvicorn이 "Started server process"를 찍기 전, 이 모듈을 import할 때 로그(ECS JSON)와 trace를 설정한다
+configure_logging(SERVICE)
+setup_tracing(SERVICE)
+# DB 쿼리마다 client span을 만든다(로그 줄은 남기지 않는다). AsyncConnectionPool이 여는 연결에도 적용된다
+PsycopgInstrumentor().instrument()
 
 
 def create_app(
@@ -46,7 +69,6 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        logs.configure()
         async with AsyncExitStack() as stack:
             pool = AsyncConnectionPool(
                 config.conninfo,
@@ -66,6 +88,8 @@ def create_app(
                     base_url=config.content_base_url,
                     timeout=config.content_timeout_seconds,
                 )
+                # content 호출에만 traceparent를 싣는다(OpenAI 같은 외부 호출에는 싣지 않는다)
+                HTTPXClientInstrumentor.instrument_client(http)
                 stack.push_async_callback(http.aclose)
                 source = ContentClient(http)
             client = None
@@ -74,7 +98,10 @@ def create_app(
                     client = AsyncOpenAI(api_key=config.openai_api_key, max_retries=2)
                     stack.push_async_callback(client.close)
                 else:
-                    log.error("OPENAI_API_KEY is not set; answers will fail")
+                    AppLogger.current().error(
+                        "openai api key is not set",
+                        LogField.error_type("OPENAI_API_KEY_MISSING"),
+                    )
             answers = model
             if answers is None:
                 answers = (
@@ -108,8 +135,10 @@ def create_app(
                     else UnconfiguredModel(config.openai_model)
                 )
             if keys is None and not config.manuscript_key_id:
-                log.warning(
-                    "MANUSCRIPT_KEY_ID is not set; encrypted summaries are left out"
+                # 요약을 열 키가 없어 지도에서 요약이 빠진다
+                AppLogger.current().warn(
+                    "manuscript key id is not set",
+                    LogField.error_type("MANUSCRIPT_KEY_ID_MISSING"),
                 )
             store = Store(
                 pool,
@@ -123,52 +152,75 @@ def create_app(
             check_store = CheckStore(pool, config.setting_check_stale_seconds)
             checks = CheckRunner(check_store, source, checks_model, config)
             app.state.services = Services(config, store, source, runner, checks)
-            try:
+            # 오래 GENERATING·RUNNING으로 남은 행 정리. 실패하면 LogFlow.task가 실패 줄(error, 메시지 없는 스택)을 남기고,
+            # 기동은 막지 않는다
+            with suppress(Exception), LogFlow.task("stale chat turn expiry") as expiry:
                 async with asyncio.timeout(5):
-                    await store.expire_stale()
-            except Exception:
-                log.warning("could not expire stale turns at startup")
-            try:
+                    expired = await store.expire_stale()
+                expiry.result(LogField.result("expired", expired))
+            with (
+                suppress(Exception),
+                LogFlow.task("stale setting check expiry") as expiry,
+            ):
                 async with asyncio.timeout(5):
-                    await check_store.expire_stale()
-            except Exception:
-                log.warning("could not expire stale setting checks at startup")
+                    expired = await check_store.expire_stale()
+                expiry.result(LogField.result("expired", expired))
             yield
             await asyncio.gather(runner.drain(), checks.drain())
 
     app = FastAPI(title=SERVICE, lifespan=lifespan)
     app.add_exception_handler(ChatFailure, handle_failure)
+    app.add_exception_handler(HTTPException, handle_http)
     app.add_exception_handler(RequestValidationError, handle_validation)
     app.add_exception_handler(Exception, handle_unexpected)
+    # 예상하지 못한 예외를 INTERNAL_ERROR 응답으로 바꾼다. 요청 로그 middleware 안쪽이라 그 이유가 결과 줄에 붙는다
+    app.add_middleware(UnexpectedErrorMiddleware)
+    # 요청마다 로그 객체를 바인딩하고 request received·request completed를 남긴다. 나중에 더한 middleware가 바깥이고,
+    # 아래 계측이 연 서버 span 안쪽에서 돈다
+    app.add_middleware(RequestLogMiddleware)
     app.include_router(router)
     app.include_router(check_router)
 
     @app.get("/")
     def root() -> dict[str, str]:
+        AppLogger.current().info("service name requested")
         return {"service": SERVICE}
 
     @app.get("/health")
     def health() -> dict[str, str]:
+        AppLogger.current().info("health check requested")
         return {"status": "ok"}
 
     @app.get("/health/db")
     def health_db() -> JSONResponse:
+        AppLogger.current().info("database health check requested")
         try:
-            result = db.check()
+            database = db.check()
         except Exception as exception:
+            # 예외 메시지에는 접속 정보가 섞일 수 있어 본문에는 고정 문구만 싣고, 결과 줄에 클래스 이름과 메시지 없는 스택을 맡긴다
+            logger = AppLogger.current()
+            logger.add_to_outcome(
+                LogField.error_type(type(exception).__name__),
+                LogField.safe_stack_trace(exception),
+            )
             return JSONResponse(
                 status_code=503,
                 content={
                     "status": "error",
                     "service": SERVICE,
-                    "error": str(exception),
+                    "message": "The database is unreachable",
+                    "trace_id": logger.trace_id,
                 },
+                headers=NO_STORE,
             )
         return JSONResponse(
             status_code=200,
-            content={"status": "ok", "service": SERVICE, **result},
+            content={"status": "ok", "service": SERVICE, "database": database},
         )
 
+    # 요청마다 서버 span을 연다. gateway가 보낸 traceparent가 있으면 그 trace를 잇는다.
+    # SSE 응답의 조각마다 생기는 send·receive span은 만들지 않는다
+    FastAPIInstrumentor.instrument_app(app, exclude_spans=["receive", "send"])
     return app
 
 

@@ -21,15 +21,7 @@ def test_root_returns_service_name():
 
 
 def test_health_db_reports_reachable_database(monkeypatch):
-    monkeypatch.setattr(
-        db,
-        "check",
-        lambda: {
-            "database": "ai_chat",
-            "username": "ai_chat_svc",
-            "version": "PostgreSQL 18.6",
-        },
-    )
+    monkeypatch.setattr(db, "check", lambda: "ai_chat")
 
     response = client.get("/health/db")
 
@@ -38,22 +30,22 @@ def test_health_db_reports_reachable_database(monkeypatch):
         "status": "ok",
         "service": "ai-chat-api",
         "database": "ai_chat",
-        "username": "ai_chat_svc",
-        "version": "PostgreSQL 18.6",
     }
 
 
 def test_health_db_reports_unreachable_database(monkeypatch):
-    def fail() -> dict[str, str]:
-        raise ConnectionError("connection refused")
+    def fail() -> str:
+        raise ConnectionError("connection refused for user ai_chat_svc")
 
     monkeypatch.setattr(db, "check", fail)
 
     response = client.get("/health/db")
 
     assert response.status_code == 503
-    assert response.json() == {
+    body = response.json()
+    assert len(body.pop("trace_id")) == 32
+    assert body == {
         "status": "error",
         "service": "ai-chat-api",
-        "error": "connection refused",
+        "message": "The database is unreachable",
     }

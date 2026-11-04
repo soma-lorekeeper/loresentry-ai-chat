@@ -1,8 +1,13 @@
 from dataclasses import dataclass
 
 from fastapi import Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from starlette.exceptions import HTTPException
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from app.logs import AppLogger, LogField
 
 NO_STORE = {"Cache-Control": "no-store"}
 
@@ -66,20 +71,69 @@ class ChatFailure(Exception):
 
 
 def failure_response(failure: ChatFailure) -> JSONResponse:
+    # 문의 받은 trace_id로 Kibana에서 이 요청의 줄을 바로 찾는다
     return JSONResponse(
         status_code=failure.contract.status,
-        content=failure.body(),
+        content={**failure.body(), "trace_id": AppLogger.current().trace_id},
         headers=NO_STORE,
     )
 
 
+# 예외 처리기는 실패를 따로 찍지 않는다. 이유를 이 요청의 결과 줄(request completed)에 맡겨, 실패 요청 하나의 결과가 한 줄이다
+
+
 async def handle_failure(_: Request, failure: ChatFailure) -> JSONResponse:
+    AppLogger.current().add_to_outcome(LogField.error_type(failure.code))
     return failure_response(failure)
 
 
+async def handle_http(request: Request, error: HTTPException) -> Response:
+    # 맞는 route가 없는 404, 메서드가 다른 405 같은 프레임워크 응답. 본문은 FastAPI 기본 그대로 둔다
+    AppLogger.current().add_to_outcome(LogField.error_type(type(error).__name__))
+    return await http_exception_handler(request, error)
+
+
 async def handle_validation(_: Request, __: RequestValidationError) -> JSONResponse:
+    AppLogger.current().add_to_outcome(LogField.error_type("INVALID_REQUEST"))
     return failure_response(ChatFailure("INVALID_REQUEST"))
 
 
-async def handle_unexpected(_: Request, __: Exception) -> JSONResponse:
+async def handle_unexpected(_: Request, error: Exception) -> JSONResponse:
+    # 예외 메시지에는 SQL·요청 값이 섞일 수 있어 클래스 이름과 메시지 없는 스택만 맡긴다
+    AppLogger.current().add_to_outcome(
+        LogField.error_type(type(error).__name__), LogField.safe_stack_trace(error)
+    )
     return failure_response(ChatFailure("INTERNAL_ERROR"))
+
+
+class UnexpectedErrorMiddleware:
+    """예상하지 못한 예외를 INTERNAL_ERROR 응답으로 바꾸는 순수 ASGI middleware. 요청 로그 middleware 안쪽에 둔다.
+
+    FastAPI는 Exception 처리기를 맨 바깥 ServerErrorMiddleware에서 부른다. 그 자리는 요청 로그 middleware 바깥이라 결과 줄에
+    이유를 맡길 수 없고, 처리기가 응답한 뒤에도 예외를 다시 던져 uvicorn이 traceback 줄을 한 번 더 찍는다. 그래서 같은 일을
+    요청 로그 middleware 안쪽에서 하고 예외를 삼킨다. 응답을 시작한 뒤의 예외는 바꿀 수 없어 그대로 던진다(요청 로그
+    middleware가 request failed with an unhandled exception을 남긴다).
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        started = False
+
+        async def sending(message: Message) -> None:
+            nonlocal started
+            if message["type"] == "http.response.start":
+                started = True
+            await send(message)
+
+        try:
+            await self.app(scope, receive, sending)
+        except Exception as error:
+            if started:
+                raise
+            response = await handle_unexpected(Request(scope), error)
+            await response(scope, receive, send)
