@@ -14,7 +14,7 @@ API가 아무것도 하지 않고, 테스트는 tests/conftest.py가 꽂은 SDK 
 | ``db.client.connection.count``(state used·idle), ``.max``, ``.pending_requests`` | 관측 up-down counter | ``watch_connection_pool``로 등록한 풀 |
 | ``loresentry.event_loop.lag`` | histogram(s) | ``watch_event_loop``가 띄운 task |
 | ``gen_ai.client.operation.duration``(s), ``gen_ai.client.token.usage``({token}) | histogram | ``LogFlow.call``(model을 넘긴 생성형 AI 호출) |
-| ``messaging.process.duration``(s), ``loresentry.kafka.consume.delay``(s) | histogram | ``LogFlow.kafka_record`` |
+| ``messaging.process.duration``(s), ``loresentry.kafka.consume.delay``(s) | histogram | ``LogFlow.kafka_record``(topic·partition·group) |
 
 Kafka 발행(``messaging.client.operation.duration``)은 없다. 이 서비스는 Kafka로 보내지 않는다(summarizer는 받기만 한다).
 """
@@ -169,7 +169,7 @@ def record_generation(
 
 
 def record_consume_delay(
-    topic: str, group: str, timestamp: tuple[int, int] | None
+    topic: str, partition: int, group: str, timestamp: tuple[int, int] | None
 ) -> None:
     """Kafka 레코드 하나가 만들어진 뒤 처리를 시작하기까지 걸린 시간(지금 − 레코드 timestamp, 0 이상).
 
@@ -182,14 +182,17 @@ def record_consume_delay(
     if kind == TIMESTAMP_NOT_AVAILABLE or epoch_ms <= 0:
         return
     delay = max(0.0, time.time() - epoch_ms / 1000)
-    _CONSUME_DELAY.record(delay, _kafka(topic, group))
+    _CONSUME_DELAY.record(delay, _kafka(topic, partition, group))
 
 
 def record_process(
-    topic: str, group: str, seconds: float, error_type: str | None
+    topic: str, partition: int, group: str, seconds: float, error_type: str | None
 ) -> None:
     """Kafka 레코드 하나를 처리하는 데 걸린 시간. ``LogFlow.kafka_record``가 consumer span을 닫기 전에 부른다. 실패면 error.type."""
-    attributes = {**_kafka(topic, group), "messaging.operation.name": "process"}
+    attributes = {
+        **_kafka(topic, partition, group),
+        "messaging.operation.name": "process",
+    }
     if error_type:
         attributes["error.type"] = error_type
     _PROCESS_DURATION.record(seconds, attributes)
@@ -198,9 +201,17 @@ def record_process(
 # ------------------------------------------------------------ 내부
 
 
-def _kafka(topic: str, group: str) -> dict[str, str]:
-    """Kafka 지표의 공통 속성. consumer group이 없으면(빈 값) 뺀다."""
-    attributes = {"messaging.system": "kafka", "messaging.destination.name": topic}
+def _kafka(topic: str, partition: int, group: str) -> dict[str, str]:
+    """Kafka 지표의 공통 속성. consumer group이 없으면(빈 값) 뺀다.
+
+    partition으로 나눠 보면 한 partition만 밀리는 것(consumer 굶주림)이 보인다. graph-rag와 같은 속성이고, semantic conventions에서
+    partition ID는 문자열이다(consumer span 속성과 같다).
+    """
+    attributes = {
+        "messaging.system": "kafka",
+        "messaging.destination.name": topic,
+        "messaging.destination.partition.id": str(partition),
+    }
     if group:
         attributes["messaging.consumer.group.name"] = group
     return attributes

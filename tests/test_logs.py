@@ -846,6 +846,8 @@ def test_the_pipe_module_runs_as_a_command():
 KAFKA = {
     "messaging.system": "kafka",
     "messaging.destination.name": "content.project.changed.v2",
+    # A string, as in the semantic conventions and the consumer span
+    "messaging.destination.partition.id": "2",
     "messaging.consumer.group.name": "ai-chat-summarizer",
 }
 
@@ -1063,12 +1065,12 @@ def test_a_genai_call_records_its_duration_and_tokens(metrics, spans):
 
 
 def test_a_kafka_record_records_its_delay_and_processing_time(metrics):
-    def record(timestamp=None, raises=False):
+    def record(timestamp=None, raises=False, partition=2):
         with (
             suppress(KeyError),
             LogFlow.kafka_record(
                 "content.project.changed.v2",
-                0,
+                partition,
                 1,
                 [],
                 {"FileChanged"},
@@ -1088,12 +1090,17 @@ def test_a_kafka_record_records_its_delay_and_processing_time(metrics):
     # Without a timestamp there is no delay
     record((0, -1))
     record()
+    # Another partition is a series of its own (one partition falling behind shows)
+    record((1, now_ms - 1000), partition=0)
 
     found = metrics()
     delay_metric = found["loresentry.kafka.consume.delay"]
     process_metric = found["messaging.process.duration"]
-    [delay] = delay_metric.data.data_points
-    assert dict(delay.attributes) == KAFKA
+    delays = points(delay_metric)
+    other = {**KAFKA, "messaging.destination.partition.id": "0"}
+    assert set(delays) == {key(KAFKA), key(other)}
+    delay = delays[key(KAFKA)]
+    assert delays[key(other)].count == 1
     assert delay.count == 2 and delay.min == 0 and 5 <= delay.max < 6
     assert tuple(delay.explicit_bounds) == (
         0.01,
@@ -1114,6 +1121,7 @@ def test_a_kafka_record_records_its_delay_and_processing_time(metrics):
     assert {name: point.count for name, point in processed.items()} == {
         key(done): 3,
         key({**done, "error.type": "KeyError"}): 1,
+        key({**other, "messaging.operation.name": "process"}): 1,
     }
     assert tuple(processed[key(done)].explicit_bounds) == (
         0.005,
