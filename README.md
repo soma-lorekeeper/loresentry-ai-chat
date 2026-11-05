@@ -234,7 +234,10 @@ keeps the pod from becoming ready. The summarizer goes through the same
 entrypoint (`args: ["python", "-m", "app.summarizer"]`, no `command`) without
 the migration. Both processes start under `opentelemetry-instrument`; the
 entrypoint's `OTEL_*` defaults export nothing until an overlay sets
-`OTEL_TRACES_EXPORTER=otlp`.
+`OTEL_TRACES_EXPORTER=otlp` (spans) or `OTEL_METRICS_EXPORTER=otlp` (metrics:
+the instrumentations' HTTP metrics, `system_metrics`, and the app metrics in
+`app/logs/_metrics.py` for the DB pool, event loop lag, OpenAI calls and Kafka
+records).
 
 | Table | Purpose |
 | --- | --- |

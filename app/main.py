@@ -29,6 +29,8 @@ from app.logs import (
     RequestLogMiddleware,
     configure_logging,
     setup_tracing,
+    watch_connection_pool,
+    watch_event_loop,
 )
 from app.manuscript import ProjectKeys, kms_client
 from app.model import (
@@ -77,6 +79,10 @@ def create_app(
             )
             await pool.open(wait=False)
             stack.push_async_callback(pool.close)
+            # 앱 지표: 이 풀의 연결 수(db.client.connection.*)와 event loop 지연(loresentry.event_loop.lag).
+            # 지연을 재는 task는 종료 때 풀보다 먼저 멈춘다. 내보내기는 OTEL_METRICS_EXPORTER를 켠 곳(dev overlay)에서만 한다
+            watch_connection_pool(SERVICE, pool)
+            stack.push_async_callback(watch_event_loop())
             source = content
             if source is None:
                 # content 호출에는 httpx 계측이 traceparent를 싣는다. OpenAI SDK가 쓰는 httpx2는 계측하지 않아

@@ -160,6 +160,29 @@ def names(events) -> list[str]:
     return [name for name, _ in events if name != "ping"]
 
 
+def test_the_app_reports_its_connection_pool_while_it_runs(database, metrics):
+    with make_env(database, db_pool_size=3) as running:
+        running.create()
+        found = metrics()
+    stopped = metrics()
+
+    pool = {"db.client.connection.pool.name": "ai-chat-api"}
+    count = found["db.client.connection.count"].data.data_points
+    assert {point.attributes["db.client.connection.state"] for point in count} == {
+        "used",
+        "idle",
+    }
+    assert all(dict(point.attributes).items() >= pool.items() for point in count)
+    # min_size is 1: at least that connection, in one state or the other
+    assert sum(point.value for point in count) >= 1
+    [maximum] = found["db.client.connection.max"].data.data_points
+    assert (dict(maximum.attributes), maximum.value) == (pool, 3)
+    [pending] = found["db.client.connection.pending_requests"].data.data_points
+    assert (dict(pending.attributes), pending.value) == (pool, 0)
+    # The lifespan closed the pool; a closed pool is left out
+    assert "db.client.connection.max" not in stopped
+
+
 def payload(events, name: str) -> dict:
     return next(data for event, data in events if event == name)
 

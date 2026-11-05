@@ -7,9 +7,13 @@
 # - migration: API(uvicorn)일 때만 먼저 flyway migrate를 돌린다. summarizer 파드는 돌리지 않는다. flyway의 줄은 앱과 같은
 #   ECS JSON으로 바꾼다(python -m app.logs.pipe. 평문 줄은 log.level unknown이 된다). 이 변환 프로세스는 distro로 띄우지 않는다.
 #   pipefail이 flyway의 종료 코드를 지킨다. 접속 URL에는 비밀번호를 넣지 않고 FLYWAY_PASSWORD로만 넘긴다.
-# - 추적 기본값: 아래 OTEL_* 값은 비어 있을 때만 넣는다. gitops overlay가 준 값(dev의 OTEL_TRACES_EXPORTER=otlp, collector 주소,
-#   resource의 환경·파드 이름)이 먼저다. 그래서 여기에는 어디서 돌아도 안전한 값만 둔다.
-#   - 보내지 않음(prod 포함). 꺼 두어도 trace ID는 만들어지고 전파된다. 지표는 Prometheus, 로그는 stdout → Filebeat가 모은다
+# - 추적·지표 기본값: 아래 OTEL_* 값은 비어 있을 때만 넣는다. gitops overlay가 준 값(dev의 OTEL_TRACES_EXPORTER=otlp·
+#   OTEL_METRICS_EXPORTER=otlp, collector 주소, resource의 환경·파드 이름)이 먼저다. 그래서 여기에는 어디서 돌아도 안전한 값만 둔다.
+#   - 보내지 않음(prod 포함). 꺼 두어도 trace ID는 만들어지고 전파된다. 로그는 stdout → Filebeat가 모은다
+#   - 지표도 기본은 보내지 않는다. dev overlay가 OTEL_METRICS_EXPORTER=otlp로 켜면 trace와 같은 collector를 거쳐 Elasticsearch
+#     (metrics-*.otel-*)에 쌓인다(docs ALERTING.md 7절). 계측의 HTTP 지표(http.server.*·http.client.*), system_metrics의
+#     process.runtime.cpython.*·cpython.gc.*, 로깅 팩토리의 앱 지표(app/logs/_metrics.py: DB 연결 풀, event loop 지연,
+#     OpenAI 호출, Kafka 레코드)다
 #   - 보낼 때는 OTLP/HTTP protobuf(collector 4318). distro의 기본값(grpc)을 쓰지 않는다
 #   - sampler는 parentbased_always_on(LOG_SCHEMA.md 7절 "span 저장"의 dev 100%). distro 기본 sampler(composite)는 root span
 #     문맥에 tracestate(ot=th:0)를 넣는데 우리 규약은 traceparent 하나다. 전파기도 W3C traceparent(tracecontext)만 쓴다(baggage는
@@ -18,8 +22,9 @@
 #   - GenAI 대화 내용(프롬프트, 모델 응답)은 span에 담지 않는다(collector 규칙은 잘못 켜졌을 때의 두 번째 방어선)
 #   - 계측은 requirements.txt에 둔 것만 설치하고, distro가 저절로 켜는 것 중 쓰지 않는 것을 끈다:
 #     fastapi(로깅 팩토리의 setup_tracing이 앱에 직접 단다), httpx2(OpenAI SDK의 HTTP client. OpenAI 호출에는 traceparent를
-#     싣지 않는다), logging(로그 줄의 ID는 로깅 팩토리가 넣는다), system_metrics(distro가 함께 설치하는 지표 계측),
-#     confluent_kafka(설치하지 않는다. traceparent를 바꾸지 않고 하나 더 붙여, Kafka는 로깅 팩토리가 맡는다)
+#     싣지 않는다), logging(로그 줄의 ID는 로깅 팩토리가 넣는다), confluent_kafka(설치하지 않는다. traceparent를 바꾸지 않고
+#     하나 더 붙여, Kafka는 로깅 팩토리가 맡는다). distro가 함께 설치하는 system_metrics는 켜 둔다. distro가 그 지표를
+#     process.runtime.cpython.*(메모리, CPU 시간·사용률, 스레드 수, context switch, GC 횟수)와 cpython.gc.*로만 줄인다(system.*은 없다)
 #   - resource detector는 네트워크를 쓰지 않는 기본 목록만 쓴다(distro의 기본 목록에서 클라우드 detector를 뺀 것). Kubernetes에서
 #     distro가 더 켜는 aws_eks는 파드 서비스 계정으로 클러스터 정보를 읽다가 403을 받아 stderr에 평문 줄(log.level unknown)을
 #     남기고, gcp_resource_detector는 이 클러스터와 상관없다. 파드·namespace·인스턴스·환경은 overlay가 OTEL_RESOURCE_ATTRIBUTES로
@@ -53,7 +58,7 @@ export OTEL_TRACES_SAMPLER="${OTEL_TRACES_SAMPLER:-parentbased_always_on}"
 export OTEL_PROPAGATORS="${OTEL_PROPAGATORS:-tracecontext}"
 export OTEL_SEMCONV_STABILITY_OPT_IN="${OTEL_SEMCONV_STABILITY_OPT_IN:-http,database}"
 export OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="${OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT:-false}"
-export OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="${OTEL_PYTHON_DISABLED_INSTRUMENTATIONS:-fastapi,httpx2,logging,system_metrics,confluent_kafka}"
+export OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="${OTEL_PYTHON_DISABLED_INSTRUMENTATIONS:-fastapi,httpx2,logging,confluent_kafka}"
 export OTEL_EXPERIMENTAL_RESOURCE_DETECTORS="${OTEL_EXPERIMENTAL_RESOURCE_DETECTORS:-process_runtime,os,telemetry_distro,service_instance,containerid,otel}"
 export OTEL_RESOURCE_ATTRIBUTES="service.version=${APP_VERSION:-unknown}${OTEL_RESOURCE_ATTRIBUTES:+,${OTEL_RESOURCE_ATTRIBUTES}}"
 

@@ -6,6 +6,8 @@ import os
 import re
 import subprocess
 import sys
+import time
+from contextlib import suppress
 from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
@@ -26,8 +28,11 @@ from app.logs import (
     LogFlow,
     LogScope,
     Outcome,
+    _metrics,
     configure_logging,
     traceparent,
+    watch_connection_pool,
+    watch_event_loop,
 )
 from app.logs._format import EcsFormatter
 from app.logs._logger import layer_of
@@ -836,6 +841,299 @@ def test_the_pipe_module_runs_as_a_command():
     assert done.stderr == ""
 
 
+# ---------------------------------------------------------------- metrics
+
+KAFKA = {
+    "messaging.system": "kafka",
+    "messaging.destination.name": "content.project.changed.v2",
+    "messaging.consumer.group.name": "ai-chat-summarizer",
+}
+
+
+def points(metric) -> dict[frozenset, object]:
+    """A metric's data points by their attributes."""
+    return {
+        frozenset(point.attributes.items()): point for point in metric.data.data_points
+    }
+
+
+def key(attributes: dict) -> frozenset:
+    return frozenset(attributes.items())
+
+
+class FakePool:
+    """What the pool metrics read of psycopg_pool's AsyncConnectionPool: closed and get_stats()."""
+
+    def __init__(self, size, available, waiting, maximum=10, closed=False):
+        self.closed = closed
+        self.stats = {
+            "pool_min": 1,
+            "pool_max": maximum,
+            "pool_size": size,
+            "pool_available": available,
+            "requests_waiting": waiting,
+            # A counter; get_stats() keeps it (pop_stats() would reset it)
+            "requests_num": 7,
+        }
+
+    def get_stats(self):
+        return dict(self.stats)
+
+
+def test_pool_metrics_read_the_open_pools_by_name(metrics, monkeypatch):
+    monkeypatch.setattr(_metrics, "_pools", {})
+    watch_connection_pool("ai-chat-test", FakePool(size=4, available=1, waiting=2))
+    # The same name again (the app started again) replaces the old pool
+    watch_connection_pool(
+        "ai-chat-test", FakePool(size=3, available=1, waiting=1, maximum=5)
+    )
+    # A closed pool keeps its connection count, so it is left out
+    watch_connection_pool(
+        "ai-chat-closed", FakePool(size=2, available=0, waiting=0, closed=True)
+    )
+
+    found = metrics()
+    count = found["db.client.connection.count"]
+    maximum = found["db.client.connection.max"]
+    pending = found["db.client.connection.pending_requests"]
+    pool = {"db.client.connection.pool.name": "ai-chat-test"}
+    assert {name: point.value for name, point in points(count).items()} == {
+        key({**pool, "db.client.connection.state": "used"}): 2,
+        key({**pool, "db.client.connection.state": "idle"}): 1,
+    }
+    assert {name: point.value for name, point in points(maximum).items()} == {
+        key(pool): 5
+    }
+    assert {name: point.value for name, point in points(pending).items()} == {
+        key(pool): 1
+    }
+    # Up-down counters, as the semantic conventions (and Java HikariCP) have them
+    assert [
+        (metric.unit, metric.data.is_monotonic) for metric in (count, maximum, pending)
+    ] == [
+        ("{connection}", False),
+        ("{connection}", False),
+        ("{request}", False),
+    ]
+
+
+def test_the_event_loop_lag_task_records_how_late_it_woke(
+    metrics, lines, spans, monkeypatch
+):
+    monkeypatch.setattr(_metrics, "LAG_INTERVAL", 0.05)
+
+    async def run():
+        # Started inside a request's span; the task carries none of it
+        with TRACER.start_as_current_span("request"):
+            stop = watch_event_loop()
+        # Let the task start sleeping, then hold the loop with blocking code
+        await asyncio.sleep(0)
+        time.sleep(0.3)
+        # The task wakes up late and records it
+        await asyncio.sleep(0.1)
+        await stop()
+        return asyncio.all_tasks()
+
+    left = asyncio.run(run())
+
+    [lag] = metrics()["loresentry.event_loop.lag"].data.data_points
+    # Only run() itself is left: stop() cancelled the task and waited for it
+    assert len(left) == 1
+    assert dict(lag.attributes) == {}
+    assert lag.count >= 1 and lag.max >= 0.2 and lag.min >= 0
+    assert tuple(lag.explicit_bounds) == (
+        0.005,
+        0.01,
+        0.025,
+        0.05,
+        0.1,
+        0.25,
+        0.5,
+        1,
+        2.5,
+        5,
+        10,
+    )
+    # Not recorded under the request's span (an exemplar would carry it)
+    assert lag.exemplars == []
+    # No line, no span of its own
+    assert lines() == []
+    assert [span.name for span in spans()] == ["request"]
+
+
+def test_a_genai_call_records_its_duration_and_tokens(metrics, spans):
+    usage = SimpleNamespace(
+        input_tokens=1200,
+        output_tokens=90,
+        input_tokens_details=SimpleNamespace(cached_tokens=800),
+        output_tokens_details=SimpleNamespace(reasoning_tokens=30),
+    )
+    served = "gpt-6-luna-2026-10-01"
+    done = SimpleNamespace(status="completed", usage=usage, model=served)
+    cut = SimpleNamespace(
+        status="incomplete",
+        usage=usage,
+        model=served,
+        incomplete_details=SimpleNamespace(reason="max_output_tokens"),
+    )
+    request = httpx2.Request("POST", "https://api.openai.com/v1/responses")
+    limited = RateLimitError(
+        "rate limited, prompt: 레나",
+        response=httpx2.Response(429, request=request),
+        body={"error": {"code": "rate_limit_exceeded"}},
+    )
+
+    asyncio.run(create(openai(done), model="gpt-6-luna", input="레나"))
+    with pytest.raises(ModelFailure):
+        asyncio.run(create(openai(cut), model="gpt-6-luna", input="레나"))
+    with pytest.raises(ModelFailure):
+        asyncio.run(create(openai(error=limited), model="gpt-6-luna", input="레나"))
+    # A call to a target that is not generative AI records no GenAI metrics
+    with LogFlow.call("content") as call:
+        call.status(200)
+
+    found = metrics()
+    duration = found["gen_ai.client.operation.duration"]
+    tokens = found["gen_ai.client.token.usage"]
+    request_attributes = {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "openai",
+        "gen_ai.request.model": "gpt-6-luna",
+    }
+    answered = {**request_attributes, "gen_ai.response.model": served}
+    incomplete = {**answered, "error.type": "MODEL_INCOMPLETE"}
+    # Every call has its duration, failures with their error.type
+    timed = points(duration)
+    assert set(timed) == {
+        key(answered),
+        key(incomplete),
+        key({**request_attributes, "error.type": "MODEL_RATE_LIMITED"}),
+    }
+    assert all(point.count == 1 and point.sum > 0 for point in timed.values())
+    # Tokens of the calls that got a usage back, input and output apart
+    assert {
+        name: (point.count, point.sum) for name, point in points(tokens).items()
+    } == {
+        key({**answered, "gen_ai.token.type": "input"}): (1, 1200),
+        key({**answered, "gen_ai.token.type": "output"}): (1, 90),
+        key({**incomplete, "gen_ai.token.type": "input"}): (1, 1200),
+        key({**incomplete, "gen_ai.token.type": "output"}): (1, 90),
+    }
+    assert (duration.unit, tokens.unit) == ("s", "{token}")
+    assert tuple(timed[key(answered)].explicit_bounds) == (
+        0.01,
+        0.02,
+        0.04,
+        0.08,
+        0.16,
+        0.32,
+        0.64,
+        1.28,
+        2.56,
+        5.12,
+        10.24,
+        20.48,
+        40.96,
+        81.92,
+    )
+    used = points(tokens)[key({**answered, "gen_ai.token.type": "input"})]
+    assert tuple(used.explicit_bounds) == (
+        1,
+        4,
+        16,
+        64,
+        256,
+        1024,
+        4096,
+        16384,
+        65536,
+        262144,
+        1048576,
+        4194304,
+    )
+    # Recorded inside the call span, before it closes (the exemplar carries it)
+    answered_span = spans()[0]
+    assert answered_span.name == "openai call"
+    [exemplar] = timed[key(answered)].exemplars
+    assert exemplar.span_id == answered_span.context.span_id
+    # No prompt or answer text
+    assert "레나" not in repr(
+        [point.attributes for point in [*timed.values(), *points(tokens).values()]]
+    )
+
+
+def test_a_kafka_record_records_its_delay_and_processing_time(metrics):
+    def record(timestamp=None, raises=False):
+        with (
+            suppress(KeyError),
+            LogFlow.kafka_record(
+                "content.project.changed.v2",
+                0,
+                1,
+                [],
+                {"FileChanged"},
+                "project changed",
+                "ai-chat-summarizer",
+                timestamp,
+            ),
+        ):
+            if raises:
+                raise KeyError("x")
+
+    now_ms = int(time.time() * 1000)
+    # Created five seconds ago
+    record((1, now_ms - 5000))
+    # A clock ahead of ours (log append time here) is no delay, not a negative one
+    record((2, now_ms + 60_000), raises=True)
+    # Without a timestamp there is no delay
+    record((0, -1))
+    record()
+
+    found = metrics()
+    delay_metric = found["loresentry.kafka.consume.delay"]
+    process_metric = found["messaging.process.duration"]
+    [delay] = delay_metric.data.data_points
+    assert dict(delay.attributes) == KAFKA
+    assert delay.count == 2 and delay.min == 0 and 5 <= delay.max < 6
+    assert tuple(delay.explicit_bounds) == (
+        0.01,
+        0.05,
+        0.1,
+        0.5,
+        1,
+        5,
+        10,
+        30,
+        60,
+        300,
+        900,
+        3600,
+    )
+    processed = points(process_metric)
+    done = {**KAFKA, "messaging.operation.name": "process"}
+    assert {name: point.count for name, point in processed.items()} == {
+        key(done): 3,
+        key({**done, "error.type": "KeyError"}): 1,
+    }
+    assert tuple(processed[key(done)].explicit_bounds) == (
+        0.005,
+        0.01,
+        0.025,
+        0.05,
+        0.075,
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        1,
+        2.5,
+        5,
+        7.5,
+        10,
+    )
+    assert {metric.unit for metric in (delay_metric, process_metric)} == {"s"}
+
+
 # ---------------------------------------------------------------- tracing engine (image entrypoint)
 
 # Run under the image's entrypoint and the real distro: which calls carry a traceparent, what is on
@@ -844,7 +1142,7 @@ import asyncio, json, threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import httpx
 from openai import AsyncOpenAI
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import (
@@ -852,6 +1150,7 @@ from opentelemetry.instrumentation.httpx import (
     HTTPXClientInstrumentor,
 )
 from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
+from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
 
 seen = {}
 
@@ -896,11 +1195,13 @@ instrumentors = {
     "psycopg": PsycopgInstrumentor,
     "botocore": BotocoreInstrumentor,
     "fastapi": FastAPIInstrumentor,
+    "system_metrics": SystemMetricsInstrumentor,
 }
 print(json.dumps({
     "content": seen["/internal/projects"],
     "openai": seen["/v1/responses"],
     "sampler": provider.sampler.get_description(),
+    "meter_provider": type(metrics.get_meter_provider()).__module__,
     "resource": {
         name: provider.resource.attributes.get(name)
         for name in ("service.name", "service.version", "deployment.environment.name")
@@ -974,8 +1275,8 @@ def test_the_entrypoint_sets_safe_defaults_and_the_process_name(tmp_path):
         "OTEL_PROPAGATORS=tracecontext",
         "OTEL_SEMCONV_STABILITY_OPT_IN=http,database",
         "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false",
-        "OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="
-        "fastapi,httpx2,logging,system_metrics,confluent_kafka",
+        # system_metrics stays on: process.runtime.cpython.* and cpython.gc.*
+        "OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=fastapi,httpx2,logging,confluent_kafka",
         # No cloud detectors: aws_eks prints a plain 403 line on EKS
         "OTEL_EXPERIMENTAL_RESOURCE_DETECTORS="
         "process_runtime,os,telemetry_distro,service_instance,containerid,otel",
@@ -1013,6 +1314,8 @@ def test_under_the_distro_only_content_calls_carry_a_traceparent():
     assert not {"traceparent", "tracestate", "baggage"} & set(found["openai"])
     assert "tracestate" not in found["content"]
     assert found["sampler"].startswith("ParentBased{root:AlwaysOnSampler")
+    # The app metrics record into the distro's SDK MeterProvider (exported only when an overlay turns it on)
+    assert found["meter_provider"].startswith("opentelemetry.sdk.metrics")
     assert found["resource"] == {
         "service.name": "ai-chat-api",
         "service.version": "build-9-1",
@@ -1024,6 +1327,7 @@ def test_under_the_distro_only_content_calls_carry_a_traceparent():
         "psycopg": True,
         "botocore": True,
         "fastapi": False,
+        "system_metrics": True,
     }
     # The distro itself writes no plain lines
     assert done.stderr == ""

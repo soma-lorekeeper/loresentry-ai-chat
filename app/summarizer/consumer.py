@@ -45,7 +45,7 @@ def handle(conn: psycopg.Connection, message, settings: SummarizerSettings) -> N
 
     헤더의 traceparent를 이은 trace로 시작·종료 줄을 남기고, 그 trace를 summary_queue 행에 저장해 나중에 하는 요약
     작업도 같은 trace로 남게 한다. 처리하지 않는 종류는 SKIPPED, 계약에 맞지 않는 레코드는 SKIPPED와 error.type(warn)이다.
-    consumer group은 span의 messaging 속성이 된다.
+    consumer group은 span의 messaging 속성이 된다. 레코드의 timestamp로 흐름이 지연 지표(만들어진 뒤 처리를 시작하기까지)를 남긴다.
     """
     error = message.error()
     if error is not None:
@@ -67,6 +67,7 @@ def handle(conn: psycopg.Connection, message, settings: SummarizerSettings) -> N
         TYPES,
         EVENT,
         settings.group_id,
+        message.timestamp(),
     ) as flow:
         try:
             change = parse(header_map(message.headers()), message.value())
