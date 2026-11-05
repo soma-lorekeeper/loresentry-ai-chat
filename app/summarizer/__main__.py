@@ -7,7 +7,14 @@ from openai import AsyncOpenAI
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from app.logs import AppLogger, LogField, LogFlow, configure_logging
+from app.logs import (
+    AppLogger,
+    LogField,
+    LogFlow,
+    configure_logging,
+    watch_connection_pool,
+    watch_event_loop,
+)
 from app.manuscript import ProjectKeys, kms_client
 from app.model import OpenAISummaryModel
 from app.summarizer.consumer import consume
@@ -107,6 +114,8 @@ async def main() -> None:
         open=False,
     )
     await pool.open()
+    # 앱 지표: 요약 작업이 쓰는 이 풀의 연결 수(db.client.connection.*). consumer 스레드의 연결은 풀 밖이다
+    watch_connection_pool(SERVICE, pool)
     model = OpenAISummaryModel(
         client,
         settings.model,
@@ -122,6 +131,8 @@ async def main() -> None:
     AppLogger.current().info(
         "summarizer started", LogField.param("topics", list(settings.topics))
     )
+    # 앱 지표: event loop 지연(loresentry.event_loop.lag)을 재는 task. 종료 때 풀을 닫기 전에 멈춘다
+    stop_watching = watch_event_loop()
     consumer = asyncio.create_task(asyncio.to_thread(consume, settings, halt))
     ticking = asyncio.create_task(worker.run(stop))
     stopping = asyncio.create_task(stop.wait())
@@ -144,6 +155,7 @@ async def main() -> None:
         halt.set()
         await asyncio.gather(consumer, ticking, return_exceptions=True)
         stopping.cancel()
+        await stop_watching()
         await client.close()
         await pool.close()
 

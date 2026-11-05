@@ -20,8 +20,13 @@ span은 시작 줄보다 먼저 열고 걸린 시간을 재기 시작한다. 그
 닫기 전에 그 span 안에서 찍으므로, 종료 줄(호출 결과 줄 포함)의 span.id가 그 span이다. 실패로 끝난 흐름(예외, ``fail``, 상대의
 5xx)은 span 상태가 ERROR다.
 
+지표(``_metrics``)도 여기서 남긴다. ``kafka_record``는 처리 시간(messaging.process.duration)과 레코드가 만들어진 뒤 처리를
+시작하기까지의 지연(loresentry.kafka.consume.delay), 생성형 AI ``call``(model을 넘긴 호출)은 걸린 시간
+(gen_ai.client.operation.duration)과 토큰 수(gen_ai.client.token.usage)다. 실패면 종료 줄의 error.type이 지표에도 붙는다.
+
 ``with``가 돌려주는 흐름 객체로 진행 중에 알게 된 값을 알린다: ``add``(이후 모든 줄과 종료 줄에 붙일 대상 ID), ``result``
-(종료 줄의 결과 값), ``outcome``(Kafka 레코드의 결과), ``status``(호출의 응답 상태), ``fail``(예외 없이 끝난 실패의 이유).
+(종료 줄의 결과 값), ``outcome``(Kafka 레코드의 결과), ``status``(호출의 응답 상태), ``fail``(예외 없이 끝난 실패의 이유),
+``response_model``·``tokens``(생성형 AI 호출의 응답 모델과 토큰 수. 지표에만 붙는다).
 
 시작·종료 줄의 위치(log.logger·log.origin.function·log.layer)는 이 모듈이 아니라 흐름을 연 함수다. 실패 줄에는 예외 메시지를
 싣지 않는다. 클래스 이름(error.type)과 메시지 없는 스택만 남긴다(예외 메시지에 SQL·요청 값·본문이 섞일 수 있다).
@@ -54,6 +59,7 @@ from app.logs._logger import (
     origin_of,
     reset,
 )
+from app.logs._metrics import record_consume_delay, record_generation, record_process
 from app.logs._trace import (
     IDLE_POLLING,
     Headers,
@@ -130,10 +136,15 @@ class LogFlow:
         self._record: (
             tuple[str, int, int, dict[str, str], Collection[str], str] | None
         ) = None
+        # Kafka 레코드의 timestamp(confluent-kafka의 (종류, epoch ms)). 지연 지표를 잰다. 모르면 None
+        self._timestamp: tuple[int, int] | None = None
         # 계측이 없는 호출 대상의 호스트(call의 server). 있으면 호출 span이 CLIENT이고 server.address가 붙는다
         self._server: str | None = None
-        # 계측이 없는 생성형 AI 호출의 모델 이름(call의 model). 있으면 호출 span에 gen_ai 속성이 붙는다
+        # 계측이 없는 생성형 AI 호출의 모델 이름(call의 model). 있으면 호출 span에 gen_ai 속성이 붙고 gen_ai 지표를 남긴다
         self._model: str | None = None
+        # 생성형 AI 호출의 응답 모델 이름(response_model)과 (입력, 출력) 토큰 수(tokens). 지표에만 붙는다. 모르면 None
+        self._response_model: str | None = None
+        self._usage: tuple[int, int] | None = None
         # 걸린 시간을 재는 시작점(흘러간 시간만 재는 시계)
         self._started = 0.0
 
@@ -167,6 +178,7 @@ class LogFlow:
         known_types: Collection[str],
         event: str,
         group: str,
+        timestamp: tuple[int, int] | None = None,
     ) -> "LogFlow":
         """Kafka 레코드 하나. 헤더의 traceparent를 이은 consumer span을 열고, 그 span으로 로그 객체를 만들어 바인딩한다.
 
@@ -176,6 +188,10 @@ class LogFlow:
         ce_type은 이 서비스가 처리하는 종류(known_types)만 그대로, 밖이면 other다. ID·대상은 표준 표기 UUID일 때만 남긴다.
         시작 줄 ``<event> event received``, 종료 줄 ``<event> event processed``(outcome, 걸린 시간). 예외면 종료 줄을
         warn·FAILED·error.type·메시지 없는 스택으로 남기고 span을 ERROR로 표시한 뒤 예외를 그대로 다시 던진다.
+
+        지표: 열 때 레코드의 timestamp(``message.timestamp()`` 그대로. 값이 없으면 남기지 않는다)로 지연
+        (loresentry.kafka.consume.delay)을, 닫을 때 처리 시간(messaging.process.duration, 실패면 error.type)을 남긴다.
+        둘 다 topic과 consumer group이 속성이다.
         """
         flow = LogFlow("kafka_record", event)
         flow._record = (
@@ -186,6 +202,7 @@ class LogFlow:
             known_types,
             group,
         )
+        flow._timestamp = timestamp
         return flow
 
     @staticmethod
@@ -206,6 +223,9 @@ class LogFlow:
         끝나면 그 span 안에서 결과 줄 하나를 남긴다: 성공은 ``<target> call completed``(걸린 시간, 응답 상태, url), 상대의 5xx는
         같은 문구의 warn과 error.type UPSTREAM_SERVER_ERROR, fail이나 예외는 ``<target> call failed``(warn, error.type, 예외면
         메시지 없는 스택). 실패면 span이 ERROR다. 예외는 그대로 다시 던진다.
+
+        model을 넘긴 호출은 지표 gen_ai.client.operation.duration(실패도, 그때는 error.type)과, ``tokens``로 알린 토큰 수
+        gen_ai.client.token.usage(입력·출력)를 남긴다. 응답 모델은 ``response_model``로 알린다.
         """
         end: tuple[LogField | None, ...] = ()
         if url is not None:
@@ -255,6 +275,17 @@ class LogFlow:
         메시지 없는 스택 대신 호출 위치 스택을 붙인다. 이미 분류한 실패라서다.
         """
         self._failure = error_type
+        return self
+
+    def response_model(self, model: str | None) -> Self:
+        """생성형 AI 호출의 응답 모델 이름(응답의 model). 지표의 gen_ai.response.model이다. 로그 줄에는 붙지 않는다."""
+        self._response_model = model
+        return self
+
+    def tokens(self, input_tokens: int, output_tokens: int) -> Self:
+        """생성형 AI 호출이 쓴 입력·출력 토큰 수(응답의 usage). 지표 gen_ai.client.token.usage가 된다. 로그 줄에는 붙지 않는다(줄에는
+        result로 따로 남긴다)."""
+        self._usage = (input_tokens, output_tokens)
         return self
 
     # ------------------------------------------------------------ with
@@ -354,6 +385,8 @@ class LogFlow:
             LogField.cloudevent_subject(headers.get("ce_subject")),
         )
         self._tokens.append(bind(logger))
+        # 레코드가 만들어진 뒤 처리를 시작하기까지의 지연(지표)
+        record_consume_delay(topic, group, self._timestamp)
 
     def _open_span(
         self,
@@ -398,17 +431,36 @@ class LogFlow:
                 self._outcome = Outcome.PROCESSED
             # 예외로 끝난 레코드는 원인 줄과 겹쳐도 메시지 없는 스택을 붙인다(LOG_SCHEMA.md 5절 "warn·error 스택")
             self._end(WARN if failed else INFO, processed, error_type, stack)
+            # 레코드 하나의 처리 시간(지표). 실패면 종료 줄과 같은 error.type이다
+            assert self._record is not None
+            topic, _, _, _, _, group = self._record
+            record_process(
+                topic, group, time.perf_counter() - self._started, error_type
+            )
             return False
         if self._kind == "call":
+            # 지표에 붙일 실패 분류. 종료 줄의 error.type과 같다(상대의 5xx 포함)
+            call_error = error_type
             if failed:
                 self._end(WARN, f"{self._name} call failed", error_type, stack)
             elif self._status is not None and self._status >= 500:
+                call_error = UPSTREAM_SERVER_ERROR
                 self._failed(UPSTREAM_SERVER_ERROR, None)
                 self._end(
                     WARN, f"{self._name} call completed", UPSTREAM_SERVER_ERROR, None
                 )
             else:
                 self._end(INFO, f"{self._name} call completed", None, None)
+            if self._model is not None:
+                # 생성형 AI 호출의 걸린 시간과 토큰 수(지표). 실패한 호출도 걸린 시간을 남긴다
+                record_generation(
+                    self._name,
+                    self._model,
+                    self._response_model,
+                    self._usage,
+                    time.perf_counter() - self._started,
+                    call_error,
+                )
             return False
         # task
         if unexpected:

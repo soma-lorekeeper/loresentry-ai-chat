@@ -2,12 +2,13 @@ import asyncio
 import base64
 import json
 import os
+import time
 from pathlib import Path
 from uuid import uuid4
 
 import psycopg
 import pytest
-from confluent_kafka import KafkaError
+from confluent_kafka import TIMESTAMP_CREATE_TIME, TIMESTAMP_NOT_AVAILABLE, KafkaError
 from opentelemetry.trace import SpanKind
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
@@ -170,11 +171,19 @@ def test_events_off_the_contract_are_malformed():
 
 
 class Message:
-    def __init__(self, offset: int, headers: dict[str, str], value: bytes, error=None):
+    def __init__(
+        self,
+        offset: int,
+        headers: dict[str, str],
+        value: bytes,
+        error=None,
+        timestamp=(TIMESTAMP_NOT_AVAILABLE, -1),
+    ):
         self._offset = offset
         self._headers = [(name, text.encode()) for name, text in headers.items()]
         self._value = value
         self._error = error
+        self._timestamp = timestamp
 
     def error(self):
         return self._error
@@ -193,6 +202,9 @@ class Message:
 
     def offset(self):
         return self._offset
+
+    def timestamp(self):
+        return self._timestamp
 
 
 def test_only_the_v2_topic_is_consumed_by_default(monkeypatch):
@@ -354,6 +366,31 @@ def test_events_off_the_contract_are_skipped_and_the_rest_applied(rig):
     assert rig.query("select document_id::text, event_seq from summary_queue") == [
         (file, 7)
     ]
+
+
+def test_a_record_leaves_its_delay_and_processing_time(rig, metrics):
+    file = str(uuid4())
+    current = event("FileChanged", file_changed(rig.project, file, "UPDATED"))
+    created = int((time.time() - 3) * 1000)
+
+    consume(rig, Message(1, *current, timestamp=(TIMESTAMP_CREATE_TIME, created)))
+
+    found = metrics()
+    [delay] = found["loresentry.kafka.consume.delay"].data.data_points
+    [processed] = found["messaging.process.duration"].data.data_points
+    kafka = {
+        "messaging.system": "kafka",
+        "messaging.destination.name": "content.project.changed.v2",
+        "messaging.consumer.group.name": "ai-chat-summarizer",
+    }
+    # The delay from the record's create time until handle() took it up
+    assert dict(delay.attributes) == kafka
+    assert delay.count == 1 and 3 <= delay.sum < 30
+    assert dict(processed.attributes) == {
+        **kafka,
+        "messaging.operation.name": "process",
+    }
+    assert processed.count == 1
 
 
 def test_a_topic_that_does_not_exist_yet_is_passed_over(rig):

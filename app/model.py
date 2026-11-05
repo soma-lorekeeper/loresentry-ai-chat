@@ -180,8 +180,11 @@ async def create(client: AsyncOpenAI, **options: Any) -> Any:
             code = status_code(error)
             call.status(error.status_code).fail(code)
             raise ModelFailure(code) from None
+        # 지표(gen_ai.client.*)에 붙일 응답 모델 이름과 토큰 수. 프롬프트·응답 내용은 넘기지 않는다
+        call.response_model(getattr(response, "model", None))
         usage = usage_of(response.usage)
         if usage is not None:
+            call.tokens(usage.input_tokens, usage.output_tokens)
             call.result(
                 LogField.result("input_tokens", usage.input_tokens),
                 LogField.result("cached_tokens", usage.cached_tokens),
