@@ -1,12 +1,19 @@
 import asyncio
 import json
 import os
+import subprocess
+import sys
 import threading
 from dataclasses import replace
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
 from botocore.exceptions import ClientError
+from opentelemetry.proto.collector.metrics.v1.metrics_service_pb2 import (
+    ExportMetricsServiceRequest,
+)
 
 from app.content import ChatMap, Document, Fetched, Memo, Node, Property, Relation
 from app.errors import ChatFailure
@@ -397,3 +404,74 @@ class FakeKms:
                 "Decrypt",
             )
         return {"Plaintext": key, "KeyId": self.key_id}
+
+
+# The semantic conventions' buckets for DB query durations (Java JDBC uses the same)
+DB_DURATION_BUCKETS = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10]
+ENTRYPOINT = Path(__file__).parent.parent / "docker-entrypoint.sh"
+
+
+def exported_db_duration_bounds(script: str, database: dict) -> list[list[float]]:
+    """Runs a script as the image starts a process and returns what it exports for DB query durations.
+
+    The script runs under the image's entrypoint and the real EDOT distro (psycopg instrumented before the app is
+    imported), against the test database, with metrics sent over OTLP/HTTP to a receiver here. The explicit bounds of
+    every db.client.operation.duration data point it exported come back, one list per point.
+    """
+    bodies: list[bytes] = []
+
+    class Receiver(BaseHTTPRequestHandler):
+        def do_POST(self):
+            bodies.append(self.rfile.read(int(self.headers["Content-Length"])))
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-protobuf")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Receiver)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    env = {
+        name: value
+        for name, value in os.environ.items()
+        if not name.startswith(("OTEL_", "ELASTIC_OTEL_"))
+    }
+    env.update(
+        PATH=f"{Path(sys.executable).parent}:{os.environ['PATH']}",
+        DB_HOST=database["host"],
+        DB_PORT=str(database["port"]),
+        DB_NAME=database["dbname"],
+        DB_USERNAME=database["user"],
+        DB_PASSWORD=database["password"],
+        OTEL_METRICS_EXPORTER="otlp",
+        OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=(
+            f"http://127.0.0.1:{server.server_port}/v1/metrics"
+        ),
+    )
+    try:
+        # The SDK exports once more when the process exits
+        subprocess.run(
+            ["bash", str(ENTRYPOINT), sys.executable, "-c", script],
+            env=env,
+            cwd=ENTRYPOINT.parent,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=120,
+        )
+    finally:
+        server.shutdown()
+    found = []
+    for body in bodies:
+        request = ExportMetricsServiceRequest.FromString(body)
+        for resource in request.resource_metrics:
+            for scope in resource.scope_metrics:
+                for metric in scope.metrics:
+                    if metric.name == "db.client.operation.duration":
+                        found.extend(
+                            list(point.explicit_bounds)
+                            for point in metric.histogram.data_points
+                        )
+    return found

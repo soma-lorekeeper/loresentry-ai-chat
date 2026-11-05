@@ -20,6 +20,7 @@ from openai import RateLimitError
 from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.context import Context
+from opentelemetry.instrumentation import dbapi
 from opentelemetry.trace import SpanKind, StatusCode
 
 from app.logs import (
@@ -1132,6 +1133,16 @@ def test_a_kafka_record_records_its_delay_and_processing_time(metrics):
         10,
     )
     assert {metric.unit for metric in (delay_metric, process_metric)} == {"s"}
+
+
+def test_the_db_bucket_swap_leaves_a_changed_instrumentation_alone(monkeypatch):
+    # The buckets themselves are checked against PostgreSQL in test_chat_api and test_summarizer.
+    # An instrumentation without the name must not stop the app from starting
+    monkeypatch.delattr(dbapi, "create_db_client_operation_duration")
+
+    _metrics._give_db_duration_buckets()
+
+    assert not hasattr(dbapi, "create_db_client_operation_duration")
 
 
 # ---------------------------------------------------------------- tracing engine (image entrypoint)
