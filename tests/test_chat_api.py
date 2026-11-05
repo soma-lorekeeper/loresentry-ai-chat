@@ -13,11 +13,13 @@ from uuid import UUID, uuid4
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from opentelemetry.instrumentation import dbapi
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 from testcontainers.community.postgres import PostgresContainer
 
 from app import main
+from app.logs import _metrics
 from app.main import create_app
 from app.manuscript import ProjectKeys, seal
 from app.model import ModelFailure
@@ -28,6 +30,7 @@ from tests.support import (
     CH1,
     CH2,
     CH3,
+    DB_DURATION_BUCKETS,
     DEFAULT_ANSWER,
     GREENHOUSE,
     LENA,
@@ -37,6 +40,7 @@ from tests.support import (
     FakeModel,
     answer,
     documents,
+    exported_db_duration_bounds,
     field,
     lines_with,
     log_lines,
@@ -158,6 +162,43 @@ def env(database):
 
 def names(events) -> list[str]:
     return [name for name, _ in events if name != "ping"]
+
+
+# The API process as the image starts it: the distro instruments psycopg, then the app is imported and its
+# lifespan opens the pool and queries the database (stale turn and setting check expiry)
+API_STARTUP = """
+from fastapi.testclient import TestClient
+from app.main import app
+
+with TestClient(app):
+    pass
+"""
+
+
+def test_db_query_durations_use_the_db_buckets(database, metrics):
+    # app.logs swaps this dbapi name; without it the swap does nothing and the buckets are lost
+    assert (
+        dbapi.create_db_client_operation_duration
+        is _metrics.db_client_operation_duration
+    )
+    with make_env(database) as running:
+        running.create()
+
+    duration = metrics("opentelemetry.instrumentation.psycopg")[
+        "db.client.operation.duration"
+    ]
+    assert duration.unit == "s"
+    # Every query's point, not the SDK's millisecond buckets (0, 5, 10, ...)
+    assert {tuple(point.explicit_bounds) for point in duration.data.data_points} == {
+        tuple(DB_DURATION_BUCKETS)
+    }
+
+
+def test_the_api_process_exports_db_query_durations_in_the_db_buckets(database):
+    bounds = exported_db_duration_bounds(API_STARTUP, database)
+
+    assert bounds
+    assert all(found == DB_DURATION_BUCKETS for found in bounds)
 
 
 def test_the_app_reports_its_connection_pool_while_it_runs(database, metrics):

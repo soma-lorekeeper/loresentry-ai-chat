@@ -17,6 +17,9 @@ API가 아무것도 하지 않고, 테스트는 tests/conftest.py가 꽂은 SDK 
 | ``messaging.process.duration``(s), ``loresentry.kafka.consume.delay``(s) | histogram | ``LogFlow.kafka_record``(topic·partition·group) |
 
 Kafka 발행(``messaging.client.operation.duration``)은 없다. 이 서비스는 Kafka로 보내지 않는다(summarizer는 받기만 한다).
+
+DB 쿼리 걸린 시간(``db.client.operation.duration``)은 psycopg 계측이 남긴다. 그 histogram에 버킷 경계가 빠져 있어, 이 모듈을
+import할 때 계측이 쓰는 생성 함수를 경계를 넣은 것으로 바꾼다(맨 아래 "DB 쿼리 버킷"). 이 일도 로그 줄도 span도 만들지 않는다.
 """
 
 import asyncio
@@ -319,3 +322,53 @@ _CONSUME_DELAY = _meter.create_histogram(
     description="Time from a record's timestamp until its processing started",
     explicit_bucket_boundaries_advisory=CONSUME_DELAY_BUCKETS,
 )
+
+
+# ------------------------------------------------------------ DB 쿼리 버킷
+#
+# 왜: psycopg 계측(opentelemetry-instrumentation-psycopg 0.66b2, 공통 코드는 dbapi)이 DB 쿼리 걸린 시간
+# db.client.operation.duration을 초 단위로 남기는데, 그 histogram을 만드는
+# opentelemetry.semconv._incubating.metrics.db_metrics.create_db_client_operation_duration이 버킷 경계(advisory)를 넘기지
+# 않는다. 그러면 SDK가 ms 단위용 기본 경계(0, 5, 10, 25, 50, ... 10000)를 쓰고, 5초 안에 끝나는 쿼리는 모두 0~5초 칸 하나에
+# 들어간다. dev에서 실제로 ES의 p95가 늘 2.5(그 칸의 가운데)로 나와 DB 지연을 볼 수 없었다.
+#
+# 어떻게: dbapi 모듈은 그 함수를 이름으로 가져와(from ... import create_db_client_operation_duration) 연결마다
+# DatabaseApiIntegration.__init__에서 부른다. 그래서 dbapi 모듈의 그 이름을, 이름·단위·설명은 같고 OpenTelemetry DB semantic
+# conventions가 권하는 경계(Java JDBC 계측도 같은 경계라 두 언어의 DB 지연을 같은 칸으로 비교한다)를 넣은 함수로 바꾼다.
+#
+# 순서: SDK는 같은 이름의 histogram을 처음 만든 것으로 계속 돌려준다. 그래서 첫 계측 연결보다 먼저 바꿔야 한다. 이 모듈은
+# app.logs를 import할 때 함께 읽히고, 두 프로세스 모두 DB에 처음 붙기 전에 app.logs를 import한다(API는 app.main import,
+# summarizer는 python -m app.summarizer의 import. 첫 연결은 그 뒤의 lifespan 풀, wait_for_schema다). distro가 psycopg를 먼저
+# 계측해 두는 것은 상관없다. 함수는 연결할 때 불린다.
+#
+# 그 이름이 없어지면(계측이 바뀜) 앱을 멈추지 않고 그냥 둔다. 대신 tests(test_chat_api, test_summarizer)가 실패해 알린다.
+# 계측이 이 경계(advisory)를 스스로 넘기게 되면 이 절을 지운다.
+
+# DB 쿼리 걸린 시간의 버킷 경계(초). OpenTelemetry DB semantic conventions의 권장값이다
+DB_DURATION_BUCKETS = (0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10)
+
+
+def db_client_operation_duration(meter: metrics.Meter) -> metrics.Histogram:
+    """dbapi 계측이 연결마다 부르는 create_db_client_operation_duration 자리에 들어가는 함수. 버킷 경계만 더한다.
+
+    이름·단위·설명은 원래 함수와 같다. 설명까지 같아야 SDK가 같은 계측으로 본다.
+    """
+    return meter.create_histogram(
+        name="db.client.operation.duration",
+        unit="s",
+        description="Duration of database client operations.",
+        explicit_bucket_boundaries_advisory=DB_DURATION_BUCKETS,
+    )
+
+
+def _give_db_duration_buckets() -> None:
+    try:
+        from opentelemetry.instrumentation import dbapi
+    except ImportError:
+        # 계측이 설치되지 않은 곳. 바꿀 것이 없다
+        return
+    if hasattr(dbapi, "create_db_client_operation_duration"):
+        dbapi.create_db_client_operation_duration = db_client_operation_duration
+
+
+_give_db_duration_buckets()

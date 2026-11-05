@@ -31,7 +31,14 @@ from app.summarizer.fingerprint import changed, fingerprint, threshold
 from app.summarizer.settings import SummarizerSettings
 from app.summarizer.store import SummaryStore, apply
 from app.summarizer.worker import Worker
-from tests.support import FakeKms, field, lines_with, log_lines
+from tests.support import (
+    DB_DURATION_BUCKETS,
+    FakeKms,
+    exported_db_duration_bounds,
+    field,
+    lines_with,
+    log_lines,
+)
 
 MIGRATIONS = sorted(
     (Path(__file__).parent.parent / "db" / "migration").glob("V*__*.sql"),
@@ -347,6 +354,26 @@ def consume(rig, *messages) -> None:
     with psycopg.connect(rig.settings.base.conninfo) as conn:
         for message in messages:
             handle(conn, message, rig.settings)
+
+
+# The summarizer process as the image starts it: the distro instruments psycopg, then app.summarizer.__main__ is
+# imported and its first connection is the schema wait
+SUMMARIZER_STARTUP = """
+import asyncio
+from app.summarizer.__main__ import wait_for_schema
+from app.summarizer.settings import SummarizerSettings
+
+asyncio.run(wait_for_schema(SummarizerSettings.from_environment(), asyncio.Event()))
+"""
+
+
+def test_the_summarizer_process_exports_db_query_durations_in_the_db_buckets(
+    database,
+):
+    bounds = exported_db_duration_bounds(SUMMARIZER_STARTUP, database)
+
+    assert bounds
+    assert all(found == DB_DURATION_BUCKETS for found in bounds)
 
 
 def test_events_off_the_contract_are_skipped_and_the_rest_applied(rig):
