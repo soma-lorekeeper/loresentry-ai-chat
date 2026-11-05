@@ -191,7 +191,7 @@ class LogFlow:
 
         지표: 열 때 레코드의 timestamp(``message.timestamp()`` 그대로. 값이 없으면 남기지 않는다)로 지연
         (loresentry.kafka.consume.delay)을, 닫을 때 처리 시간(messaging.process.duration, 실패면 error.type)을 남긴다.
-        둘 다 topic과 consumer group이 속성이다.
+        둘 다 topic, partition, consumer group이 속성이다.
         """
         flow = LogFlow("kafka_record", event)
         flow._record = (
@@ -386,7 +386,7 @@ class LogFlow:
         )
         self._tokens.append(bind(logger))
         # 레코드가 만들어진 뒤 처리를 시작하기까지의 지연(지표)
-        record_consume_delay(topic, group, self._timestamp)
+        record_consume_delay(topic, partition, group, self._timestamp)
 
     def _open_span(
         self,
@@ -433,9 +433,9 @@ class LogFlow:
             self._end(WARN if failed else INFO, processed, error_type, stack)
             # 레코드 하나의 처리 시간(지표). 실패면 종료 줄과 같은 error.type이다
             assert self._record is not None
-            topic, _, _, _, _, group = self._record
+            topic, partition, _, _, _, group = self._record
             record_process(
-                topic, group, time.perf_counter() - self._started, error_type
+                topic, partition, group, time.perf_counter() - self._started, error_type
             )
             return False
         if self._kind == "call":

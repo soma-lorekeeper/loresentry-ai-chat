@@ -381,6 +381,8 @@ def test_a_record_leaves_its_delay_and_processing_time(rig, metrics):
     kafka = {
         "messaging.system": "kafka",
         "messaging.destination.name": "content.project.changed.v2",
+        # handle() passes message.partition()
+        "messaging.destination.partition.id": "0",
         "messaging.consumer.group.name": "ai-chat-summarizer",
     }
     # The delay from the record's create time until handle() took it up
