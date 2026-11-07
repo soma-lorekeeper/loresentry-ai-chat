@@ -127,3 +127,32 @@ from about 6.8k to 13k (77% cached) and output from about 0.7k to 1.1k.
 Misses that remain: a character acting against a setting is sometimes judged a
 change over time (Lena at sea, 1 in 3 runs), and a contradiction that needs an
 older chapter the finder does not name. The teacup case is fine either way.
+
+## Setting check on the chat stories, through the services
+
+`datasets/setting-check-prod.json` plants contradictions into the chat
+evaluation stories: four chapters of each of the three mid-length stories and
+chapters 20, 50, 80 and 100 of `mumyeong-suro`, three contradictions per chapter
+(two against setting documents, one of them a core setting, one against an
+earlier chapter) and two traps per chapter. `build_setting_check_dataset.py`
+writes it from the story datasets and checks that every replaced sentence and
+every expected quote is present. The file is materialized, so
+`evaluation.setting_check --dataset` runs it without the services and records
+tokens per check.
+
+`setting_check_prod.py` runs the same cases through content and ai-chat (for
+example over `kubectl port-forward`): it seeds one project per case with the
+core paragraph marked, starts a check for the last chapter, waits for it,
+grades the findings with the same matching rules and deletes the projects.
+
+```bash
+.venv/bin/python -m evaluation.setting_check_prod \
+  --content http://localhost:28001 --chat http://localhost:28000 \
+  --runs 3 --out evaluation/results/setting-check/prod-service
+```
+
+`results/setting-check/prod-service` is the run through prod on 2026-11-07
+(48 checks: recall 0.85, trap rate 0, precision 0.99, 20 seconds median) and
+`prod-local` the same cases through the evaluator for tokens. The seconds in
+`prod-local` include time spent waiting for a concurrency slot and are not
+check durations.
