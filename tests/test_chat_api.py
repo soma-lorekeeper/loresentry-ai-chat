@@ -1008,3 +1008,120 @@ def test_a_turn_sees_sealed_summaries_and_survives_a_kms_failure(database):
         prompt = json.dumps(env.model.inputs[0], ensure_ascii=False)
         assert "<summary>" not in prompt
         assert "서윤이 등불을 들고 문을 민다." not in prompt
+
+
+def test_a_usage_question_is_answered_from_the_guide(database):
+    model = FakeModel(routes=["product"])
+    with make_env(database, model) as env:
+        session = env.create()
+        status, events = env.send(session["id"], "쓰던 원고는 어떻게 가져와?")
+        done = payload(events, "done")
+        saved = env.messages(session["id"])
+        listed = env.client.get(
+            f"/projects/{env.project}/chat/sessions", headers=env.headers
+        ).json()["sessions"][0]
+        turn = env.query(
+            "select grounding, steps, judge_calls, chars_read, context_chars "
+            "from chat_turns"
+        )
+        maps = env.content.maps
+
+    assert status == 200
+    assert [data["phase"] for name, data in events if name == "phase"] == [
+        "gathering",
+        "reading",
+        "writing",
+    ]
+    activities = [data["kind"] for name, data in events if name == "activity"]
+    assert activities == ["guide", "review", "reviewed"]
+    assert "citation" not in names(events)
+    assert done["answer"]["content"] == (
+        "쓰던 원고는 사이드바의 ‘가져오기’로 올려요. 텍스트(.txt)와 마크다운(.md)만 받아요.\n"
+        "[[action:import]][[action:guide:writing#import]]"
+    )
+    assert done["answer"]["citations"] == []
+    assert done["answer"]["grounding"] == {
+        "level": "PRODUCT",
+        "documents_read": 0,
+        "missing": [],
+    }
+    assert saved["messages"][1]["content"] == done["answer"]["content"]
+    assert listed["preview"] == (
+        "쓰던 원고는 사이드바의 ‘가져오기’로 올려요. 텍스트(.txt)와 마크다운(.md)만 받아요."
+    )
+    assert turn == [("PRODUCT", 1, 1, 0, 0)]
+    assert maps == 0
+    assert model.inputs == []
+    assert model.route_inputs[0].endswith(
+        "<question>\n쓰던 원고는 어떻게 가져와?\n</question>"
+    )
+
+
+def test_a_mixed_question_gets_the_story_answer_then_the_guide_answer(database):
+    model = FakeModel(
+        routes=["mixed"],
+        writes=['최신화는 사이드바에서 시작해요. <action id="guide:refresh#run"/>'],
+    )
+    with make_env(database, model) as env:
+        session = env.create()
+        _, events = env.send(session["id"], "레나 설정을 최신화하려면 어떻게 해?")
+        done = payload(events, "done")
+        turn = env.query("select grounding, steps, judge_calls from chat_turns")
+
+    content = done["answer"]["content"]
+    assert content.startswith("북쪽 문을 연 사람은 서윤이에요. [[1]]")
+    assert content.endswith(
+        "\n\n최신화는 사이드바에서 시작해요.\n[[action:guide:refresh#run]]"
+    )
+    assert len(done["answer"]["citations"]) == 2
+    assert done["answer"]["grounding"]["level"] == "SUPPORTED"
+    assert turn == [("SUPPORTED", 3, 3)]
+
+
+def test_quoted_questions_skip_routing_and_the_next_turn_hides_markers(database):
+    model = FakeModel(
+        routes=["product"], steps=[read(CH3), answer(), read(CH3), answer()]
+    )
+    with make_env(database, model) as env:
+        session = env.create()
+        env.send(
+            session["id"],
+            "",
+            quote={
+                "file_id": CH3,
+                "title": "3화 · 균열의 밤",
+                "doc_type": "manuscript",
+                "text": "서윤은 등불을 내려놓고",
+            },
+        )
+        assert model.route_inputs == []
+        _, events = env.send(session["id"], "처음인데 어떻게 시작해?")
+        assert payload(events, "done")["answer"]["grounding"]["level"] == "PRODUCT"
+        _, events = env.send(session["id"], "그럼 북쪽 문은 누가 열었어?")
+
+    assert payload(events, "done")["answer"]["grounding"]["level"] == "SUPPORTED"
+    story_items = model.inputs[-1]
+    earlier_answers = [
+        item["content"] for item in story_items if item.get("role") == "assistant"
+    ]
+    assert any("가져오기" in text for text in earlier_answers)
+    assert not any("[[action:" in text for text in earlier_answers)
+
+
+def test_a_routing_failure_falls_back_to_the_story_loop(database):
+    model = FakeModel(routes=["product"])
+    model.fail_route = "MODEL_TIMEOUT"
+    with make_env(database, model) as env:
+        _, events = env.send(env.create()["id"], "처음인데 어떻게 시작해?")
+
+    assert payload(events, "done")["answer"]["grounding"]["level"] == "SUPPORTED"
+    assert model.write_inputs == []
+
+
+def test_product_help_can_be_switched_off(database):
+    model = FakeModel(routes=["product"])
+    with make_env(database, model, product_help=False) as env:
+        _, events = env.send(env.create()["id"], "처음인데 어떻게 시작해?")
+
+    assert model.route_inputs == []
+    assert payload(events, "done")["answer"]["grounding"]["level"] == "SUPPORTED"

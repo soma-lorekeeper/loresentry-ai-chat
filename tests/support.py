@@ -172,6 +172,12 @@ DEFAULT_ANSWER = (
 )
 
 
+PRODUCT_ANSWER = (
+    "쓰던 원고는 사이드바의 ‘가져오기’로 올려요. 텍스트(.txt)와 마크다운(.md)만 받아요.\n"
+    '<action id="import"/><action id="guide:writing#import"/>'
+)
+
+
 def read(*targets: str) -> tuple[str, list[str]]:
     return ("read", [short(target) for target in targets])
 
@@ -188,10 +194,17 @@ class FakeModel:
         steps: list[tuple[str, Any]] | None = None,
         sufficiency: list[Sufficiency] | None = None,
         checks: list[AnswerCheck] | None = None,
+        routes: list[str] | None = None,
+        writes: list[str] | None = None,
     ):
         self.steps = list(steps) if steps is not None else [read(CH3, CH2), answer()]
         self.sufficiency_script = list(sufficiency or [])
         self.check_script = list(checks or [])
+        self.routes = list(routes or [])
+        self.writes = list(writes or [])
+        self.route_inputs: list[str] = []
+        self.write_inputs: list[list[dict[str, Any]]] = []
+        self.fail_route: str | None = None
         self.inputs: list[list[dict[str, Any]]] = []
         self.choices: list[str] = []
         self.sufficiency_inputs: list[str] = []
@@ -256,6 +269,28 @@ class FakeModel:
             self.check_script.pop(0) if self.check_script else AnswerCheck(True, [])
         )
         return verdict, Usage(100, 0, 0, 10, 5)
+
+    async def route(self, instructions: str, text: str) -> tuple[str, Usage | None]:
+        self.route_inputs.append(text)
+        if self.fail_route:
+            code, self.fail_route = self.fail_route, None
+            raise ModelFailure(code)
+        return (self.routes.pop(0) if self.routes else "story"), None
+
+    async def write(
+        self, instructions: str, items: list[dict[str, Any]], cache_key: str
+    ) -> StepResult:
+        self.write_inputs.append(json.loads(json.dumps(items)))
+        if self.fail_with:
+            code, self.fail_with = self.fail_with, None
+            raise ModelFailure(code)
+        text = self.writes.pop(0) if self.writes else PRODUCT_ANSWER
+        message = {
+            "type": "message",
+            "role": "assistant",
+            "content": [{"type": "output_text", "text": text}],
+        }
+        return StepResult(None, text, [message], self.usage)
 
 
 def read_events(response) -> list[tuple[str, dict | None]]:

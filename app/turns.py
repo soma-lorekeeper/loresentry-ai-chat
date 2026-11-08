@@ -7,13 +7,14 @@ from dataclasses import dataclass, replace
 from typing import Any
 from uuid import UUID
 
-from app.agent import Agent, Outcome
+from app.agent import Agent, Outcome, add
 from app.citations import CitationStream, Cited
 from app.content import ContentSource, Document, Memo
 from app.errors import CONTRACTS, ChatFailure
 from app.model import AnswerModel, ModelFailure, Usage
 from app.navigation import Turn
-from app.prompt import Profile, Question, select_history
+from app.product import ProductAgent
+from app.prompt import Exchange, Material, Profile, Question, select_history
 from app.settings import Settings
 from app.store import Metrics, Started, Store, message_json
 from app.usage import usage_json
@@ -99,6 +100,7 @@ class TurnRunner:
         self.model = model
         self.settings = settings
         self.agent = Agent(model, content, settings)
+        self.product = ProductAgent(model)
         self.tasks: dict[UUID, asyncio.Task[None]] = {}
         self.stopping = False
 
@@ -170,27 +172,69 @@ class TurnRunner:
         try:
             channel.put("phase", {"phase": "gathering"})
             async with asyncio.timeout(self.settings.turn_deadline_seconds):
-                turn = await self.prepare(
-                    started, user_id, project_id, profile, question
+                history = select_history(
+                    await self.store.history(session_id, started.question["id"]),
+                    self.settings.history_max_chars,
                 )
-                metrics = replace(
-                    metrics,
-                    snapshot_ms=int((time.monotonic() - begun) * 1000),
-                )
-                channel.put("phase", {"phase": "reading"})
-                result = await self.agent.run(
-                    turn,
-                    begun + self.settings.turn_deadline_seconds,
-                    spent,
-                    lambda activity: channel.put("activity", activity),
-                )
-                metrics = replace(
-                    finished(metrics, result),
-                    context_chars=turn.context_chars,
-                    chars_read=turn.chars_read,
-                    first_token_ms=int((time.monotonic() - begun) * 1000),
-                )
-                parser = self.deliver(result, turn, channel)
+                kind = await self.route(question, history, spent)
+                deadline = begun + self.settings.turn_deadline_seconds
+                notify = lambda activity: channel.put("activity", activity)  # noqa: E731
+                if kind == "product":
+                    metrics = replace(
+                        metrics,
+                        snapshot_ms=int((time.monotonic() - begun) * 1000),
+                    )
+                    channel.put("phase", {"phase": "reading"})
+                    result = await self.product.run(
+                        profile, question, history, spent, notify
+                    )
+                    materials: dict[str, Material] = {}
+                    grounding = {"level": "PRODUCT", "documents_read": 0, "missing": []}
+                    held: list[tuple[str, str]] = []
+                    metrics = replace(
+                        finished(metrics, result),
+                        context_chars=0,
+                        chars_read=0,
+                        first_token_ms=int((time.monotonic() - begun) * 1000),
+                    )
+                else:
+                    turn = await self.prepare(
+                        started, user_id, project_id, profile, question, history
+                    )
+                    metrics = replace(
+                        metrics,
+                        snapshot_ms=int((time.monotonic() - begun) * 1000),
+                    )
+                    channel.put("phase", {"phase": "reading"})
+                    if kind == "mixed":
+                        result, extra = await asyncio.gather(
+                            self.agent.run(turn, deadline, spent, notify),
+                            self.product.run(profile, question, history),
+                        )
+                        result.text = f"{result.text.rstrip()}\n\n{extra.text}"
+                        result.steps += extra.steps
+                        result.judge_calls += extra.judge_calls
+                        result.usage = add(result.usage, extra.usage)
+                    else:
+                        result = await self.agent.run(turn, deadline, spent, notify)
+                    materials = turn.materials()
+                    grounding = {
+                        "level": result.level,
+                        "documents_read": len(turn.read),
+                        "missing": (
+                            result.reviews[-1].sufficiency.missing
+                            if result.reviews and result.level != "SUPPORTED"
+                            else []
+                        ),
+                    }
+                    held = [(target, turn.kind_of(target)) for target in turn.read]
+                    metrics = replace(
+                        finished(metrics, result),
+                        context_chars=turn.context_chars,
+                        chars_read=turn.chars_read,
+                        first_token_ms=int((time.monotonic() - begun) * 1000),
+                    )
+                parser = self.deliver(result, materials, channel)
             if not parser.content:
                 raise ModelFailure("MODEL_EMPTY_RESPONSE")
             metrics = replace(metrics, total_ms=int((time.monotonic() - begun) * 1000))
@@ -201,16 +245,8 @@ class TurnRunner:
                 parser.content,
                 parser.citations,
                 metrics,
-                grounding={
-                    "level": result.level,
-                    "documents_read": len(turn.read),
-                    "missing": (
-                        result.reviews[-1].sufficiency.missing
-                        if result.reviews and result.level != "SUPPORTED"
-                        else []
-                    ),
-                },
-                held=[(target, turn.kind_of(target)) for target in turn.read],
+                grounding=grounding,
+                held=held,
             )
             if answer is None:
                 raise Stopped()
@@ -276,6 +312,15 @@ class TurnRunner:
                 },
             )
 
+    async def route(
+        self, question: Question, history: list[Exchange], spent: Outcome
+    ) -> str:
+        if not self.settings.product_help:
+            return "story"
+        kind, usage = await self.product.route(question, history)
+        spent.usage = add(spent.usage, usage)
+        return kind
+
     async def prepare(
         self,
         started: Started,
@@ -283,6 +328,7 @@ class TurnRunner:
         project_id: UUID,
         profile: Profile,
         question: Question,
+        history: list[Exchange],
     ) -> Turn:
         session_id = started.session["id"]
         chat_map = await self.content.map(user_id, project_id)
@@ -298,14 +344,13 @@ class TurnRunner:
         summaries = await self.store.summaries(
             [node.id for node in (*chat_map.manuscripts, *chat_map.settings)]
         )
-        history = await self.store.history(session_id, started.question["id"])
         return Turn(
             user_id=user_id,
             project_id=project_id,
             chat_map=chat_map,
             profile=profile,
             question=question,
-            history=select_history(history, self.settings.history_max_chars),
+            history=history,
             summaries=summaries,
             held_documents=documents,
             held_memos=memos,
@@ -328,8 +373,10 @@ class TurnRunner:
         memos = [item for item in kept if isinstance(item, Memo)]
         return documents, memos, dropped
 
-    def deliver(self, outcome: Outcome, turn: Turn, channel: Channel) -> CitationStream:
-        parser = CitationStream(turn.materials())
+    def deliver(
+        self, outcome: Outcome, materials: dict[str, Material], channel: Channel
+    ) -> CitationStream:
+        parser = CitationStream(materials)
         channel.put("phase", {"phase": "writing"})
         text = outcome.text
         for start in range(0, len(text), CHUNK):

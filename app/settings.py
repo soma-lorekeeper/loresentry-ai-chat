@@ -41,6 +41,7 @@ class Settings:
     stale_turn_seconds: int = 300
     daily_credit_limit: int = 3_500_000
     shutdown_grace_seconds: float = 15.0
+    product_help: bool = True
     setting_check_max_chars: int = 600_000
     setting_check_reasoning_effort: str = "medium"
     setting_check_judge_reasoning_effort: str = "low"
@@ -113,6 +114,8 @@ class Settings:
             shutdown_grace_seconds=_float(
                 "CHAT_SHUTDOWN_GRACE_SECONDS", cls.shutdown_grace_seconds
             ),
+            product_help=os.getenv("CHAT_PRODUCT_HELP", "true").lower()
+            not in {"0", "false", "no", "off"},
             setting_check_max_chars=_int(
                 "SETTING_CHECK_MAX_CHARS", cls.setting_check_max_chars
             ),

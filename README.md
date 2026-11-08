@@ -84,6 +84,17 @@ question. Errors are `{code, message, next_action}`.
 
 ### A turn
 
+0. The question is sorted first (`app/product.py`, one small structured call on
+   the judge model): a question about the author's work goes through the
+   document loop below; a question about Lore Sentry itself (how to use it, where
+   a button is, why nothing happened, greetings) is answered from the user guide
+   in `app/guide.py` and `app/guide_data/`, checked once against that guide, and
+   saved with grounding `PRODUCT`; a message that asks both gets both answers.
+   The guide answer may end with up to three `[[action:…]]` markers
+   (`tour`, `import`, `view:<screen>`, `guide:<topic>#<section>`) that the
+   frontend shows as shortcut buttons. Quoted (drag) questions and the
+   `explain`/`related`/`flow` intents are never sorted; `CHAT_PRODUCT_HELP=false`
+   turns the sorting off.
 1. Checks before streaming answer with a JSON error: the question, the session,
    project access (`chat-size` on content), one answer at a time per session
    (`CHAT_ANSWER_IN_PROGRESS`), `replaces` must be the last question, and a
@@ -92,8 +103,10 @@ question. Errors are `{code, message, next_action}`.
    answer runs as a background task. Closing the browser does not stop it; only
    `cancel` or deleting the session does. A watcher polls the turn row, so a
    cancel reaching another replica still stops it.
-3. Events: `phase` (`gathering` → `reading` → `writing`), `citation`, `delta`,
-   then `done` with the saved question and answer (with `grounding`), or `error`.
+3. Events: `phase` (`gathering` → `reading` → `writing`), `activity`
+   (`map`/`think`/`read`/`review`/`reviewed`/`final`, or `guide` for a guide
+   answer), `citation`, `delta`, then `done` with the saved question and answer
+   (with `grounding`), or `error`.
    `: ping` every 15 seconds keeps the gateway and ALB from closing a quiet stream.
 4. Input: project and author, the map (`chat-map` on content, with summaries from
    `document_summaries`; cache breakpoint), the documents this session already
