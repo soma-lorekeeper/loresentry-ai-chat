@@ -3,7 +3,7 @@ from html import escape
 from typing import Any
 
 from app.content import Document, Memo, Relation
-from app.text import MARKER
+from app.text import ACTION, MARKER
 
 FORMAT = """# Format
 - Plain text. One line is one paragraph. A line starting with "- " is a bullet item.
@@ -158,7 +158,7 @@ def history_answer(exchange: Exchange, by_target: dict[str, str]) -> str:
         alias = by_target.get(target or "")
         return f'<cite id="{alias}"/>' if alias else ""
 
-    return MARKER.sub(replace, exchange.answer)
+    return MARKER.sub(replace, ACTION.sub("", exchange.answer)).rstrip()
 
 
 def select_history(exchanges: list[Exchange], budget: int) -> list[Exchange]:

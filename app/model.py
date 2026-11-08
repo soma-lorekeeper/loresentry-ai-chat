@@ -6,6 +6,7 @@ from typing import Any, Protocol
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
+from app.guide import ROUTE_SCHEMA
 from app.navigation import (
     ANSWER_CHECK_SCHEMA,
     SUFFICIENCY_SCHEMA,
@@ -75,6 +76,10 @@ class AnswerModel(Protocol):
         cache_key: str,
     ) -> StepResult: ...
 
+    async def write(
+        self, instructions: str, items: list[dict[str, Any]], cache_key: str
+    ) -> StepResult: ...
+
     async def sufficiency(
         self, instructions: str, text: str
     ) -> tuple[Sufficiency, Usage | None]: ...
@@ -82,6 +87,8 @@ class AnswerModel(Protocol):
     async def check_answer(
         self, instructions: str, text: str
     ) -> tuple[AnswerCheck, Usage | None]: ...
+
+    async def route(self, instructions: str, text: str) -> tuple[str, Usage | None]: ...
 
 
 class SummaryModel(Protocol):
@@ -277,6 +284,25 @@ class OpenAIModel:
         text = "" if call else (response.output_text or "")
         return StepResult(call, text, output, usage_of(response.usage))
 
+    async def write(
+        self, instructions: str, items: list[dict[str, Any]], cache_key: str
+    ) -> StepResult:
+        response = await create(
+            self.client,
+            model=self.name,
+            instructions=instructions,
+            input=items,
+            include=["reasoning.encrypted_content"],
+            max_output_tokens=self.max_output_tokens,
+            prompt_cache_key=cache_key,
+            timeout=self.timeout_seconds,
+            **effort(self.reasoning_effort),
+        )
+        output = [item.model_dump(exclude_none=True) for item in response.output]
+        return StepResult(
+            None, response.output_text or "", output, usage_of(response.usage)
+        )
+
     async def _judge(
         self, instructions: str, text: str, name: str, schema: dict[str, Any]
     ) -> tuple[dict[str, Any], Usage | None]:
@@ -313,6 +339,10 @@ class OpenAIModel:
             AnswerCheck(bool(value["answer_ok"]), [str(p) for p in value["problems"]]),
             usage,
         )
+
+    async def route(self, instructions: str, text: str) -> tuple[str, Usage | None]:
+        value, usage = await self._judge(instructions, text, "route", ROUTE_SCHEMA)
+        return str(value["kind"]), usage
 
 
 class OpenAISummaryModel:
@@ -427,4 +457,10 @@ class UnconfiguredModel:
         raise ModelFailure("MODEL_NOT_CONFIGURED")
 
     async def check_answer(self, *_: Any) -> tuple[AnswerCheck, Usage | None]:
+        raise ModelFailure("MODEL_NOT_CONFIGURED")
+
+    async def write(self, *_: Any, **__: Any) -> StepResult:
+        raise ModelFailure("MODEL_NOT_CONFIGURED")
+
+    async def route(self, *_: Any) -> tuple[str, Usage | None]:
         raise ModelFailure("MODEL_NOT_CONFIGURED")

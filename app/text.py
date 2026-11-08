@@ -7,6 +7,7 @@ SNIPPET_BEFORE = 16
 SNIPPET_AFTER = 40
 
 MARKER = re.compile(r"\[\[(\d+)\]\]")
+ACTION = re.compile(r"\[\[action:[^\]\s]+\]\]")
 SPACES = re.compile(r"\s+")
 BULLET = re.compile(r"^- ", re.MULTILINE)
 
@@ -34,7 +35,7 @@ def chat_preview(content: str, citations: list[dict[str, Any]]) -> str:
         index = int(match.group(1)) - 1
         return citations[index]["title"] if 0 <= index < len(citations) else ""
 
-    flat = MARKER.sub(replace, content).replace("**", "")
+    flat = MARKER.sub(replace, ACTION.sub("", content)).replace("**", "")
     flat = collapse(BULLET.sub("", flat))
     return f"{flat[:PREVIEW_LIMIT]}…" if len(flat) > PREVIEW_LIMIT else flat
 
@@ -46,7 +47,7 @@ def search_text(
         index = int(match.group(1)) - 1
         return f" {citations[index]['title']} " if 0 <= index < len(citations) else ""
 
-    body = MARKER.sub(replace, content)
+    body = MARKER.sub(replace, ACTION.sub("", content))
     quoted = quote["text"] if quote else ""
     return collapse(f"{quoted} {body}".replace("**", ""))
 
