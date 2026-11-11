@@ -132,6 +132,12 @@ class Fetched:
     missing: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class CheckVersion:
+    version_id: str
+    document: Document
+
+
 def properties_of(item: dict[str, Any]) -> tuple[Property, ...]:
     return tuple(Property(prop["key"], prop["value"]) for prop in item["properties"])
 
@@ -198,20 +204,21 @@ def parse_map(payload: dict[str, Any]) -> ChatMap:
     )
 
 
+def manuscript_of(item: dict[str, Any]) -> Document:
+    return Document(
+        id=item["id"],
+        title=item["title"],
+        folder_code="MANUSCRIPT",
+        body_text=item["body_text"],
+        revision_no=item["revision_no"],
+        ordinal=item["ordinal"],
+        episode_name=item.get("episode_name"),
+        properties=properties_of(item),
+    )
+
+
 def parse_documents(payload: dict[str, Any]) -> Fetched:
-    documents = [
-        Document(
-            id=item["id"],
-            title=item["title"],
-            folder_code="MANUSCRIPT",
-            body_text=item["body_text"],
-            revision_no=item["revision_no"],
-            ordinal=item["ordinal"],
-            episode_name=item.get("episode_name"),
-            properties=properties_of(item),
-        )
-        for item in payload["manuscripts"]
-    ]
+    documents = [manuscript_of(item) for item in payload["manuscripts"]]
     documents += [
         Document(
             id=item["id"],
@@ -250,13 +257,30 @@ class ContentSource(Protocol):
         memo_ids: list[str],
     ) -> Fetched: ...
 
+    async def check_version(
+        self, user_id: UUID, project_id: UUID, document_id: str
+    ) -> CheckVersion: ...
+
+
+def code_of(response: httpx.Response) -> str | None:
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    return body.get("code") if isinstance(body, dict) else None
+
 
 class ContentClient:
     def __init__(self, client: httpx.AsyncClient):
         self.client = client
 
     async def _call(
-        self, user_id: UUID, method: str, path: str, body: Any = None
+        self,
+        user_id: UUID,
+        method: str,
+        path: str,
+        body: Any = None,
+        missing: str | None = None,
     ) -> dict[str, Any]:
         try:
             response = await self.client.request(
@@ -265,6 +289,8 @@ class ContentClient:
         except httpx.HTTPError as error:
             raise ChatFailure("CONTENT_UNAVAILABLE", type(error).__name__) from None
         if response.status_code == 404:
+            if missing and code_of(response) != "PROJECT_NOT_FOUND":
+                raise ChatFailure(missing)
             raise ChatFailure("PROJECT_NOT_FOUND")
         if response.status_code != 200:
             raise ChatFailure("CONTENT_UNAVAILABLE", f"status {response.status_code}")
@@ -305,5 +331,22 @@ class ContentClient:
         )
         try:
             return parse_documents(payload)
+        except (KeyError, TypeError) as error:
+            raise ChatFailure("CONTENT_UNAVAILABLE", type(error).__name__) from None
+
+    async def check_version(
+        self, user_id: UUID, project_id: UUID, document_id: str
+    ) -> CheckVersion:
+        payload = await self._call(
+            user_id,
+            "POST",
+            f"/internal/projects/{project_id}/check-versions",
+            {"document_id": document_id},
+            missing="SETTING_CHECK_DOCUMENT_NOT_FOUND",
+        )
+        try:
+            return CheckVersion(
+                str(payload["version_id"]), manuscript_of(payload["manuscript"])
+            )
         except (KeyError, TypeError) as error:
             raise ChatFailure("CONTENT_UNAVAILABLE", type(error).__name__) from None

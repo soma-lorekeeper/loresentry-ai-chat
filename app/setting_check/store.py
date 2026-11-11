@@ -13,35 +13,32 @@ from app.store import iso
 
 RUN_SELECT = (
     "select r.id, r.project_id, r.document_id, r.document_title, r.revision_no, "
-    "r.status, r.stage, r.read_manuscripts, r.read_from_ordinal, r.read_to_ordinal, "
-    "r.read_settings, r.read_core_facts, r.failure_code, r.created_at, "
-    "r.finished_at, c.open, c.intended, c.not_conflict "
+    "r.version_id, r.status, r.stage, r.read_manuscripts, r.read_from_ordinal, "
+    "r.read_to_ordinal, r.read_settings, r.read_core_facts, r.failure_code, "
+    "r.created_at, r.finished_at, c.open, c.intended, c.not_conflict "
     "from setting_check_runs r cross join lateral (select "
-    "count(*) filter (where v.verdict is null) as open, "
-    "count(*) filter (where v.verdict = 'INTENDED') as intended, "
-    "count(*) filter (where v.verdict = 'NOT_CONFLICT') as not_conflict "
-    "from setting_check_findings f left join setting_check_verdicts v "
-    "on v.project_id = r.project_id and v.fingerprint = f.fingerprint "
-    "where f.run_id = r.id) c "
+    "count(*) filter (where f.verdict is null) as open, "
+    "count(*) filter (where f.verdict = 'INTENDED') as intended, "
+    "count(*) filter (where f.verdict = 'NOT_CONFLICT') as not_conflict "
+    "from setting_check_findings f where f.run_id = r.id) c "
 )
 
 FINDING_COLUMNS = (
     "f.id, f.kind, f.core, f.confidence, f.explanation, f.quote, "
     "f.quote_focus, f.source_document_id, f.source_title, f.source_doc_type, "
-    "f.source_ordinal, f.source_quote, f.source_focus, v.verdict, v.reason "
+    "f.source_ordinal, f.source_quote, f.source_focus, f.verdict, f.reason "
 )
 
-FINDING_SELECT = (
-    f"select {FINDING_COLUMNS}from setting_check_findings f "
-    "join setting_check_runs r on r.id = f.run_id "
-    "left join setting_check_verdicts v "
-    "on v.project_id = r.project_id and v.fingerprint = f.fingerprint "
-)
+FINDING_SELECT = f"select {FINDING_COLUMNS}from setting_check_findings f "
 
-FINDING_OWNER = (
-    "select f.fingerprint, f.source_document_id, f.source_quote, r.project_id "
+LATEST_STATE = (
+    "select distinct on (f.fingerprint) f.fingerprint, f.kind, f.quote, "
+    "f.explanation, f.source_document_id, f.source_title, f.source_quote, "
+    "f.verdict, f.reason, f.decided_at, f.decided_revision_no "
     "from setting_check_findings f join setting_check_runs r on r.id = f.run_id "
-    "where f.id = %s and r.user_id = %s"
+    "where r.project_id = %s and r.document_id = %s and r.status = 'DONE' "
+    "and r.id <> %s "
+    "order by f.fingerprint, r.created_at desc, r.id desc, f.position"
 )
 
 
@@ -54,6 +51,7 @@ def run_json(
         "document_id": str(row["document_id"]),
         "document_title": row["document_title"],
         "revision_no": row["revision_no"],
+        "version_id": str(row["version_id"]) if row["version_id"] else None,
         "status": row["status"],
         "stage": row["stage"],
         "created_at": iso(row["created_at"]),
@@ -179,19 +177,20 @@ class CheckStore:
             raise ChatFailure("SETTING_CHECK_IN_PROGRESS") from None
 
     async def advance(
-        self, run_id: UUID, title: str, revision_no: int, read: Read
+        self, run_id: UUID, title: str, revision_no: int, version_id: str, read: Read
     ) -> bool:
         async with self.pool.connection() as conn:
             row = await (
                 await conn.execute(
                     "update setting_check_runs set stage = 'FINDING', "
-                    "document_title = %s, revision_no = %s, read_manuscripts = %s, "
-                    "read_from_ordinal = %s, read_to_ordinal = %s, read_settings = %s, "
-                    "read_core_facts = %s where id = %s and status = 'RUNNING' "
-                    "returning id",
+                    "document_title = %s, revision_no = %s, version_id = %s, "
+                    "read_manuscripts = %s, read_from_ordinal = %s, "
+                    "read_to_ordinal = %s, read_settings = %s, read_core_facts = %s "
+                    "where id = %s and status = 'RUNNING' returning id",
                     (
                         title,
                         revision_no,
+                        version_id,
                         read.manuscripts,
                         read.from_ordinal,
                         read.to_ordinal,
@@ -218,7 +217,8 @@ class CheckStore:
         async with self.pool.connection() as conn, conn.transaction():
             row = await (
                 await conn.execute(
-                    "select status from setting_check_runs where id = %s for update",
+                    "select status, project_id, document_id from setting_check_runs "
+                    "where id = %s for update",
                     (run_id,),
                 )
             ).fetchone()
@@ -254,6 +254,14 @@ class CheckStore:
                             for position, finding in enumerate(findings)
                         ],
                     )
+                await conn.execute(
+                    "update setting_check_findings f set verdict = p.verdict, "
+                    "reason = p.reason, decided_at = p.decided_at, "
+                    f"decided_revision_no = p.decided_revision_no from ({LATEST_STATE}) p "
+                    "where f.run_id = %s and f.fingerprint = p.fingerprint "
+                    "and p.verdict is not null",
+                    (row["project_id"], row["document_id"], run_id, run_id),
+                )
             await self._close(conn, run_id, "DONE", None, usage)
         return True
 
@@ -376,15 +384,14 @@ class CheckStore:
         async with self.pool.connection() as conn:
             rows = await (
                 await conn.execute(
-                    "select * from (select distinct on (v.fingerprint) "
+                    "select * from (select distinct on (r.document_id, f.fingerprint) "
                     f"{FINDING_COLUMNS}, r.document_id, r.document_title, "
-                    "v.updated_at as decided_at from setting_check_verdicts v "
-                    "join setting_check_findings f on f.fingerprint = v.fingerprint "
+                    "f.decided_at from setting_check_findings f "
                     "join setting_check_runs r on r.id = f.run_id "
-                    "and r.project_id = v.project_id "
-                    "where v.project_id = %s and r.user_id = %s "
-                    "order by v.fingerprint, r.created_at desc, f.id desc) d "
-                    "order by decided_at desc, id desc",
+                    "where r.project_id = %s and r.user_id = %s and r.status = 'DONE' "
+                    "order by r.document_id, f.fingerprint, r.created_at desc, "
+                    "r.id desc, f.position) d "
+                    "where d.verdict is not null order by decided_at desc, id desc",
                     (project_id, user_id),
                 )
             ).fetchall()
@@ -399,36 +406,30 @@ class CheckStore:
         ]
 
     async def notes(
-        self, project_id: UUID, source_ids: list[str]
-    ) -> dict[str, list[Note]]:
-        if not source_ids:
-            return {}
+        self, project_id: UUID, document_id: str, run_id: UUID
+    ) -> list[Note]:
         async with self.pool.connection() as conn:
             rows = await (
                 await conn.execute(
-                    "select source_document_id, verdict, source_quote, reason "
-                    "from setting_check_verdicts where project_id = %s "
-                    "and source_document_id = any(%s::uuid[]) "
-                    "order by updated_at desc, fingerprint",
-                    (project_id, source_ids),
+                    f"select * from ({LATEST_STATE}) p where p.verdict is not null "
+                    "order by p.decided_at desc, p.fingerprint",
+                    (project_id, document_id, run_id),
                 )
             ).fetchall()
-        found: dict[str, list[Note]] = {}
-        for row in rows:
-            found.setdefault(str(row["source_document_id"]), []).append(
-                Note(row["verdict"], row["source_quote"], row["reason"])
+        return [
+            Note(
+                verdict=row["verdict"],
+                reason=row["reason"],
+                revision_no=row["decided_revision_no"],
+                kind=row["kind"],
+                quote=row["quote"],
+                source_document_id=str(row["source_document_id"]),
+                source_title=row["source_title"],
+                source_quote=row["source_quote"],
+                explanation=row["explanation"],
             )
-        return found
-
-    async def _owned(
-        self, conn: AsyncConnection, user_id: UUID, finding_id: UUID
-    ) -> dict[str, Any]:
-        row = await (
-            await conn.execute(FINDING_OWNER, (finding_id, user_id))
-        ).fetchone()
-        if row is None:
-            raise ChatFailure("SETTING_CHECK_FINDING_NOT_FOUND")
-        return row
+            for row in rows
+        ]
 
     async def _finding(self, conn: AsyncConnection, finding_id: UUID) -> dict[str, Any]:
         row = await (
@@ -436,36 +437,33 @@ class CheckStore:
         ).fetchone()
         return finding_json(row)
 
+    async def _decide(
+        self,
+        user_id: UUID,
+        finding_id: UUID,
+        verdict: str | None,
+        reason: str | None,
+    ) -> dict[str, Any]:
+        async with self.pool.connection() as conn, conn.transaction():
+            row = await (
+                await conn.execute(
+                    "update setting_check_findings f set verdict = %s, reason = %s, "
+                    "decided_at = case when %s::text is null then null else now() end, "
+                    "decided_revision_no = case when %s::text is null then null "
+                    "else r.revision_no end from setting_check_runs r "
+                    "where r.id = f.run_id and f.id = %s and r.user_id = %s "
+                    "returning f.id",
+                    (verdict, reason, verdict, verdict, finding_id, user_id),
+                )
+            ).fetchone()
+            if row is None:
+                raise ChatFailure("SETTING_CHECK_FINDING_NOT_FOUND")
+            return await self._finding(conn, finding_id)
+
     async def set_verdict(
         self, user_id: UUID, finding_id: UUID, verdict: str, reason: str | None
     ) -> dict[str, Any]:
-        async with self.pool.connection() as conn, conn.transaction():
-            owned = await self._owned(conn, user_id, finding_id)
-            await conn.execute(
-                "insert into setting_check_verdicts (project_id, user_id, fingerprint, "
-                "verdict, reason, source_document_id, source_quote) "
-                "values (%s, %s, %s, %s, %s, %s, %s) "
-                "on conflict (project_id, fingerprint) do update set "
-                "user_id = excluded.user_id, verdict = excluded.verdict, "
-                "reason = excluded.reason, updated_at = now()",
-                (
-                    owned["project_id"],
-                    user_id,
-                    owned["fingerprint"],
-                    verdict,
-                    reason,
-                    owned["source_document_id"],
-                    owned["source_quote"],
-                ),
-            )
-            return await self._finding(conn, finding_id)
+        return await self._decide(user_id, finding_id, verdict, reason)
 
     async def clear_verdict(self, user_id: UUID, finding_id: UUID) -> dict[str, Any]:
-        async with self.pool.connection() as conn, conn.transaction():
-            owned = await self._owned(conn, user_id, finding_id)
-            await conn.execute(
-                "delete from setting_check_verdicts "
-                "where project_id = %s and fingerprint = %s",
-                (owned["project_id"], owned["fingerprint"]),
-            )
-            return await self._finding(conn, finding_id)
+        return await self._decide(user_id, finding_id, None, None)

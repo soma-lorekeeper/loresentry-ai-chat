@@ -3,7 +3,7 @@ from typing import Any
 
 from app.content import Document
 from app.prompt import attr, text_block
-from app.setting_check.findings import Candidate, Reading
+from app.setting_check.findings import Candidate, Reading, locate
 
 MAX_CANDIDATES = 20
 JUDGE_EARLIER_CHARS = 30_000
@@ -79,7 +79,7 @@ JUDGE_INSTRUCTIONS = f"""You review one candidate contradiction in a chapter of 
 - <chapter>: the chapter being checked, in full.
 - <source>: the setting document or earlier chapter that the candidate says the chapter contradicts. Setting documents are the ground truth. <core> lines are facts the author marked as must-keep.
 - <related>: older chapters the first reviewer says the contradiction also depends on, when they are not in <earlier>.
-- <verdicts>: what the author said about earlier candidates that used this same source: INTENDED (the author meant it that way) or NOT_CONFLICT (the author says it is not a contradiction), with the author's reason when given. When the author has already explained the same point, follow the author's reason.
+- <verdicts>: the author's decisions on contradictions that earlier checks of this same chapter reported. Each <verdict> records what that check flagged: the chapter sentence (<quote>), the passage it was held against (<source_quote>, from the document named by `source_title`, with its id in `source` when that document is in the materials) and that reviewer's <explanation>. Then the author's answer: `decision` INTENDED (the author knows the chapter departs from the source there and keeps it on purpose) or NOT_CONFLICT (the author says the reviewer was wrong and both can be true), with the author's <reason> when given. A decision answers the chapter as it read in the version that check read: `revision` is that version and `chapter_revision` on <verdicts> is the version in <chapter>; `version` says whether the two are the same, and `quote_now` whether the quoted sentence still appears in <chapter> word for word.
 - <candidate>: the sentence from the chapter (<quote>), the passage from the source (<source_quote>), and the first reviewer's summary and direction.
 - <author>: the author's locale.
 
@@ -89,11 +89,18 @@ Judge what the texts say, not what could be true. Read the chapter as its reader
 - CHANGED_OVER_TIME: the materials show or state the change: time passes, something happens in between, a character grows or decides differently. A character simply acting against the setting is not a change.
 - CHARACTER_PERSPECTIVE: the sentence in <quote> itself is a character's words, lie, mistake, belief, rumour, dream or point of view, not a fact of the story. A rumour or belief elsewhere in the chapter does not turn narration into one.
 - INSUFFICIENT: read in context, the quotes do not say what the candidate claims, or the contradiction depends on a fact that appears nowhere in the materials.
+- AUTHOR_EXPLAINED: a NOT_CONFLICT decision in <verdicts> answers this same point and still holds for the chapter as it is now.
 confidence: HIGH when both sides are stated plainly; LOW when the contradiction rests on an interpretation, such as which person or object a sentence means. A contradiction on a plausible reading is still CONFLICT, with LOW confidence.
 explanation: three or four sentences, addressed to the author, that let them see why this is a contradiction without opening either document. Say what the source establishes and where (the document's title, or the chapter number); what the chapter states or shows at <quote>; why the two cannot both be true at that point in the story; and what the story never shows that would let both hold, such as a missing scene or reason. Use the concrete names, objects, numbers and events from the texts. Do not copy either quote in full, do not judge the writing and never write a corrected sentence.
 quote_focus: the shortest phrase in <quote> that carries the contradiction, copied character for character from <quote>; an empty string when no single phrase does. For example, 세 번째 순찰 in "서윤은 세 번째 순찰에서야 알아차렸다."
 source_focus: the same for <source_quote>: the shortest phrase that carries the contradiction, copied character for character from <source_quote>; an empty string when no single phrase does. For example, 다섯 번째 순찰 in "다섯 번째 순찰을 마친 새벽이었다."
 For any verdict other than CONFLICT, explanation may be one short sentence.
+
+# Author decisions
+A decision in <verdicts> applies only to the same point: the same fact of the source against the same passage of the chapter, even when the wording has changed a little. Never carry a decision over to a different point.
+- NOT_CONFLICT on the same point: when the chapter still says what the author answered (the quote is still there, or the passage that replaced it says the same thing) and the author's reason or the materials still account for it, return AUTHOR_EXPLAINED. When the passage now says something different, or the reason no longer fits the chapter as it is now, judge the candidate on the texts as usual.
+- INTENDED on the same point: the author keeps the departure on purpose; that does not make the two texts agree. Judge the candidate on the texts as usual; the author's decision stays with it.
+- Facts the author states about the story in a <reason> are true for the version they answered. A decision made on an earlier version (`version="earlier"`, or `quote_now="absent"`) may no longer fit: check it against <chapter> before relying on it.
 
 {JUDGE_LANGUAGE}"""
 
@@ -164,12 +171,32 @@ JUDGE_SCHEMA: dict[str, Any] = {
     },
 }
 
+NOTED_JUDGE_SCHEMA: dict[str, Any] = {
+    **JUDGE_SCHEMA,
+    "properties": {
+        **JUDGE_SCHEMA["properties"],
+        "verdict": {
+            "type": "string",
+            "enum": [
+                *JUDGE_SCHEMA["properties"]["verdict"]["enum"],
+                "AUTHOR_EXPLAINED",
+            ],
+        },
+    },
+}
+
 
 @dataclass(frozen=True)
 class Note:
     verdict: str
-    source_quote: str
     reason: str | None
+    revision_no: int
+    kind: str
+    quote: str
+    source_document_id: str
+    source_title: str
+    source_quote: str
+    explanation: str
 
 
 def author_xml(locale: str) -> str:
@@ -235,15 +262,33 @@ def settings_input(reading: Reading, locale: str) -> list[dict[str, Any]]:
     )
 
 
-def verdicts_xml(notes: list[Note]) -> str:
-    parts = [
-        f'<verdict value="{note.verdict}">\n<source_quote>{note.source_quote}'
-        "</source_quote>"
+def verdict_xml(reading: Reading, note: Note) -> str:
+    current = reading.target.revision_no
+    alias = reading.ids.get(note.source_document_id)
+    present = locate(note.quote, (reading.body,)) is not None
+    return (
+        f'<verdict decision="{note.verdict}" revision="{note.revision_no}"'
+        f' version="{"same" if note.revision_no == current else "earlier"}"'
+        f' quote_now="{"present" if present else "absent"}" kind="{note.kind}"'
+        + (f' source="{alias}"' if alias else "")
+        + f' source_title="{attr(note.source_title)}">\n'
+        f"<quote>{note.quote}</quote>\n"
+        f"<source_quote>{note.source_quote}</source_quote>\n"
+        f"<explanation>{note.explanation}</explanation>"
         + (f"\n<reason>{note.reason}</reason>" if note.reason else "")
         + "\n</verdict>"
-        for note in notes
-    ]
-    return section("verdicts", parts)
+    )
+
+
+def verdicts_xml(reading: Reading, notes: list[Note]) -> str:
+    if not notes:
+        return "<verdicts/>"
+    parts = [verdict_xml(reading, note) for note in notes]
+    return (
+        f'<verdicts chapter_revision="{reading.target.revision_no}">\n'
+        + "\n\n".join(parts)
+        + "\n</verdicts>"
+    )
 
 
 def recent(reading: Reading) -> list[Document]:
@@ -291,13 +336,12 @@ def judge_input(
         [
             text_block(
                 f"{section('settings', settings)}\n{section('earlier', earlier)}\n"
-                f"{chapter_xml(reading)}",
+                f"{chapter_xml(reading)}\n{verdicts_xml(reading, notes)}",
                 breakpoint=True,
             ),
             text_block(
                 f"<source>\n{document_xml(source, reading.ids[source.id])}\n</source>\n"
-                f"{related_xml(reading, candidate)}{verdicts_xml(notes)}\n"
-                f"{author_xml(locale)}"
+                f"{related_xml(reading, candidate)}{author_xml(locale)}"
             ),
             text_block(candidate_xml(candidate)),
         ]

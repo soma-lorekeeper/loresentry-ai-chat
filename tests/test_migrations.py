@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import psycopg
@@ -47,8 +48,8 @@ def test_migrations_create_chat_tables(conn):
         "chat_usage",
         "setting_check_runs",
         "setting_check_findings",
-        "setting_check_verdicts",
     } <= {row[0] for row in rows}
+    assert "setting_check_verdicts" not in {row[0] for row in rows}
 
 
 def test_chat_messages_reject_unknown_role(conn):
@@ -244,12 +245,85 @@ def test_findings_go_with_their_run_and_verdicts_are_checked(conn):
     assert conn.execute(
         "select count(*) from setting_check_findings where run_id = %s", (run,)
     ).fetchone() == (0,)
-    verdict = (
-        "insert into setting_check_verdicts (project_id, user_id, fingerprint, "
-        "verdict, reason, source_document_id, source_quote) "
-        "values (uuidv7(), uuidv7(), 'f', %s, %s, uuidv7(), 'q')"
+    run = insert_run(conn, conn.execute("select uuidv7()").fetchone()[0], "DONE")
+    finding = (
+        "insert into setting_check_findings (run_id, position, kind, confidence, "
+        "explanation, quote, source_document_id, source_title, source_doc_type, "
+        "source_quote, fingerprint, verdict, reason, decided_at, decided_revision_no) "
+        "values (%s, %s, 'SETTING', 'HIGH', 'e', 'q', uuidv7(), 't', 'place', 'sq', "
+        "'f', %s, %s, %s, %s)"
     )
-    for value, reason in (("MAYBE", None), ("INTENDED", "가" * 501)):
+    now = datetime.now(UTC)
+    for position, (value, reason, decided_at, revision) in enumerate(
+        (
+            ("MAYBE", None, now, 1),
+            ("INTENDED", "가" * 501, now, 1),
+            ("INTENDED", None, None, None),
+            (None, None, now, 1),
+        )
+    ):
         with pytest.raises(psycopg.errors.CheckViolation):
-            conn.execute(verdict, (value, reason))
-    conn.execute(verdict, ("INTENDED", "가" * 500))
+            conn.execute(finding, (run, position, value, reason, decided_at, revision))
+    conn.execute(finding, (run, 9, "INTENDED", "가" * 500, now, 3))
+
+
+def test_verdicts_move_onto_every_finding_with_their_fingerprint(conn):
+    conn.execute("create schema upgrade")
+    conn.execute("set search_path to upgrade")
+    try:
+        for migration in MIGRATIONS:
+            if version(migration) >= 12:
+                break
+            conn.execute(migration.read_text())
+        project, other = conn.execute("select uuidv7(), uuidv7()").fetchone()
+        first = insert_run(conn, project, "DONE")
+        second = insert_run(conn, project, "DONE")
+        elsewhere = insert_run(conn, other, "DONE")
+        conn.execute(
+            "update setting_check_runs set revision_no = 7 where id = %s", (second,)
+        )
+        finding = (
+            "insert into setting_check_findings (run_id, position, kind, confidence, "
+            "explanation, quote, source_document_id, source_title, source_doc_type, "
+            "source_quote, fingerprint) values (%s, %s, 'SETTING', 'HIGH', 'e', 'q', "
+            "uuidv7(), 't', 'place', 'sq', %s)"
+        )
+        for run, position, mark in (
+            (first, 0, "a"),
+            (second, 0, "a"),
+            (second, 1, "b"),
+            (elsewhere, 0, "a"),
+        ):
+            conn.execute(finding, (run, position, mark))
+        conn.execute(
+            "insert into setting_check_verdicts (project_id, user_id, fingerprint, "
+            "verdict, reason, source_document_id, source_quote, updated_at) "
+            "values (%s, uuidv7(), 'a', 'INTENDED', 'r', uuidv7(), 'sq', "
+            "'2026-10-30T00:00:00Z')",
+            (project,),
+        )
+
+        conn.execute(MIGRATIONS[[version(m) for m in MIGRATIONS].index(12)].read_text())
+
+        rows = conn.execute(
+            "select f.run_id, f.fingerprint, f.verdict, f.reason, f.decided_at, "
+            "f.decided_revision_no from setting_check_findings f "
+            "order by f.run_id, f.position"
+        ).fetchall()
+        decided = datetime(2026, 10, 30, tzinfo=UTC)
+        assert rows == [
+            (first, "a", "INTENDED", "r", decided, 1),
+            (second, "a", "INTENDED", "r", decided, 7),
+            (second, "b", None, None, None, None),
+            (elsewhere, "a", None, None, None, None),
+        ]
+        assert conn.execute(
+            "select count(*) from information_schema.tables "
+            "where table_schema = 'upgrade' and table_name = 'setting_check_verdicts'"
+        ).fetchone() == (0,)
+        assert conn.execute(
+            "select version_id from setting_check_runs where id = %s", (first,)
+        ).fetchone() == (None,)
+    finally:
+        conn.execute("set search_path to public")
+        conn.execute("drop schema upgrade cascade")

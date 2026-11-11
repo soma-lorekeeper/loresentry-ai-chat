@@ -81,7 +81,6 @@ def apply(conn: Connection, changes: list[Change], prompt_version: str) -> None:
                     "summary_queue",
                     "document_summaries",
                     "setting_check_runs",
-                    "setting_check_verdicts",
                 ):
                     conn.execute(
                         f"delete from {table} where project_id = %s",

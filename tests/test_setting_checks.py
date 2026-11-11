@@ -36,6 +36,7 @@ from tests.support import (
     FakeModel,
     candidate,
     short,
+    version_of,
 )
 
 MIGRATIONS = sorted(
@@ -193,9 +194,7 @@ def story(content: FakeContent) -> None:
 @contextmanager
 def make_env(database, checker: FakeChecker | None = None, **overrides):
     with psycopg.connect(**database, autocommit=True) as conn:
-        conn.execute(
-            "truncate setting_check_runs, setting_check_verdicts, chat_sessions cascade"
-        )
+        conn.execute("truncate setting_check_runs, chat_sessions cascade")
     user, project = uuid4(), uuid4()
     content = FakeContent(user, project)
     story(content)
@@ -224,6 +223,7 @@ REQUIRED = {
     "document_id",
     "document_title",
     "revision_no",
+    "version_id",
     "status",
     "stage",
     "created_at",
@@ -236,7 +236,7 @@ REQUIRED = {
 
 def assert_run_shape(run: dict, findings: bool) -> None:
     assert set(run) == REQUIRED | ({"findings"} if findings else set())
-    for key in REQUIRED - {"stage", "finished_at", "failure_code"}:
+    for key in REQUIRED - {"stage", "finished_at", "failure_code", "version_id"}:
         assert run[key] is not None, key
     for key in ("manuscripts", "settings", "core_facts"):
         assert isinstance(run["read"][key], int), key
@@ -431,6 +431,7 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
     assert_run_shape(started, findings=False)
     assert started["status"] == "RUNNING"
     assert started["stage"] == "READING"
+    assert started["version_id"] is None
     assert started["document_title"] == "3화 · 균열의 밤"
     assert started["read"] == {
         "manuscripts": 0,
@@ -448,6 +449,9 @@ def test_a_check_runs_in_the_background_and_keeps_only_judged_conflicts(env):
     assert run["stage"] is None and run["finished_at"] is not None
     assert run["failure_code"] is None
     assert run["revision_no"] == env.content.docs[CH3].revision_no
+    assert run["version_id"] == version_of(CH3, run["revision_no"])
+    assert env.content.versions == [(CH3, run["revision_no"])]
+    assert all(CH3 not in ids for ids, _ in env.content.reads)
     assert run["read"] == {
         "manuscripts": 2,
         "from_ordinal": 1,
@@ -585,7 +589,7 @@ def test_summary_and_history_list_runs_without_findings(env):
     }
 
 
-def test_verdicts_follow_the_fingerprint_into_later_runs(env):
+def test_verdicts_stay_with_their_report_and_carry_into_later_runs(env):
     run = env.check()
     lena, manuscript, door = run["findings"]
 
@@ -608,15 +612,6 @@ def test_verdicts_follow_the_fingerprint_into_later_runs(env):
         (None, None),
         ("INTENDED", REASON),
     ]
-    door_judgement = next(text for text in env.checker.judged[4:] if FACT in text)
-    assert f"<reason>{REASON}</reason>" in door_judgement
-    assert '<verdict value="NOT_CONFLICT">' not in door_judgement
-    manuscript_judgement = next(
-        text
-        for text in env.checker.judged[4:]
-        if "처음 왔다" in text.split("<candidate")[-1]
-    )
-    assert "<verdicts/>" in manuscript_judgement
 
     cleared = env.client.delete(
         f"/setting-check-findings/{again['findings'][2]['id']}/verdict",
@@ -624,15 +619,112 @@ def test_verdicts_follow_the_fingerprint_into_later_runs(env):
     )
     assert cleared.status_code == 200
     assert cleared.json()["verdict"] is None and cleared.json()["reason"] is None
-    assert env.get(f"/setting-checks/{run['id']}")["counts"] == {
-        "open": 2,
-        "intended": 0,
-        "not_conflict": 1,
-    }
-    assert env.query("select count(*) from setting_check_verdicts") == [(1,)]
+    changed = env.verdict(again["findings"][0]["id"], "INTENDED", "바뀐 판단")
+    assert changed.status_code == 200
+    first = env.get(f"/setting-checks/{run['id']}")
+    assert first["counts"] == {"open": 1, "intended": 1, "not_conflict": 1}
+    assert [(f["verdict"], f["reason"]) for f in first["findings"]] == [
+        ("NOT_CONFLICT", None),
+        (None, None),
+        ("INTENDED", REASON),
+    ]
+
+    third = env.check()
+
+    assert [(f["verdict"], f["reason"]) for f in third["findings"]] == [
+        ("INTENDED", "바뀐 판단"),
+        (None, None),
+        (None, None),
+    ]
 
 
-def test_the_verdict_ledger_lists_each_verdict_with_its_latest_finding(env):
+def test_the_judge_reads_every_decision_on_this_chapter_with_its_version(env):
+    run = env.check()
+    lena, _, door = run["findings"]
+    env.verdict(door["id"], "INTENDED", REASON)
+    env.verdict(lena["id"], "NOT_CONFLICT")
+    elsewhere = env.query(
+        "insert into setting_check_runs (project_id, user_id, document_id, "
+        "document_title, revision_no, status) values (%s, %s, %s, 't', 1, 'DONE') "
+        "returning id",
+        env.project,
+        env.user,
+        CH2,
+    )[0][0]
+    env.query(
+        "insert into setting_check_findings (run_id, position, kind, confidence, "
+        "explanation, quote, source_document_id, source_title, source_doc_type, "
+        "source_quote, fingerprint, verdict, reason, decided_at, "
+        "decided_revision_no) values (%s, 0, 'SETTING', 'HIGH', '다른 회차', "
+        "'레나는 북쪽 문 앞에 섰다.', %s, '북쪽 온실', 'place', %s, 'other', "
+        "'INTENDED', '다른 회차의 판정', now(), 1)",
+        elsewhere,
+        GREENHOUSE,
+        FACT,
+    )
+    checked = run["revision_no"]
+
+    env.check()
+    same = env.checker.judged[4:]
+
+    assert len(same) == 4
+    assert all("AUTHOR_EXPLAINED" not in enum for enum in env.checker.schemas[:4])
+    assert all("AUTHOR_EXPLAINED" in enum for enum in env.checker.schemas[4:])
+    for text in same:
+        assert f'<verdicts chapter_revision="{checked}">' in text
+        assert "다른 회차의 판정" not in text
+    assert (
+        f'<verdict decision="INTENDED" revision="{checked}" version="same" '
+        f'quote_now="present" kind="SETTING" source="{short(GREENHOUSE)}" '
+        'source_title="북쪽 온실">\n'
+        "<quote>서윤은 등불을 내려놓고 문을 밀었다.</quote>\n"
+        f"<source_quote>{FACT}</source_quote>\n"
+        f"<explanation>{door['explanation']}</explanation>\n"
+        f"<reason>{REASON}</reason>\n</verdict>"
+    ) in same[0]
+    assert (
+        f'<verdict decision="NOT_CONFLICT" revision="{checked}" version="same" '
+        f'quote_now="present" kind="SETTING" source="{short(LENA)}" '
+        'source_title="레나 아르벨">'
+    ) in same[0]
+
+    env.content.edit(CH3, CHAPTER.replace("은빛 눈으로", "검은 눈으로"))
+    edited = env.check()
+    later = env.checker.judged[8:]
+
+    assert edited["version_id"] == version_of(CH3, checked + 1)
+    assert len(later) == 3
+    for text in later:
+        assert f'<verdicts chapter_revision="{checked + 1}">' in text
+    assert (
+        f'<verdict decision="INTENDED" revision="{checked}" version="earlier" '
+        'quote_now="present"'
+    ) in later[0]
+    assert (
+        f'<verdict decision="NOT_CONFLICT" revision="{checked}" version="earlier" '
+        'quote_now="absent"'
+    ) in later[0]
+    assert [(f["verdict"], f["reason"]) for f in edited["findings"]] == [
+        (None, None),
+        ("INTENDED", REASON),
+    ]
+
+
+def test_a_candidate_the_author_explained_is_dropped(database):
+    lena_quote = "레나는 은빛 눈으로 정원을 보았다."
+    checker = FakeChecker(
+        WHOLE,
+        BY_SETTING,
+        {**VERDICTS, lena_quote: {"verdict": "AUTHOR_EXPLAINED"}},
+    )
+    with make_env(database, checker) as env:
+        run = env.check()
+
+    assert lena_quote not in [finding["quote"] for finding in run["findings"]]
+    assert len(run["findings"]) == 2
+
+
+def test_the_verdict_ledger_lists_each_chapters_latest_decisions(env):
     lena, _, door = env.check()["findings"]
     env.verdict(door["id"], "INTENDED", REASON)
     env.verdict(lena["id"], "NOT_CONFLICT")
@@ -651,7 +743,7 @@ def test_the_verdict_ledger_lists_each_verdict_with_its_latest_finding(env):
     assert ledger[0]["decided_at"] > ledger[1]["decided_at"]
 
     env.client.delete(
-        f"/setting-check-findings/{lena['id']}/verdict", headers=env.headers
+        f"/setting-check-findings/{again[0]['id']}/verdict", headers=env.headers
     )
     assert [entry["finding"]["id"] for entry in env.get(path)["verdicts"]] == [
         again[2]["id"]
@@ -839,8 +931,8 @@ def test_documents_are_fetched_in_batches_of_100(env):
         env.content.docs[doc.id] = doc
     run = env.check()
 
-    assert [len(ids) for ids, _ in env.content.reads] == [100, 55]
-    assert env.content.reads[0][0][:3] == [CH3, CH1, CH2]
+    assert [len(ids) for ids, _ in env.content.reads] == [100, 54]
+    assert env.content.reads[0][0][:2] == [CH1, CH2]
     assert run["read"]["settings"] == 152
 
 
@@ -903,14 +995,6 @@ def test_deleting_data_removes_checks_and_stops_running_ones(env):
             user,
             CH3,
         )
-        env.query(
-            "insert into setting_check_verdicts (project_id, user_id, fingerprint, "
-            "verdict, source_document_id, source_quote) "
-            "values (%s, %s, 'f', 'INTENDED', %s, 'q')",
-            project,
-            user,
-            CH3,
-        )
     env.checker.gate = threading.Event()
     running = env.start().json()
     deadline = time.monotonic() + 5
@@ -935,12 +1019,8 @@ def test_deleting_data_removes_checks_and_stops_running_ones(env):
     assert (
         sorted(env.query("select project_id, user_id from setting_check_runs")) == rows
     )
-    assert (
-        sorted(env.query("select project_id, user_id from setting_check_verdicts"))
-        == rows
-    )
     assert env.query("select count(*) from setting_check_findings") == [(0,)]
 
     assert env.client.delete("/users/me/data", headers=env.headers).status_code == 204
     assert env.query("select user_id from setting_check_runs") == [(stranger,)]
-    assert env.query("select user_id from setting_check_verdicts") == [(stranger,)]
+    assert env.query("select count(*) from setting_check_findings") == [(0,)]

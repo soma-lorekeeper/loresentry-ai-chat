@@ -179,10 +179,9 @@ class Store:
                 "delete from chat_sessions where user_id = %s", (user_id,)
             )
             await conn.execute("delete from chat_usage where user_id = %s", (user_id,))
-            for table in ("setting_check_runs", "setting_check_verdicts"):
-                await conn.execute(
-                    f"delete from {table} where user_id = %s", (user_id,)
-                )
+            await conn.execute(
+                "delete from setting_check_runs where user_id = %s", (user_id,)
+            )
         return turns
 
     async def delete_project_data(self, user_id: UUID, project_id: UUID) -> list[UUID]:
@@ -190,11 +189,7 @@ class Store:
             turns = await self._generating_turns(
                 conn, "s.user_id = %s and s.project_id = %s", (user_id, project_id)
             )
-            for table in (
-                "chat_sessions",
-                "setting_check_runs",
-                "setting_check_verdicts",
-            ):
+            for table in ("chat_sessions", "setting_check_runs"):
                 await conn.execute(
                     f"delete from {table} where user_id = %s and project_id = %s",
                     (user_id, project_id),
