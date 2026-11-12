@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.content import ContentSource
 from app.errors import NO_STORE, ChatFailure
 from app.prompt import Profile, Question
+from app.sample_history import load as load_sample_history
+from app.sample_history import seed as seed_sample_history
 from app.setting_check.runner import CheckRunner
 from app.settings import Settings
 from app.store import Replayed, Store
@@ -20,6 +22,7 @@ QUESTION_LIMIT = 4000
 TITLE_LIMIT = 200
 SEARCH_LIMIT = 100
 STREAM_HEADERS = {**NO_STORE, "X-Accel-Buffering": "no"}
+SAMPLE_HISTORY = load_sample_history()
 
 router = APIRouter()
 
@@ -253,3 +256,12 @@ async def delete_project_data(project_id: str, user: User, deps: Deps) -> Respon
     deps.runner.stop(await deps.store.delete_project_data(user, project))
     deps.checks.stop_for(user, project)
     return Response(status_code=204, headers=NO_STORE)
+
+
+@router.post("/projects/{project_id}/chat/sample-history")
+async def sample_history(project_id: str, user: User, deps: Deps) -> JSONResponse:
+    project = uuid_or(project_id, "PROJECT_NOT_FOUND")
+    seeded = await seed_sample_history(
+        deps.store.pool, deps.content, user, project, SAMPLE_HISTORY
+    )
+    return no_store({"seeded": seeded})
